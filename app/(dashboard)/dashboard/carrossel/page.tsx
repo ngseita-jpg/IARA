@@ -142,7 +142,7 @@ export default function CarrosselPage() {
     setSlidePngs({})
 
     const conteudo = modoConteudo === 'url'
-      ? (leitura?.conteudo || url)
+      ? (leitura?.conteudo || textoManual || url)
       : textoManual
 
     try {
@@ -222,7 +222,7 @@ export default function CarrosselPage() {
     setEnviandoChat(true)
 
     const conteudo = modoConteudo === 'url'
-      ? (leitura?.conteudo || url)
+      ? (leitura?.conteudo || textoManual || url)
       : textoManual
 
     try {
@@ -290,9 +290,9 @@ export default function CarrosselPage() {
 
   function podeProsseguir() {
     if (step === 'conteudo') {
-      return modoConteudo === 'url'
-        ? !!(leitura?.conteudo || url.trim())
-        : !!textoManual.trim()
+      if (modoConteudo === 'texto') return !!textoManual.trim()
+      // modo URL: precisa de conteúdo extraído OU texto manual colado (fallback)
+      return !!(leitura?.conteudo || textoManual.trim())
     }
     return true
   }
@@ -426,19 +426,38 @@ export default function CarrosselPage() {
                   </div>
                 )}
 
-                {leitura && (
+                {leitura && leitura.conteudo && (
                   <div className="p-4 rounded-xl bg-[#0f0f20] border border-green-700/30">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="w-4 h-4 text-green-400" />
                       <span className="text-sm font-medium text-green-300">Conteúdo extraído!</span>
                     </div>
                     <p className="text-sm font-medium text-[#f1f1f8] mb-1">{leitura.titulo}</p>
-                    {leitura.aviso && (
-                      <div className="text-xs text-yellow-400 bg-yellow-900/20 p-2 rounded-lg mb-2">{leitura.aviso}</div>
-                    )}
-                    {leitura.conteudo && (
-                      <p className="text-xs text-[#6b6b8a] line-clamp-3">{leitura.conteudo.slice(0, 300)}...</p>
-                    )}
+                    <p className="text-xs text-[#6b6b8a] line-clamp-3">{leitura.conteudo.slice(0, 300)}...</p>
+                  </div>
+                )}
+
+                {leitura && !leitura.conteudo && (
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-xl bg-yellow-900/20 border border-yellow-700/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-400" />
+                        <span className="text-sm font-medium text-yellow-300">Não foi possível extrair o conteúdo automaticamente</span>
+                      </div>
+                      <p className="text-xs text-yellow-400/80">
+                        {leitura.aviso || 'Cole o conteúdo do vídeo manualmente no campo abaixo para continuar.'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-[#9b9bb5] font-medium">Cole o conteúdo manualmente:</p>
+                      <textarea
+                        value={textoManual}
+                        onChange={(e) => setTextoManual(e.target.value)}
+                        placeholder="Cole aqui a transcrição, legenda ou texto do vídeo..."
+                        rows={6}
+                        className="w-full bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-3 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500 resize-none"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
