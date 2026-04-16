@@ -384,7 +384,7 @@ export default function CarrosselPage() {
                   </p>
                   <div className="flex gap-2">
                     <input
-                      type="url"
+                      type="text"
                       value={url}
                       onChange={(e) => { setUrl(e.target.value); setLeitura(null); setErroLeitura(null) }}
                       placeholder="https://youtube.com/watch?v=... ou link de artigo"

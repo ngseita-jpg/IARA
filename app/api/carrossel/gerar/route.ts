@@ -132,13 +132,23 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
 
     // Extrair JSON da resposta
     const jsonMatch = texto.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return NextResponse.json({ error: 'IA não retornou JSON válido' }, { status: 500 })
+    if (!jsonMatch) return NextResponse.json({ error: 'IA não retornou JSON válido. Tente novamente.' }, { status: 500 })
 
-    const carrossel: CarrosselData = JSON.parse(jsonMatch[0])
+    let carrossel: CarrosselData
+    try {
+      carrossel = JSON.parse(jsonMatch[0])
+    } catch {
+      return NextResponse.json({ error: 'Erro ao interpretar resposta da IA. Tente novamente.' }, { status: 500 })
+    }
+
+    if (!carrossel?.slides?.length) {
+      return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })
+    }
 
     return NextResponse.json({ carrossel, assistant_message: texto })
   } catch (err) {
-    console.error(err)
-    return NextResponse.json({ error: 'Erro ao gerar carrossel' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    console.error('Erro gerar carrossel:', msg)
+    return NextResponse.json({ error: `Erro ao gerar carrossel: ${msg}` }, { status: 500 })
   }
 }
