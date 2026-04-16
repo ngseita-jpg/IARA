@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import * as cheerio from 'cheerio'
 
+// Aumenta o timeout da rota para 60s (necessário para transcrição de áudio)
+export const maxDuration = 60
+
 function extractYouTubeId(url: string) {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/)
   return m?.[1] ?? null
@@ -14,15 +17,13 @@ function detectPlatform(url: string) {
   return 'artigo'
 }
 
-type CaptionTrack = {
-  baseUrl: string
-  languageCode: string
-  kind?: string
-}
+type CaptionTrack = { baseUrl: string; languageCode: string; kind?: string }
+type AudioFormat  = { url?: string; mimeType?: string; bitrate?: number; contentLength?: string }
 
-// Usa a InnerTube API do YouTube (muito mais confiável que scraping)
-async function fetchPlayerResponse(videoId: string): Promise<Record<string, unknown> | null> {
-  // Tentativa 1: cliente ANDROID (retorna captions mesmo sem login)
+// ─────────────────────────────────────────────────────────
+// InnerTube: busca o player response do YouTube
+// ─────────────────────────────────────────────────────────
+async function fetchInnerTube(videoId: string, clientName: string, clientVersion: string, extraHeaders: Record<string, string> = {}): Promise<Record<string, unknown> | null> {
   try {
     const res = await fetch(
       'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
@@ -30,136 +31,43 @@ async function fetchPlayerResponse(videoId: string): Promise<Record<string, unkn
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11)',
-          'X-YouTube-Client-Name': '3',
-          'X-YouTube-Client-Version': '17.31.35',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+          ...extraHeaders,
         },
         body: JSON.stringify({
-          context: {
-            client: {
-              clientName: 'ANDROID',
-              clientVersion: '17.31.35',
-              androidSdkVersion: 30,
-              hl: 'pt',
-              gl: 'BR',
-            },
-          },
+          context: { client: { clientName, clientVersion, hl: 'pt', gl: 'BR' } },
           videoId,
         }),
       }
     )
-    if (res.ok) {
-      const data = await res.json() as Record<string, unknown>
-      const tracks = getCaptionTracks(data)
-      if (tracks.length > 0) return data
-    }
-  } catch { /* tenta próximo */ }
-
-  // Tentativa 2: cliente WEB
-  try {
-    const res = await fetch(
-      'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context: {
-            client: {
-              clientName: 'WEB',
-              clientVersion: '2.20231121.08.00',
-              hl: 'pt',
-              gl: 'BR',
-            },
-          },
-          videoId,
-        }),
-      }
-    )
-    if (res.ok) {
-      const data = await res.json() as Record<string, unknown>
-      const tracks = getCaptionTracks(data)
-      if (tracks.length > 0) return data
-    }
-  } catch { /* tenta próximo */ }
-
-  // Tentativa 3: scraping da página
-  try {
-    const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'pt-BR,pt;q=0.9',
-      },
-    })
-    if (pageRes.ok) {
-      const html = await pageRes.text()
-      // Tenta múltiplos padrões de extração
-      const patterns = [
-        /ytInitialPlayerResponse\s*=\s*(\{.+?\});\s*(?:var|const|let|<\/script>)/,
-        /ytInitialPlayerResponse\s*=\s*(\{[\s\S]+?\});\s*(?:var|const|let|<)/,
-        /"ytInitialPlayerResponse"\s*:\s*(\{[\s\S]+?\}),\s*"ytInitialData"/,
-      ]
-      for (const pattern of patterns) {
-        const match = html.match(pattern)
-        if (match) {
-          try {
-            const data = JSON.parse(match[1]) as Record<string, unknown>
-            const tracks = getCaptionTracks(data)
-            if (tracks.length > 0) return data
-          } catch { /* continua */ }
-        }
-      }
-    }
-  } catch { /* falhou */ }
-
-  return null
+    if (!res.ok) return null
+    return await res.json() as Record<string, unknown>
+  } catch {
+    return null
+  }
 }
 
-function getCaptionTracks(playerResponse: Record<string, unknown>): CaptionTrack[] {
-  const captions = playerResponse?.captions as Record<string, unknown> | undefined
-  const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined
-  const tracks = renderer?.captionTracks as CaptionTrack[] | undefined
+function getCaptionTracks(pr: Record<string, unknown>): CaptionTrack[] {
+  const tracks = ((pr?.captions as Record<string, unknown>)
+    ?.playerCaptionsTracklistRenderer as Record<string, unknown>)
+    ?.captionTracks as CaptionTrack[] | undefined
   return tracks ?? []
 }
 
-function getVideoTitle(playerResponse: Record<string, unknown>): string {
-  const details = playerResponse?.videoDetails as Record<string, unknown> | undefined
-  return (details?.title as string | undefined) ?? ''
+function getAudioFormats(pr: Record<string, unknown>): AudioFormat[] {
+  const formats = ((pr?.streamingData as Record<string, unknown>)
+    ?.adaptiveFormats as AudioFormat[] | undefined) ?? []
+  return formats.filter((f) => f.url && f.mimeType?.includes('audio'))
 }
 
-async function parseCaptionXml(xml: string): Promise<string> {
-  return xml
-    .replace(/<text[^>]*>/g, ' ')
-    .replace(/<\/text>/g, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
+function getVideoTitle(pr: Record<string, unknown>): string {
+  return ((pr?.videoDetails as Record<string, unknown>)?.title as string | undefined) ?? ''
 }
 
-async function parseCaptionJson3(json: unknown): Promise<string> {
-  const data = json as { events?: Array<{ segs?: Array<{ utf8?: string }> }> }
-  return (data.events ?? [])
-    .flatMap((e) => e.segs ?? [])
-    .map((s) => s.utf8 ?? '')
-    .join(' ')
-    .replace(/\n/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-async function fetchYouTubeTranscript(videoId: string): Promise<{ texto: string; titulo: string } | null> {
-  const playerResponse = await fetchPlayerResponse(videoId)
-  if (!playerResponse) return null
-
-  const titulo = getVideoTitle(playerResponse) || `Vídeo ${videoId}`
-  const tracks = getCaptionTracks(playerResponse)
-  if (!tracks.length) return null
-
-  // Prioridade: PT-BR → PT → ASR (auto) em qualquer idioma → primeira disponível
+// ─────────────────────────────────────────────────────────
+// Extrai legendas do player response
+// ─────────────────────────────────────────────────────────
+async function transcriptFromCaptions(tracks: CaptionTrack[]): Promise<string | null> {
   const track =
     tracks.find((t) => t.languageCode === 'pt-BR') ??
     tracks.find((t) => t.languageCode === 'pt') ??
@@ -169,29 +77,142 @@ async function fetchYouTubeTranscript(videoId: string): Promise<{ texto: string;
 
   if (!track?.baseUrl) return null
 
-  // Tentar JSON3 primeiro (mais limpo)
+  // JSON3 (mais limpo)
   try {
-    const jsonRes = await fetch(track.baseUrl + '&fmt=json3')
-    if (jsonRes.ok) {
-      const json = await jsonRes.json()
-      const texto = await parseCaptionJson3(json)
-      if (texto.length > 50) return { texto: texto.slice(0, 8000), titulo }
+    const r = await fetch(track.baseUrl + '&fmt=json3')
+    if (r.ok) {
+      const j = await r.json() as { events?: Array<{ segs?: Array<{ utf8?: string }> }> }
+      const t = (j.events ?? [])
+        .flatMap((e) => e.segs ?? [])
+        .map((s) => s.utf8 ?? '')
+        .join(' ').replace(/\s+/g, ' ').trim()
+      if (t.length > 50) return t.slice(0, 8000)
     }
   } catch { /* tenta XML */ }
 
-  // Fallback: XML
+  // XML fallback
   try {
-    const xmlRes = await fetch(track.baseUrl)
-    if (xmlRes.ok) {
-      const xml = await xmlRes.text()
-      const texto = await parseCaptionXml(xml)
-      if (texto.length > 50) return { texto: texto.slice(0, 8000), titulo }
+    const r = await fetch(track.baseUrl)
+    if (r.ok) {
+      const xml = await r.text()
+      const t = xml
+        .replace(/<text[^>]*>/g, ' ').replace(/<\/text>/g, ' ').replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+        .replace(/\s+/g, ' ').trim()
+      if (t.length > 50) return t.slice(0, 8000)
     }
   } catch { /* falhou */ }
 
   return null
 }
 
+// ─────────────────────────────────────────────────────────
+// Transcrição de áudio via Groq Whisper (para vídeos sem legenda)
+// ─────────────────────────────────────────────────────────
+async function transcriptFromAudio(audioFormats: AudioFormat[]): Promise<string | null> {
+  const groqKey = process.env.GROQ_API_KEY
+  if (!groqKey) return null
+
+  // Escolhe o formato de menor bitrate (menos dados para baixar)
+  const sorted = audioFormats
+    .filter((f) => f.url)
+    .sort((a, b) => (a.bitrate ?? 999999) - (b.bitrate ?? 999999))
+
+  const chosen = sorted[0]
+  if (!chosen?.url) return null
+
+  // Determina a extensão pelo mimeType
+  const ext = chosen.mimeType?.includes('webm') ? 'webm' : 'mp4'
+
+  // Baixa no máximo 6MB do áudio (≈ 10 min a 64kbps)
+  let audioBuffer: ArrayBuffer
+  try {
+    const audioRes = await fetch(chosen.url, {
+      headers: { Range: 'bytes=0-6291456' }, // 6MB
+    })
+    if (!audioRes.ok) return null
+    audioBuffer = await audioRes.arrayBuffer()
+  } catch {
+    return null
+  }
+
+  // Envia ao Groq Whisper
+  try {
+    const blob = new Blob([audioBuffer], { type: chosen.mimeType ?? 'audio/mp4' })
+    const form = new FormData()
+    form.append('file', blob, `audio.${ext}`)
+    form.append('model', 'whisper-large-v3-turbo')
+    form.append('language', 'pt')
+    form.append('response_format', 'text')
+
+    const whisperRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${groqKey}` },
+      body: form,
+    })
+
+    if (!whisperRes.ok) {
+      console.error('Groq Whisper error:', await whisperRes.text())
+      return null
+    }
+
+    const texto = (await whisperRes.text()).trim()
+    return texto.length > 50 ? texto.slice(0, 8000) : null
+  } catch (err) {
+    console.error('Erro Groq Whisper:', err)
+    return null
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Pipeline principal do YouTube
+// ─────────────────────────────────────────────────────────
+async function fetchYouTubeContent(videoId: string): Promise<{ texto: string; titulo: string } | null> {
+  // Tenta 3 clientes em ordem de confiabilidade
+  const clients = [
+    { name: 'ANDROID', version: '17.31.35', headers: { 'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11)', 'X-YouTube-Client-Name': '3', 'X-YouTube-Client-Version': '17.31.35' } as Record<string, string> },
+    { name: 'WEB',     version: '2.20231121.08.00', headers: {} as Record<string, string> },
+    { name: 'TVHTML5', version: '7.20230727.00.00', headers: {} as Record<string, string> },
+  ]
+
+  let bestPlayerResponse: Record<string, unknown> | null = null
+  let bestAudioFormats: AudioFormat[] = []
+
+  for (const client of clients) {
+    const pr = await fetchInnerTube(videoId, client.name, client.version, client.headers)
+    if (!pr) continue
+
+    const tracks = getCaptionTracks(pr)
+    if (tracks.length > 0) {
+      // Tem legenda — usa diretamente
+      const texto = await transcriptFromCaptions(tracks)
+      if (texto) {
+        return { texto, titulo: getVideoTitle(pr) || `Vídeo ${videoId}` }
+      }
+    }
+
+    // Guarda formatos de áudio para fallback
+    const audioFmts = getAudioFormats(pr)
+    if (audioFmts.length > bestAudioFormats.length) {
+      bestAudioFormats = audioFmts
+      bestPlayerResponse = pr
+    }
+  }
+
+  // Sem legenda — tenta transcrever via Groq Whisper
+  if (bestAudioFormats.length > 0) {
+    const titulo = bestPlayerResponse ? getVideoTitle(bestPlayerResponse) : `Vídeo ${videoId}`
+    const texto = await transcriptFromAudio(bestAudioFormats)
+    if (texto) return { texto, titulo: titulo || `Vídeo ${videoId}` }
+  }
+
+  return null
+}
+
+// ─────────────────────────────────────────────────────────
+// Handler principal
+// ─────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -208,7 +229,7 @@ export async function POST(req: NextRequest) {
     if (!videoId) return NextResponse.json({ error: 'URL do YouTube inválida' }, { status: 400 })
 
     try {
-      const resultado = await fetchYouTubeTranscript(videoId)
+      const resultado = await fetchYouTubeContent(videoId)
 
       if (resultado?.texto) {
         return NextResponse.json({
@@ -219,21 +240,24 @@ export async function POST(req: NextRequest) {
         })
       }
 
+      const semGroq = !process.env.GROQ_API_KEY
       return NextResponse.json({
         plataforma,
         titulo: `Vídeo YouTube (${videoId})`,
         conteudo: '',
         tipo: 'sem_transcricao',
-        aviso: 'Este vídeo não tem legenda disponível. Cole o conteúdo manualmente abaixo.',
+        aviso: semGroq
+          ? 'Configure a variável GROQ_API_KEY no Vercel para transcrever vídeos sem legenda.'
+          : 'Não foi possível extrair o conteúdo deste vídeo. Cole o texto manualmente abaixo.',
       })
     } catch (err) {
-      console.error('Erro transcrição YouTube:', err)
+      console.error('Erro YouTube:', err)
       return NextResponse.json({
         plataforma,
         titulo: `Vídeo YouTube (${videoId})`,
         conteudo: '',
         tipo: 'sem_transcricao',
-        aviso: 'Não foi possível acessar este vídeo. Cole o conteúdo manualmente abaixo.',
+        aviso: 'Erro ao processar o vídeo. Cole o conteúdo manualmente abaixo.',
       })
     }
   }
@@ -241,9 +265,7 @@ export async function POST(req: NextRequest) {
   // ── Artigo ───────────────────────────────────────────
   if (plataforma === 'artigo') {
     try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; IARABot/1.0)' },
-      })
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; IARABot/1.0)' } })
       const html = await res.text()
       const $ = cheerio.load(html)
 
@@ -270,6 +292,6 @@ export async function POST(req: NextRequest) {
     titulo: url,
     conteudo: '',
     tipo: 'sem_suporte',
-    aviso: `${plataforma === 'tiktok' ? 'TikTok' : 'Instagram'} não permite extração automática. Cole o texto do vídeo manualmente abaixo.`,
+    aviso: `${plataforma === 'tiktok' ? 'TikTok' : 'Instagram'} não permite extração automática. Cole o texto manualmente abaixo.`,
   })
 }
