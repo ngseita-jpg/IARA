@@ -18,12 +18,15 @@ import {
   TrendingUp,
   Layers,
   BookOpen,
+  Image,
 } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
   { label: 'Dashboard',   href: '/dashboard',             icon: LayoutDashboard },
   { label: 'Roteiros',    href: '/dashboard/roteiros',    icon: FileText },
+  { label: 'Carrossel',   href: '/dashboard/carrossel',   icon: Layers },
+  { label: 'Thumbnail',   href: '/dashboard/thumbnail',   icon: Image },
   { label: 'Stories',     href: '/dashboard/stories',     icon: Layers },
   { label: 'Mídia Kit',   href: '/dashboard/midia-kit',   icon: BookOpen },
   { label: 'Métricas',    href: '/dashboard/metricas',    icon: TrendingUp },
