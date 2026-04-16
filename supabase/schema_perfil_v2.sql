@@ -14,4 +14,5 @@ ALTER TABLE creator_profiles
   ADD COLUMN IF NOT EXISTS inspiracoes TEXT,
   ADD COLUMN IF NOT EXISTS desafio_principal TEXT,
   ADD COLUMN IF NOT EXISTS meta_12_meses TEXT,
-  ADD COLUMN IF NOT EXISTS proposito TEXT;
+  ADD COLUMN IF NOT EXISTS proposito TEXT,
+  ADD COLUMN IF NOT EXISTS video_referencias JSONB DEFAULT '[]'::jsonb;

@@ -57,6 +57,9 @@ export default function RoteirosPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [inspiracaoUrl, setInspiacaoUrl] = useState('')
+  const [inspiracaoVideo, setInspiracaoVideo] = useState<{ titulo: string; thumbnail?: string; transcricao?: string | null; aviso?: string } | null>(null)
+  const [analisandoInspiracao, setAnalisandoInspiracao] = useState(false)
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
@@ -70,7 +73,12 @@ export default function RoteirosPage() {
       const res = await fetch('/api/roteiros', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tema, formato, duracao, estilo, objetivo, modo }),
+        body: JSON.stringify({
+          tema, formato, duracao, estilo, objetivo, modo,
+          inspiracao: inspiracaoVideo
+            ? { titulo: inspiracaoVideo.titulo, transcricao: inspiracaoVideo.transcricao }
+            : null,
+        }),
       })
 
       if (!res.ok) {
@@ -99,6 +107,21 @@ export default function RoteirosPage() {
     await navigator.clipboard.writeText(roteiro)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleAnalisarInspiracao() {
+    if (!inspiracaoUrl.trim()) return
+    setAnalisandoInspiracao(true)
+    const res = await fetch('/api/video/analisar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: inspiracaoUrl.trim() }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setInspiracaoVideo(data)
+    }
+    setAnalisandoInspiracao(false)
   }
 
   const hasResult = roteiro.length > 0
@@ -247,6 +270,59 @@ export default function RoteirosPage() {
                 rows={2}
                 className="iara-input resize-none"
               />
+            </div>
+
+            {/* Vídeo de inspiração */}
+            <div>
+              <label className="iara-label">
+                Vídeo de inspiração{' '}
+                <span className="text-[#5a5a7a] font-normal">(opcional)</span>
+              </label>
+              {inspiracaoVideo ? (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-[#0a0a14] border border-iara-700/30">
+                  {inspiracaoVideo.thumbnail && (
+                    <img src={inspiracaoVideo.thumbnail} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[#d0d0e8] truncate">{inspiracaoVideo.titulo}</p>
+                    <p className="text-[10px] mt-0.5">
+                      {inspiracaoVideo.transcricao
+                        ? <span className="text-green-400">transcrição extraída — IA vai aprender a estrutura</span>
+                        : <span className="text-yellow-500/70">{inspiracaoVideo.aviso ?? 'sem transcrição'}</span>
+                      }
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setInspiracaoVideo(null); setInspiacaoUrl('') }}
+                    className="p-1.5 rounded-lg hover:bg-red-900/30 text-[#5a5a7a] hover:text-red-400 transition-colors"
+                  >
+                    <span className="text-xs">✕</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={inspiracaoUrl}
+                    onChange={(e) => setInspiacaoUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAnalisarInspiracao())}
+                    placeholder="Cole um link do YouTube para servir de referência de estrutura…"
+                    className="iara-input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAnalisarInspiracao}
+                    disabled={analisandoInspiracao || !inspiracaoUrl.trim()}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0f0f1e] border border-[#1a1a2e] text-[#9b9bb5] text-xs hover:border-iara-700/40 transition-colors disabled:opacity-40 flex-shrink-0"
+                  >
+                    {analisandoInspiracao
+                      ? <><Loader2 className="w-3 h-3 animate-spin" /> Analisando</>
+                      : <><Play className="w-3 h-3" /> Analisar</>
+                    }
+                  </button>
+                </div>
+              )}
             </div>
 
             {error && (

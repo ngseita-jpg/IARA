@@ -59,6 +59,7 @@ export async function PUT(req: NextRequest) {
         desafio_principal:  body.desafio_principal?.trim()  || null,
         meta_12_meses:      body.meta_12_meses?.trim()      || null,
         proposito:          body.proposito?.trim()          || null,
+        video_referencias:  body.video_referencias          ?? [],
         sobre:              body.sobre?.trim()              || null,
         updated_at:        new Date().toISOString(),
       },

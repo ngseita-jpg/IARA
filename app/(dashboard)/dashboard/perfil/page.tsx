@@ -4,12 +4,21 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ChevronRight, ChevronLeft, Check, Loader2, Sparkles,
-  Mic, Trophy, RefreshCw, User,
+  Mic, Trophy, RefreshCw, User, Play, X,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 import { getPlatformIcon } from '@/components/platform-icons'
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
+
+type VideoRef = {
+  url: string
+  titulo: string
+  plataforma: string
+  thumbnail?: string
+  transcricao?: string | null
+  aviso?: string
+}
 
 type Profile = {
   nome_artistico: string
@@ -32,6 +41,7 @@ type Profile = {
   desafio_principal: string
   meta_12_meses: string
   proposito: string
+  video_referencias: VideoRef[]
   sobre: string
   pontos?: number
   nivel?: number
@@ -46,7 +56,7 @@ const EMPTY: Profile = {
   publico_real: '', plataformas: [], formatos: [], frequencia: '',
   conteudo_marcante: '', tom_de_voz: '', diferencial: '', inspiracoes: '',
   objetivo: '', desafio_principal: '', meta_12_meses: '',
-  proposito: '', sobre: '',
+  proposito: '', video_referencias: [], sobre: '',
 }
 
 // ─── dados de configuração ────────────────────────────────────────────────────
@@ -176,6 +186,8 @@ export default function PerfilPage() {
   const [gerandoPersona, setGerandoPersona] = useState(false)
   const [personaGerada, setPersonaGerada] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState('')
+  const [analisandoVideo, setAnalisandoVideo] = useState(false)
 
   function set(field: keyof Profile, value: unknown) {
     setProfile((p) => ({ ...p, [field]: value }))
@@ -231,6 +243,7 @@ export default function PerfilPage() {
             desafio_principal:  data.desafio_principal  ?? '',
             meta_12_meses:      data.meta_12_meses      ?? '',
             proposito:          data.proposito          ?? '',
+            video_referencias:  data.video_referencias  ?? [],
             sobre:              data.sobre              ?? '',
             pontos:             data.pontos             ?? 0,
             nivel:              data.nivel              ?? 0,
@@ -277,6 +290,41 @@ export default function PerfilPage() {
       showToast('Persona gerada com sucesso!')
     }
     setGerandoPersona(false)
+  }
+
+  async function handleAdicionarVideo() {
+    if (!videoUrl.trim()) return
+    setAnalisandoVideo(true)
+    const res = await fetch('/api/video/analisar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: videoUrl.trim() }),
+    })
+    if (res.ok) {
+      const video: VideoRef = await res.json()
+      const novasRefs = [...profile.video_referencias, video]
+      set('video_referencias', novasRefs)
+      await fetch('/api/perfil', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...profile, video_referencias: novasRefs }),
+      })
+      setVideoUrl('')
+      showToast(video.aviso ?? `"${video.titulo}" adicionado!`)
+    } else {
+      showToast('Não foi possível analisar esse link')
+    }
+    setAnalisandoVideo(false)
+  }
+
+  function handleRemoverVideo(url: string) {
+    const novasRefs = profile.video_referencias.filter((v) => v.url !== url)
+    set('video_referencias', novasRefs)
+    fetch('/api/perfil', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...profile, video_referencias: novasRefs }),
+    })
   }
 
   const badge = getBadgeInfo(profile.pontos ?? 0, profile.nicho || undefined)
@@ -768,6 +816,69 @@ export default function PerfilPage() {
           <p className="text-sm text-[#c4c4d8] leading-relaxed whitespace-pre-wrap">{profile.sobre}</p>
         </div>
       )}
+
+      {/* Vídeos de referência */}
+      <div className="iara-card p-5 mb-6">
+        <div className="mb-4">
+          <p className="text-sm font-semibold text-[#f1f1f8] mb-0.5">Vídeos de referência</p>
+          <p className="text-xs text-[#5a5a7a]">
+            Cole links de vídeos seus ou de outros criadores. A IA vai ler o conteúdo e aprender com o estilo, estrutura e abordagem de cada um.
+          </p>
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-2 mb-4">
+          <input
+            type="url"
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdicionarVideo()}
+            placeholder="Cole um link do YouTube, TikTok ou Instagram…"
+            className="iara-input flex-1"
+          />
+          <button
+            onClick={handleAdicionarVideo}
+            disabled={analisandoVideo || !videoUrl.trim()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-iara-600/20 border border-iara-600/40 text-iara-300 text-sm font-medium hover:opacity-80 transition-opacity disabled:opacity-40 flex-shrink-0"
+          >
+            {analisandoVideo
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analisando…</>
+              : <><Play className="w-3.5 h-3.5" /> Adicionar</>
+            }
+          </button>
+        </div>
+
+        {/* Lista de vídeos */}
+        {profile.video_referencias.length === 0 ? (
+          <p className="text-xs text-[#3a3a5a] text-center py-4">Nenhum vídeo adicionado ainda</p>
+        ) : (
+          <div className="space-y-2">
+            {profile.video_referencias.map((v) => (
+              <div key={v.url} className="flex items-center gap-3 p-3 rounded-xl bg-[#0a0a14] border border-[#1a1a2e]">
+                {v.thumbnail && (
+                  <img src={v.thumbnail} alt="" className="w-14 h-10 rounded-lg object-cover flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-[#d0d0e8] truncate">{v.titulo}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-[#5a5a7a] capitalize">{v.plataforma}</span>
+                    {v.transcricao
+                      ? <span className="text-[10px] text-green-400">· transcrição extraída</span>
+                      : <span className="text-[10px] text-yellow-500/70">· sem transcrição</span>
+                    }
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemoverVideo(v.url)}
+                  className="p-1.5 rounded-lg hover:bg-red-900/30 text-[#5a5a7a] hover:text-red-400 transition-colors flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Link oratória */}
       <div className="iara-card p-4 flex items-center gap-3 border-dashed border-[#2a2a4e]">

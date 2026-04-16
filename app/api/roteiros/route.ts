@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { tema, formato, duracao, estilo, objetivo, modo } = body
+  const { tema, formato, duracao, estilo, objetivo, modo, inspiracao } = body
 
   if (!tema || !formato) {
     return new Response(JSON.stringify({ error: 'Tema e formato são obrigatórios' }), {
@@ -118,7 +118,13 @@ Perfil não configurado — gere um roteiro autêntico e engajador em português
 **Estilo/tom adicional:** ${estilo || 'Use o perfil do criador como referência'}
 **Objetivo do conteúdo:** ${objetivo || 'Engajamento e entrega de valor'}
 
-${perfilContexto}`
+${perfilContexto}${inspiracao ? `
+
+## Vídeo de inspiração: "${inspiracao.titulo}"
+${inspiracao.transcricao
+  ? `Transcrição (use como referência de estrutura, ritmo e abordagem — NÃO copie o conteúdo, apenas aprenda o padrão):
+${inspiracao.transcricao.slice(0, 4000)}`
+  : 'O criador indicou este vídeo como referência de estilo. Considere isso na geração.'}` : ''}`
 
   const stream = anthropic.messages.stream({
     model: 'claude-opus-4-6',
