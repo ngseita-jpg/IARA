@@ -20,7 +20,9 @@ import {
   Play,
   FileText,
   Sliders,
+  Newspaper,
 } from 'lucide-react'
+import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 
 type Step = 'conteudo' | 'imagens' | 'config' | 'preview'
@@ -405,13 +407,13 @@ export default function CarrosselPage() {
                 {/* Exemplos de plataformas */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
-                    { label: 'YouTube', emoji: '▶️', dica: 'Extrai transcrição automática' },
-                    { label: 'Artigo', emoji: '📰', dica: 'Lê o texto principal' },
-                    { label: 'TikTok', emoji: '🎵', dica: 'Cole o texto manualmente' },
-                    { label: 'Instagram', emoji: '📷', dica: 'Cole o texto manualmente' },
+                    { label: 'YouTube',   icon: <YouTubeIcon size={22} />,   dica: 'Extrai transcrição automática' },
+                    { label: 'Artigo',    icon: <Newspaper className="w-5 h-5 text-[#9b9bb5]" />, dica: 'Lê o texto principal' },
+                    { label: 'TikTok',    icon: <TikTokIcon size={22} />,    dica: 'Cole o texto manualmente' },
+                    { label: 'Instagram', icon: <InstagramIcon size={22} />, dica: 'Cole o texto manualmente' },
                   ].map((p) => (
                     <div key={p.label} className="p-3 rounded-lg bg-[#0a0a14] border border-[#1a1a2e] text-center">
-                      <div className="text-lg mb-1">{p.emoji}</div>
+                      <div className="flex justify-center mb-1.5">{p.icon}</div>
                       <div className="text-xs font-medium text-[#c1c1d8]">{p.label}</div>
                       <div className="text-xs text-[#4a4a6a] mt-0.5">{p.dica}</div>
                     </div>

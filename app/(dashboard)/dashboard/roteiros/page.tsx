@@ -12,17 +12,32 @@ import {
   Target,
   Play,
   User,
+  Layers,
+  Radio,
 } from 'lucide-react'
 import Link from 'next/link'
+import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
 
 const FORMATOS = [
-  { value: 'Reel (até 90s)', icon: '🎬', desc: 'Instagram / TikTok' },
-  { value: 'Carrossel', icon: '🖼️', desc: 'Feed do Instagram' },
-  { value: 'Vídeo longo (YouTube)', icon: '▶️', desc: 'YouTube' },
-  { value: 'Stories (sequência)', icon: '📱', desc: 'Instagram / WhatsApp' },
-  { value: 'Live (roteiro ao vivo)', icon: '🔴', desc: 'Instagram / YouTube' },
-  { value: 'YouTube Shorts', icon: '⚡', desc: 'YouTube Shorts' },
+  { value: 'Reel (até 90s)',         iconKey: 'reel',    desc: 'Instagram / TikTok' },
+  { value: 'Carrossel',              iconKey: 'carrossel', desc: 'Feed do Instagram' },
+  { value: 'Vídeo longo (YouTube)',  iconKey: 'youtube', desc: 'YouTube' },
+  { value: 'Stories (sequência)',    iconKey: 'stories', desc: 'Instagram / WhatsApp' },
+  { value: 'Live (roteiro ao vivo)', iconKey: 'live',    desc: 'Instagram / YouTube' },
+  { value: 'YouTube Shorts',        iconKey: 'shorts',  desc: 'YouTube Shorts' },
 ]
+
+function FormatoIcon({ iconKey, size = 18 }: { iconKey: string; size?: number }) {
+  switch (iconKey) {
+    case 'reel':     return <div className="flex gap-0.5"><InstagramIcon size={size} /><TikTokIcon size={size} /></div>
+    case 'carrossel':return <Layers style={{ width: size, height: size }} className="text-pink-400" />
+    case 'youtube':  return <YouTubeIcon size={size} />
+    case 'stories':  return <InstagramIcon size={size} />
+    case 'live':     return <Radio style={{ width: size, height: size }} className="text-red-500" />
+    case 'shorts':   return <YouTubeIcon size={size} />
+    default:         return null
+  }
+}
 
 const DURACOES = [
   '15 a 30 segundos',
@@ -208,7 +223,7 @@ export default function RoteirosPage() {
                           : 'bg-[#0f0f1e] border-iara-900/40 text-[#9b9bb5] hover:border-iara-700/40 hover:text-[#f1f1f8]'
                       }`}
                     >
-                      <span className="text-base flex-shrink-0">{f.icon}</span>
+                      <span className="flex-shrink-0 flex items-center"><FormatoIcon iconKey={f.iconKey} size={16} /></span>
                       <div>
                         <p className="text-xs font-medium leading-tight">{f.value}</p>
                         <p className="text-[10px] text-[#5a5a7a] leading-tight">{f.desc}</p>

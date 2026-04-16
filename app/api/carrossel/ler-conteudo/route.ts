@@ -14,81 +14,182 @@ function detectPlatform(url: string) {
   return 'artigo'
 }
 
-// Extrai transcrição diretamente da página do YouTube
-async function fetchYouTubeTranscript(videoId: string): Promise<{ texto: string; titulo: string } | null> {
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  }
+type CaptionTrack = {
+  baseUrl: string
+  languageCode: string
+  kind?: string
+}
 
-  // 1. Buscar a página do vídeo
-  const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, { headers })
-  if (!pageRes.ok) return null
-  const html = await pageRes.text()
-
-  // 2. Extrair ytInitialPlayerResponse do HTML
-  const match = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});(?:var|const|let|\s*<\/script>)/)
-  if (!match) return null
-
-  let playerResponse: Record<string, unknown>
+// Usa a InnerTube API do YouTube (muito mais confiável que scraping)
+async function fetchPlayerResponse(videoId: string): Promise<Record<string, unknown> | null> {
+  // Tentativa 1: cliente ANDROID (retorna captions mesmo sem login)
   try {
-    playerResponse = JSON.parse(match[1])
-  } catch {
-    return null
-  }
+    const res = await fetch(
+      'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11)',
+          'X-YouTube-Client-Name': '3',
+          'X-YouTube-Client-Version': '17.31.35',
+        },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: 'ANDROID',
+              clientVersion: '17.31.35',
+              androidSdkVersion: 30,
+              hl: 'pt',
+              gl: 'BR',
+            },
+          },
+          videoId,
+        }),
+      }
+    )
+    if (res.ok) {
+      const data = await res.json() as Record<string, unknown>
+      const tracks = getCaptionTracks(data)
+      if (tracks.length > 0) return data
+    }
+  } catch { /* tenta próximo */ }
 
-  // 3. Extrair título do vídeo
-  const titulo = (playerResponse?.videoDetails as Record<string, unknown>)?.title as string | undefined
+  // Tentativa 2: cliente WEB
+  try {
+    const res = await fetch(
+      'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: {
+            client: {
+              clientName: 'WEB',
+              clientVersion: '2.20231121.08.00',
+              hl: 'pt',
+              gl: 'BR',
+            },
+          },
+          videoId,
+        }),
+      }
+    )
+    if (res.ok) {
+      const data = await res.json() as Record<string, unknown>
+      const tracks = getCaptionTracks(data)
+      if (tracks.length > 0) return data
+    }
+  } catch { /* tenta próximo */ }
 
-  // 4. Encontrar as trilhas de legenda
+  // Tentativa 3: scraping da página
+  try {
+    const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+      },
+    })
+    if (pageRes.ok) {
+      const html = await pageRes.text()
+      // Tenta múltiplos padrões de extração
+      const patterns = [
+        /ytInitialPlayerResponse\s*=\s*(\{.+?\});\s*(?:var|const|let|<\/script>)/,
+        /ytInitialPlayerResponse\s*=\s*(\{[\s\S]+?\});\s*(?:var|const|let|<)/,
+        /"ytInitialPlayerResponse"\s*:\s*(\{[\s\S]+?\}),\s*"ytInitialData"/,
+      ]
+      for (const pattern of patterns) {
+        const match = html.match(pattern)
+        if (match) {
+          try {
+            const data = JSON.parse(match[1]) as Record<string, unknown>
+            const tracks = getCaptionTracks(data)
+            if (tracks.length > 0) return data
+          } catch { /* continua */ }
+        }
+      }
+    }
+  } catch { /* falhou */ }
+
+  return null
+}
+
+function getCaptionTracks(playerResponse: Record<string, unknown>): CaptionTrack[] {
   const captions = playerResponse?.captions as Record<string, unknown> | undefined
-  const trackList = (captions?.playerCaptionsTracklistRenderer as Record<string, unknown>)?.captionTracks as Array<Record<string, unknown>> | undefined
+  const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined
+  const tracks = renderer?.captionTracks as CaptionTrack[] | undefined
+  return tracks ?? []
+}
 
-  if (!trackList?.length) return null
+function getVideoTitle(playerResponse: Record<string, unknown>): string {
+  const details = playerResponse?.videoDetails as Record<string, unknown> | undefined
+  return (details?.title as string | undefined) ?? ''
+}
 
-  // 5. Priorizar: PT-BR → PT → qualquer idioma
-  const track =
-    trackList.find((t) => String(t.languageCode).toLowerCase().startsWith('pt')) ??
-    trackList[0]
+async function parseCaptionXml(xml: string): Promise<string> {
+  return xml
+    .replace(/<text[^>]*>/g, ' ')
+    .replace(/<\/text>/g, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
-  const captionUrl = track?.baseUrl as string | undefined
-  if (!captionUrl) return null
-
-  // 6. Buscar o XML da legenda
-  const captionRes = await fetch(captionUrl + '&fmt=json3', { headers })
-  if (!captionRes.ok) {
-    // fallback: tentar XML
-    const xmlRes = await fetch(captionUrl, { headers })
-    if (!xmlRes.ok) return null
-    const xml = await xmlRes.text()
-    const texto = xml
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 8000)
-    return { texto, titulo: titulo ?? `Vídeo ${videoId}` }
-  }
-
-  // 7. Parsear JSON3 format (mais limpo)
-  const captionJson = await captionRes.json() as { events?: Array<{ segs?: Array<{ utf8?: string }> }> }
-  const texto = (captionJson.events ?? [])
+async function parseCaptionJson3(json: unknown): Promise<string> {
+  const data = json as { events?: Array<{ segs?: Array<{ utf8?: string }> }> }
+  return (data.events ?? [])
     .flatMap((e) => e.segs ?? [])
     .map((s) => s.utf8 ?? '')
     .join(' ')
     .replace(/\n/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 8000)
+}
 
-  if (!texto) return null
+async function fetchYouTubeTranscript(videoId: string): Promise<{ texto: string; titulo: string } | null> {
+  const playerResponse = await fetchPlayerResponse(videoId)
+  if (!playerResponse) return null
 
-  return { texto, titulo: titulo ?? `Vídeo ${videoId}` }
+  const titulo = getVideoTitle(playerResponse) || `Vídeo ${videoId}`
+  const tracks = getCaptionTracks(playerResponse)
+  if (!tracks.length) return null
+
+  // Prioridade: PT-BR → PT → ASR (auto) em qualquer idioma → primeira disponível
+  const track =
+    tracks.find((t) => t.languageCode === 'pt-BR') ??
+    tracks.find((t) => t.languageCode === 'pt') ??
+    tracks.find((t) => t.languageCode?.startsWith('pt')) ??
+    tracks.find((t) => t.kind === 'asr') ??
+    tracks[0]
+
+  if (!track?.baseUrl) return null
+
+  // Tentar JSON3 primeiro (mais limpo)
+  try {
+    const jsonRes = await fetch(track.baseUrl + '&fmt=json3')
+    if (jsonRes.ok) {
+      const json = await jsonRes.json()
+      const texto = await parseCaptionJson3(json)
+      if (texto.length > 50) return { texto: texto.slice(0, 8000), titulo }
+    }
+  } catch { /* tenta XML */ }
+
+  // Fallback: XML
+  try {
+    const xmlRes = await fetch(track.baseUrl)
+    if (xmlRes.ok) {
+      const xml = await xmlRes.text()
+      const texto = await parseCaptionXml(xml)
+      if (texto.length > 50) return { texto: texto.slice(0, 8000), titulo }
+    }
+  } catch { /* falhou */ }
+
+  return null
 }
 
 export async function POST(req: NextRequest) {
@@ -118,13 +219,12 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // Sem legenda disponível
       return NextResponse.json({
         plataforma,
         titulo: `Vídeo YouTube (${videoId})`,
         conteudo: '',
         tipo: 'sem_transcricao',
-        aviso: 'Este vídeo não tem legenda/transcrição disponível. Cole o conteúdo do vídeo manualmente abaixo.',
+        aviso: 'Este vídeo não tem legenda disponível. Cole o conteúdo manualmente abaixo.',
       })
     } catch (err) {
       console.error('Erro transcrição YouTube:', err)
@@ -133,7 +233,7 @@ export async function POST(req: NextRequest) {
         titulo: `Vídeo YouTube (${videoId})`,
         conteudo: '',
         tipo: 'sem_transcricao',
-        aviso: 'Não foi possível acessar a transcrição. Cole o conteúdo do vídeo manualmente abaixo.',
+        aviso: 'Não foi possível acessar este vídeo. Cole o conteúdo manualmente abaixo.',
       })
     }
   }
