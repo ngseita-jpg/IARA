@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import * as cheerio from 'cheerio'
 
-// Aumenta o timeout da rota para 60s (necessário para transcrição de áudio)
 export const maxDuration = 60
 
 function extractYouTubeId(url: string) {
@@ -18,10 +17,9 @@ function detectPlatform(url: string) {
 }
 
 type CaptionTrack = { baseUrl: string; languageCode: string; kind?: string }
-type AudioFormat  = { url?: string; mimeType?: string; bitrate?: number; contentLength?: string }
 
 // ─────────────────────────────────────────────────────────
-// InnerTube: busca o player response do YouTube
+// InnerTube API
 // ─────────────────────────────────────────────────────────
 async function fetchInnerTube(videoId: string, clientName: string, clientVersion: string, extraHeaders: Record<string, string> = {}): Promise<Record<string, unknown> | null> {
   try {
@@ -29,11 +27,7 @@ async function fetchInnerTube(videoId: string, clientName: string, clientVersion
       'https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept-Language': 'pt-BR,pt;q=0.9',
-          ...extraHeaders,
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept-Language': 'pt-BR,pt;q=0.9', ...extraHeaders },
         body: JSON.stringify({
           context: { client: { clientName, clientVersion, hl: 'pt', gl: 'BR' } },
           videoId,
@@ -42,9 +36,7 @@ async function fetchInnerTube(videoId: string, clientName: string, clientVersion
     )
     if (!res.ok) return null
     return await res.json() as Record<string, unknown>
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 function getCaptionTracks(pr: Record<string, unknown>): CaptionTrack[] {
@@ -54,18 +46,17 @@ function getCaptionTracks(pr: Record<string, unknown>): CaptionTrack[] {
   return tracks ?? []
 }
 
-function getAudioFormats(pr: Record<string, unknown>): AudioFormat[] {
-  const formats = ((pr?.streamingData as Record<string, unknown>)
-    ?.adaptiveFormats as AudioFormat[] | undefined) ?? []
-  return formats.filter((f) => f.url && f.mimeType?.includes('audio'))
-}
-
 function getVideoTitle(pr: Record<string, unknown>): string {
   return ((pr?.videoDetails as Record<string, unknown>)?.title as string | undefined) ?? ''
 }
 
+function getVideoDescription(pr: Record<string, unknown>): string {
+  const details = pr?.videoDetails as Record<string, unknown> | undefined
+  return (details?.shortDescription as string | undefined) ?? ''
+}
+
 // ─────────────────────────────────────────────────────────
-// Extrai legendas do player response
+// Extrai legendas
 // ─────────────────────────────────────────────────────────
 async function transcriptFromCaptions(tracks: CaptionTrack[]): Promise<string | null> {
   const track =
@@ -77,7 +68,6 @@ async function transcriptFromCaptions(tracks: CaptionTrack[]): Promise<string | 
 
   if (!track?.baseUrl) return null
 
-  // JSON3 (mais limpo)
   try {
     const r = await fetch(track.baseUrl + '&fmt=json3')
     if (r.ok) {
@@ -90,7 +80,6 @@ async function transcriptFromCaptions(tracks: CaptionTrack[]): Promise<string | 
     }
   } catch { /* tenta XML */ }
 
-  // XML fallback
   try {
     const r = await fetch(track.baseUrl)
     if (r.ok) {
@@ -108,110 +97,122 @@ async function transcriptFromCaptions(tracks: CaptionTrack[]): Promise<string | 
 }
 
 // ─────────────────────────────────────────────────────────
-// Transcrição de áudio via Groq Whisper (para vídeos sem legenda)
+// Extrai metadados da página (fallback sem legenda)
 // ─────────────────────────────────────────────────────────
-async function transcriptFromAudio(audioFormats: AudioFormat[]): Promise<string | null> {
-  const groqKey = process.env.GROQ_API_KEY
-  if (!groqKey) return null
-
-  // Escolhe o formato de menor bitrate (menos dados para baixar)
-  const sorted = audioFormats
-    .filter((f) => f.url)
-    .sort((a, b) => (a.bitrate ?? 999999) - (b.bitrate ?? 999999))
-
-  const chosen = sorted[0]
-  if (!chosen?.url) return null
-
-  // Determina a extensão pelo mimeType
-  const ext = chosen.mimeType?.includes('webm') ? 'webm' : 'mp4'
-
-  // Baixa no máximo 6MB do áudio (≈ 10 min a 64kbps)
-  let audioBuffer: ArrayBuffer
+async function fetchYouTubeMetadata(videoId: string): Promise<{ titulo: string; descricao: string; capitulos: string } | null> {
   try {
-    const audioRes = await fetch(chosen.url, {
-      headers: { Range: 'bytes=0-6291456' }, // 6MB
+    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+      },
     })
-    if (!audioRes.ok) return null
-    audioBuffer = await audioRes.arrayBuffer()
-  } catch {
-    return null
-  }
+    if (!res.ok) return null
+    const html = await res.text()
 
-  // Envia ao Groq Whisper
-  try {
-    const blob = new Blob([audioBuffer], { type: chosen.mimeType ?? 'audio/mp4' })
-    const form = new FormData()
-    form.append('file', blob, `audio.${ext}`)
-    form.append('model', 'whisper-large-v3-turbo')
-    form.append('language', 'pt')
-    form.append('response_format', 'text')
+    // Extrai ytInitialData para pegar descrição e capítulos
+    const dataMatch = html.match(/ytInitialData\s*=\s*(\{[\s\S]+?\});\s*(?:var|const|let|<\/script>)/)
+    let descricao = ''
+    let capitulos = ''
 
-    const whisperRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${groqKey}` },
-      body: form,
-    })
-
-    if (!whisperRes.ok) {
-      console.error('Groq Whisper error:', await whisperRes.text())
-      return null
+    if (dataMatch) {
+      try {
+        const data = JSON.parse(dataMatch[1]) as Record<string, unknown>
+        // Descrição
+        const contents = (((data?.contents as Record<string, unknown>)
+          ?.twoColumnWatchNextResults as Record<string, unknown>)
+          ?.results as Record<string, unknown>)
+          ?.results as Record<string, unknown>
+        const items = (contents?.contents as Array<Record<string, unknown>>) ?? []
+        for (const item of items) {
+          const video = item?.videoPrimaryInfoRenderer as Record<string, unknown> | undefined
+          if (video) {
+            const desc = (video?.description as Record<string, unknown>)?.runs as Array<{ text?: string }> | undefined
+            if (desc) descricao = desc.map((r) => r.text ?? '').join('').slice(0, 3000)
+          }
+          // Capítulos
+          const secondary = item?.videoSecondaryInfoRenderer as Record<string, unknown> | undefined
+          if (secondary) {
+            const descRuns = ((secondary?.description as Record<string, unknown>)?.runs) as Array<{ text?: string }> | undefined
+            if (descRuns) {
+              const texto = descRuns.map((r) => r.text ?? '').join('')
+              // Detecta padrão de capítulos (00:00 Intro etc.)
+              const capMatches = texto.match(/\d+:\d+\s+.+/g)
+              if (capMatches?.length) capitulos = capMatches.join('\n')
+            }
+          }
+        }
+      } catch { /* continua */ }
     }
 
-    const texto = (await whisperRes.text()).trim()
-    return texto.length > 50 ? texto.slice(0, 8000) : null
-  } catch (err) {
-    console.error('Erro Groq Whisper:', err)
-    return null
-  }
+    // Título via oEmbed (mais confiável)
+    let titulo = ''
+    try {
+      const oembed = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      if (oembed.ok) titulo = ((await oembed.json()) as { title?: string }).title ?? ''
+    } catch { /* ignora */ }
+
+    if (!titulo && !descricao) return null
+
+    return { titulo, descricao, capitulos }
+  } catch { return null }
 }
 
 // ─────────────────────────────────────────────────────────
-// Pipeline principal do YouTube
+// Pipeline principal
 // ─────────────────────────────────────────────────────────
-async function fetchYouTubeContent(videoId: string): Promise<{ texto: string; titulo: string } | null> {
-  // Tenta 3 clientes em ordem de confiabilidade
-  const clients = [
-    { name: 'ANDROID', version: '17.31.35', headers: { 'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11)', 'X-YouTube-Client-Name': '3', 'X-YouTube-Client-Version': '17.31.35' } as Record<string, string> },
-    { name: 'WEB',     version: '2.20231121.08.00', headers: {} as Record<string, string> },
-    { name: 'TVHTML5', version: '7.20230727.00.00', headers: {} as Record<string, string> },
+async function fetchYouTubeContent(videoId: string): Promise<{ texto: string; titulo: string; tipo: string } | null> {
+  const clients: Array<{ name: string; version: string; headers: Record<string, string> }> = [
+    { name: 'ANDROID', version: '17.31.35', headers: { 'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11)', 'X-YouTube-Client-Name': '3', 'X-YouTube-Client-Version': '17.31.35' } },
+    { name: 'WEB',     version: '2.20231121.08.00', headers: {} },
+    { name: 'TVHTML5', version: '7.20230727.00.00', headers: {} },
   ]
 
-  let bestPlayerResponse: Record<string, unknown> | null = null
-  let bestAudioFormats: AudioFormat[] = []
+  let bestTitle = ''
 
   for (const client of clients) {
     const pr = await fetchInnerTube(videoId, client.name, client.version, client.headers)
     if (!pr) continue
 
+    if (!bestTitle) bestTitle = getVideoTitle(pr)
+
+    // 1. Tenta legendas
     const tracks = getCaptionTracks(pr)
     if (tracks.length > 0) {
-      // Tem legenda — usa diretamente
       const texto = await transcriptFromCaptions(tracks)
-      if (texto) {
-        return { texto, titulo: getVideoTitle(pr) || `Vídeo ${videoId}` }
-      }
+      if (texto) return { texto, titulo: getVideoTitle(pr) || bestTitle, tipo: 'transcricao' }
     }
 
-    // Guarda formatos de áudio para fallback
-    const audioFmts = getAudioFormats(pr)
-    if (audioFmts.length > bestAudioFormats.length) {
-      bestAudioFormats = audioFmts
-      bestPlayerResponse = pr
+    // 2. Tenta descrição do player response
+    const descricao = getVideoDescription(pr)
+    if (descricao.length > 100) {
+      return {
+        texto: `Título: ${getVideoTitle(pr)}\n\nDescrição:\n${descricao}`,
+        titulo: getVideoTitle(pr) || bestTitle,
+        tipo: 'descricao',
+      }
     }
   }
 
-  // Sem legenda — tenta transcrever via Groq Whisper
-  if (bestAudioFormats.length > 0) {
-    const titulo = bestPlayerResponse ? getVideoTitle(bestPlayerResponse) : `Vídeo ${videoId}`
-    const texto = await transcriptFromAudio(bestAudioFormats)
-    if (texto) return { texto, titulo: titulo || `Vídeo ${videoId}` }
+  // 3. Fallback: scraping da página (título + descrição + capítulos)
+  const meta = await fetchYouTubeMetadata(videoId)
+  if (meta) {
+    const partes = [
+      `Título: ${meta.titulo}`,
+      meta.descricao ? `Descrição do vídeo:\n${meta.descricao}` : '',
+      meta.capitulos ? `Capítulos/estrutura do vídeo:\n${meta.capitulos}` : '',
+    ].filter(Boolean)
+
+    if (partes.length > 1) {
+      return { texto: partes.join('\n\n'), titulo: meta.titulo, tipo: 'descricao' }
+    }
   }
 
   return null
 }
 
 // ─────────────────────────────────────────────────────────
-// Handler principal
+// Handler
 // ─────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const supabase = createClient()
@@ -231,24 +232,26 @@ export async function POST(req: NextRequest) {
     try {
       const resultado = await fetchYouTubeContent(videoId)
 
-      if (resultado?.texto) {
+      if (resultado) {
+        const aviso = resultado.tipo === 'descricao'
+          ? 'Este vídeo não tem legenda — usando título e descrição como base para o carrossel.'
+          : undefined
+
         return NextResponse.json({
           plataforma,
           titulo: resultado.titulo,
           conteudo: resultado.texto,
-          tipo: 'transcricao',
+          tipo: resultado.tipo,
+          ...(aviso ? { aviso } : {}),
         })
       }
 
-      const semGroq = !process.env.GROQ_API_KEY
       return NextResponse.json({
         plataforma,
         titulo: `Vídeo YouTube (${videoId})`,
         conteudo: '',
-        tipo: 'sem_transcricao',
-        aviso: semGroq
-          ? 'Configure a variável GROQ_API_KEY no Vercel para transcrever vídeos sem legenda.'
-          : 'Não foi possível extrair o conteúdo deste vídeo. Cole o texto manualmente abaixo.',
+        tipo: 'sem_conteudo',
+        aviso: 'Não foi possível extrair conteúdo deste vídeo. Cole o texto manualmente abaixo.',
       })
     } catch (err) {
       console.error('Erro YouTube:', err)
@@ -256,7 +259,7 @@ export async function POST(req: NextRequest) {
         plataforma,
         titulo: `Vídeo YouTube (${videoId})`,
         conteudo: '',
-        tipo: 'sem_transcricao',
+        tipo: 'sem_conteudo',
         aviso: 'Erro ao processar o vídeo. Cole o conteúdo manualmente abaixo.',
       })
     }
@@ -272,7 +275,6 @@ export async function POST(req: NextRequest) {
       $('script, style, nav, footer, header, aside, [class*="menu"], [class*="sidebar"], [class*="ad"], [class*="banner"]').remove()
 
       const titulo = $('h1').first().text().trim() || $('title').text().trim() || url
-
       const seletores = ['article', 'main', '[class*="content"]', '[class*="article"]', '[class*="post"]', 'body']
       let conteudo = ''
       for (const sel of seletores) {
