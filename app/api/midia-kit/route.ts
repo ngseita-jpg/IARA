@@ -100,7 +100,7 @@ Retorne SOMENTE JSON válido:
 }`
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await (anthropic.messages.create as (body: unknown) => Promise<Anthropic.Message>)({
       model: 'claude-opus-4-6',
       max_tokens: 3000,
       thinking: { type: 'adaptive' },
