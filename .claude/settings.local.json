@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(supabase --version)",
+      "Bash(psql --version)",
+      "Bash(curl -s -X POST https://api.supabase.com/v1/projects/jirrewtrfjgfkrtqpldu/database/query -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Content-Type: application/json' -d '{\"query\": \"SELECT 1 as test\"}')",
+      "Bash(curl -s -X POST https://jirrewtrfjgfkrtqpldu.supabase.co/pg/query -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Content-Type: application/json' -d '{\"query\":\"SELECT 1\"}')",
+      "Read(//tmp/**)",
+      "Bash(node -e ' *)",
+      "Bash(timeout 5 node -e ' *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/dashboard/perfil)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/dashboard/roteiros)",
+      "Bash(curl -s https://jirrewtrfjgfkrtqpldu.supabase.co/auth/v1/settings -H 'apikey: sb_publishable_nX7z2NbPi4eUYEhazbfMSg_trMgndl4')",
+      "Bash(python3 -c \" import sys, json data = json.load\\(sys.stdin\\) print\\('mailer_autoconfirm:', data.get\\('mailer_autoconfirm'\\)\\) print\\('email_confirm:', data.get\\('email_confirm_changes'\\)\\) print\\('disable_signup:', data.get\\('disable_signup'\\)\\) \")",
+      "Bash(curl -s \"https://jirrewtrfjgfkrtqpldu.supabase.co/auth/v1/settings\" -H \"apikey: sb_publishable_nX7z2NbPi4eUYEhazbfMSg_trMgndl4\")",
+      "Bash(curl -s https://jirrewtrfjgfkrtqpldu.supabase.co/auth/v1/admin/users -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI')",
+      "Bash(curl -s -X PUT https://jirrewtrfjgfkrtqpldu.supabase.co/auth/v1/admin/users/dd3ce31c-a741-4446-8b0f-478b039d7a3d -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Content-Type: application/json' -d '{\"email_confirm\": true}')",
+      "Bash(npx tsc *)",
+      "Bash(curl -s 'https://jirrewtrfjgfkrtqpldu.supabase.co/rest/v1/voice_analyses?limit=1' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/dashboard/oratorio)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3002/dashboard/metas)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' 'https://jirrewtrfjgfkrtqpldu.supabase.co/rest/v1/__TRACKED_VAR__?limit=1' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppcnJld3RyZmpnZmtydHFwbGR1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2ODgwNywiZXhwIjoyMDkxNzQ0ODA3fQ.XcfvkBDVB0-sUbndv-4P6k4j7XCWbx4VaSnBo_Ya5pI')"
+    ]
+  }
+}
