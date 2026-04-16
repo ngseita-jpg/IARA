@@ -95,7 +95,7 @@ As 3 ações mais importantes que esse criador deve fazer nos próximos 30 dias 
 Escreva em português brasileiro, de forma natural e personalizada. Evite clichês como "criar conteúdo de valor", "postar de forma consistente" sem contexto específico.`
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await (anthropic.messages.create as (body: unknown) => Promise<Anthropic.Message>)({
       model: 'claude-opus-4-6',
       max_tokens: 2000,
       thinking: { type: 'adaptive' },
