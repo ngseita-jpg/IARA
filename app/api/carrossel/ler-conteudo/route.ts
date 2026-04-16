@@ -17,6 +17,7 @@ function detectPlatform(url: string) {
 }
 
 type CaptionTrack = { baseUrl: string; languageCode: string; kind?: string }
+type AudioFormat  = { url?: string; mimeType?: string; bitrate?: number }
 
 // ─────────────────────────────────────────────────────────
 // InnerTube API
@@ -53,6 +54,62 @@ function getVideoTitle(pr: Record<string, unknown>): string {
 function getVideoDescription(pr: Record<string, unknown>): string {
   const details = pr?.videoDetails as Record<string, unknown> | undefined
   return (details?.shortDescription as string | undefined) ?? ''
+}
+
+function getAudioFormats(pr: Record<string, unknown>): AudioFormat[] {
+  const formats = ((pr?.streamingData as Record<string, unknown>)
+    ?.adaptiveFormats as AudioFormat[] | undefined) ?? []
+  return formats.filter((f) => f.url && f.mimeType?.includes('audio'))
+}
+
+// ─────────────────────────────────────────────────────────
+// Transcrição de áudio via OpenAI Whisper
+// ─────────────────────────────────────────────────────────
+async function transcriptFromAudio(audioFormats: AudioFormat[]): Promise<string | null> {
+  const openaiKey = process.env.OPENAI_API_KEY
+  if (!openaiKey || !audioFormats.length) return null
+
+  // Menor bitrate = menor arquivo = mais rápido
+  const sorted = audioFormats.sort((a, b) => (a.bitrate ?? 999999) - (b.bitrate ?? 999999))
+  const chosen = sorted[0]
+  if (!chosen?.url) return null
+
+  const ext = chosen.mimeType?.includes('webm') ? 'webm' : 'mp4'
+
+  // Baixa até 6MB (≈ 10min a 64kbps)
+  let audioBuffer: ArrayBuffer
+  try {
+    const r = await fetch(chosen.url, { headers: { Range: 'bytes=0-6291456' } })
+    if (!r.ok) return null
+    audioBuffer = await r.arrayBuffer()
+  } catch { return null }
+
+  // Envia ao Whisper
+  try {
+    const blob = new Blob([audioBuffer], { type: chosen.mimeType ?? 'audio/mp4' })
+    const form = new FormData()
+    form.append('file', blob, `audio.${ext}`)
+    form.append('model', 'whisper-1')
+    form.append('language', 'pt')
+    form.append('response_format', 'text')
+
+    const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${openaiKey}` },
+      body: form,
+    })
+
+    if (!r.ok) {
+      console.error('Whisper error:', await r.text())
+      return null
+    }
+
+    const texto = (await r.text()).trim()
+    return texto.length > 50 ? texto.slice(0, 8000) : null
+  } catch (err) {
+    console.error('Erro Whisper:', err)
+    return null
+  }
 }
 
 // ─────────────────────────────────────────────────────────
@@ -169,28 +226,43 @@ async function fetchYouTubeContent(videoId: string): Promise<{ texto: string; ti
   ]
 
   let bestTitle = ''
+  let bestAudioFormats: AudioFormat[] = []
+  let bestDescription = ''
 
   for (const client of clients) {
     const pr = await fetchInnerTube(videoId, client.name, client.version, client.headers)
     if (!pr) continue
 
-    if (!bestTitle) bestTitle = getVideoTitle(pr)
+    const titulo = getVideoTitle(pr)
+    if (!bestTitle && titulo) bestTitle = titulo
 
     // 1. Tenta legendas
     const tracks = getCaptionTracks(pr)
     if (tracks.length > 0) {
       const texto = await transcriptFromCaptions(tracks)
-      if (texto) return { texto, titulo: getVideoTitle(pr) || bestTitle, tipo: 'transcricao' }
+      if (texto) return { texto, titulo: titulo || bestTitle, tipo: 'transcricao' }
     }
 
-    // 2. Tenta descrição do player response
-    const descricao = getVideoDescription(pr)
-    if (descricao.length > 100) {
-      return {
-        texto: `Título: ${getVideoTitle(pr)}\n\nDescrição:\n${descricao}`,
-        titulo: getVideoTitle(pr) || bestTitle,
-        tipo: 'descricao',
-      }
+    // Guarda áudio e descrição para fallbacks
+    const audioFmts = getAudioFormats(pr)
+    if (audioFmts.length > bestAudioFormats.length) bestAudioFormats = audioFmts
+
+    const desc = getVideoDescription(pr)
+    if (desc.length > bestDescription.length) bestDescription = desc
+  }
+
+  // 2. Sem legenda — tenta transcrever o áudio via Whisper
+  if (bestAudioFormats.length > 0) {
+    const texto = await transcriptFromAudio(bestAudioFormats)
+    if (texto) return { texto, titulo: bestTitle, tipo: 'transcricao' }
+  }
+
+  // 3. Fallback final: descrição do vídeo
+  if (bestDescription.length > 100) {
+    return {
+      texto: `Título: ${bestTitle}\n\nDescrição:\n${bestDescription}`,
+      titulo: bestTitle,
+      tipo: 'descricao',
     }
   }
 
