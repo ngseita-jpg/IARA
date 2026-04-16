@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
-  User, Calendar, Mic, Target, Layers, BookOpen,
+  User, Calendar, Mic, Target, Layers, BookOpen, Image,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 
@@ -44,6 +44,26 @@ const modules = [
     href: '/dashboard/perfil',
     gradient: 'from-accent-purple/15 to-iara-600/10',
     border: 'border-accent-purple/20',
+    badge: 'Disponível',
+    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
+  },
+  {
+    icon: Layers,
+    label: 'Gerador de Carrossel',
+    description: 'Cole um link, texto ou vídeo e a Iara monta o carrossel completo com imagens, texto e paleta. Chat de ajustes incluso.',
+    href: '/dashboard/carrossel',
+    gradient: 'from-accent-pink/15 to-accent-purple/10',
+    border: 'border-accent-pink/20',
+    badge: 'Disponível',
+    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
+  },
+  {
+    icon: Image,
+    label: 'Gerador de Thumbnail',
+    description: 'Thumbnails de alto CTR para YouTube e Reels. Sobe a foto, descreve o vídeo — a Iara cria em segundos.',
+    href: '/dashboard/thumbnail',
+    gradient: 'from-teal-900/20 to-accent-purple/10',
+    border: 'border-teal-800/20',
     badge: 'Disponível',
     badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
   },
@@ -105,18 +125,6 @@ export default async function DashboardPage() {
   const nicho = profile?.nicho ?? undefined
   const badge = getBadgeInfo(pontos, nicho)
 
-  // Buscar métricas para o widget de resumo
-  const { data: metricas } = await supabase
-    .from('metricas_redes')
-    .select('plataforma, seguidores, alcance_mensal, visualizacoes_mensais, taxa_engajamento')
-    .eq('user_id', user?.id ?? '')
-
-  const totalSeguidores = (metricas ?? []).reduce((s, m) => s + (m.seguidores ?? 0), 0)
-  const metricasComEng = (metricas ?? []).filter((m) => m.taxa_engajamento != null)
-  const engMedio = metricasComEng.length > 0
-    ? metricasComEng.reduce((s, m) => s + (m.taxa_engajamento ?? 0), 0) / metricasComEng.length
-    : 0
-
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -151,36 +159,6 @@ export default async function DashboardPage() {
               )}
             </div>
           </Link>
-        </div>
-      </div>
-
-      {/* Métricas + Stats strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <div className="iara-card px-4 py-4 text-center">
-          <p className="text-2xl font-bold iara-gradient-text">{pontos.toLocaleString('pt-BR')}</p>
-          <p className="text-xs text-[#5a5a7a] mt-1">Pontos acumulados</p>
-        </div>
-        <div className="iara-card px-4 py-4 text-center">
-          <p className="text-2xl font-bold iara-gradient-text">
-            {totalSeguidores >= 1000000
-              ? `${(totalSeguidores / 1000000).toFixed(1)}M`
-              : totalSeguidores >= 1000
-              ? `${(totalSeguidores / 1000).toFixed(1)}K`
-              : totalSeguidores > 0 ? totalSeguidores.toLocaleString('pt-BR') : '—'}
-          </p>
-          <p className="text-xs text-[#5a5a7a] mt-1">Seguidores totais</p>
-        </div>
-        <div className="iara-card px-4 py-4 text-center">
-          <p className="text-2xl font-bold iara-gradient-text">
-            {engMedio > 0 ? `${engMedio.toFixed(2)}%` : '—'}
-          </p>
-          <p className="text-xs text-[#5a5a7a] mt-1">Eng. médio</p>
-        </div>
-        <div className="iara-card px-4 py-4 text-center">
-          <p className="text-2xl font-bold iara-gradient-text">
-            {profile?.voz_score_medio ? `${profile.voz_score_medio}/100` : '—'}
-          </p>
-          <p className="text-xs text-[#5a5a7a] mt-1">Score de oratória</p>
         </div>
       </div>
 
