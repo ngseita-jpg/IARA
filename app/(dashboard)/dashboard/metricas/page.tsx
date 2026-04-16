@@ -6,6 +6,8 @@ import {
   Heart, MessageCircle, Share2, Bookmark, BarChart2,
   RefreshCw, ChevronDown, ChevronUp, X, Check,
 } from 'lucide-react'
+import { getPlatformIcon } from '@/components/platform-icons'
+import { SocialConnect } from '@/components/social-connect'
 
 // ─── tipos ───────────────────────────────────────────────────────────────────
 
@@ -37,17 +39,17 @@ interface Profile {
 // ─── constantes ──────────────────────────────────────────────────────────────
 
 const PLATAFORMAS = [
-  { value: 'instagram', label: 'Instagram', color: '#E1306C', bg: 'bg-pink-900/20', border: 'border-pink-800/30', text: 'text-pink-400', icon: '📸' },
-  { value: 'youtube',   label: 'YouTube',   color: '#FF0000', bg: 'bg-red-900/20',  border: 'border-red-800/30',  text: 'text-red-400',  icon: '▶️' },
-  { value: 'tiktok',    label: 'TikTok',    color: '#69C9D0', bg: 'bg-cyan-900/20', border: 'border-cyan-800/30', text: 'text-cyan-400', icon: '🎵' },
-  { value: 'linkedin',  label: 'LinkedIn',  color: '#0077B5', bg: 'bg-blue-900/20', border: 'border-blue-800/30', text: 'text-blue-400', icon: '💼' },
-  { value: 'twitter',   label: 'Twitter/X', color: '#1DA1F2', bg: 'bg-sky-900/20',  border: 'border-sky-800/30',  text: 'text-sky-400',  icon: '🐦' },
+  { value: 'instagram', label: 'Instagram', color: '#E1306C', bg: 'bg-pink-900/20', border: 'border-pink-800/30', text: 'text-pink-400' },
+  { value: 'youtube',   label: 'YouTube',   color: '#FF0000', bg: 'bg-red-900/20',  border: 'border-red-800/30',  text: 'text-red-400'  },
+  { value: 'tiktok',    label: 'TikTok',    color: '#69C9D0', bg: 'bg-cyan-900/20', border: 'border-cyan-800/30', text: 'text-cyan-400' },
+  { value: 'linkedin',  label: 'LinkedIn',  color: '#0077B5', bg: 'bg-blue-900/20', border: 'border-blue-800/30', text: 'text-blue-400' },
+  { value: 'twitter',   label: 'Twitter/X', color: '#1DA1F2', bg: 'bg-sky-900/20',  border: 'border-sky-800/30',  text: 'text-sky-400'  },
 ]
 
 function getPlatInfo(value: string) {
   return PLATAFORMAS.find((p) => p.value === value) ?? {
     value, label: value, color: '#9b9bb5', bg: 'bg-iara-900/20',
-    border: 'border-iara-700/30', text: 'text-iara-400', icon: '📊',
+    border: 'border-iara-700/30', text: 'text-iara-400',
   }
 }
 
@@ -181,7 +183,7 @@ function MetricaForm({
                     : 'bg-[#0a0a14] border-[#1a1a2e] text-[#5a5a7a] hover:border-[#2a2a4a]'
                 }`}
               >
-                <span className="text-lg">{p.icon}</span>
+                {getPlatformIcon(p.value, 22)}
                 {p.label}
               </button>
             ))}
@@ -317,7 +319,7 @@ function RedeCard({
       {/* header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-2.5">
-          <span className="text-2xl">{plat.icon}</span>
+          {getPlatformIcon(m.plataforma, 28)}
           <div>
             <p className={`font-semibold text-sm ${plat.text}`}>{plat.label}</p>
             <p className="text-xs text-[#5a5a7a]">
@@ -407,10 +409,43 @@ export default function MetricasPage() {
   const [analiseExpandida, setAnaliseExpandida] = useState(true)
 
   const [toast, setToast] = useState<{ msg: string; tipo?: 'sucesso' | 'erro' } | null>(null)
+  const [connections, setConnections] = useState<{ platform: string; platform_username: string | null; connected_at: string; token_expires_at: string | null }[]>([])
 
   function showToast(msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') {
     setToast({ msg, tipo })
     setTimeout(() => setToast(null), 3500)
+  }
+
+  async function fetchConnections() {
+    const res = await fetch('/api/metricas/sync')
+    if (res.ok) {
+      const d = await res.json()
+      setConnections(d.connections ?? [])
+    }
+  }
+
+  async function handleSync(platform: string) {
+    const res = await fetch('/api/metricas/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform }),
+    })
+    if (res.ok) {
+      await fetchData()
+      showToast(`Métricas do ${platform} atualizadas!`)
+    } else {
+      showToast('Erro ao sincronizar', 'erro')
+    }
+  }
+
+  async function handleDisconnect(platform: string) {
+    await fetch('/api/oauth/disconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform }),
+    })
+    await fetchConnections()
+    showToast('Conta desconectada')
   }
 
   const fetchData = useCallback(async () => {
@@ -428,7 +463,7 @@ export default function MetricasPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { fetchData(); fetchConnections() }, [fetchData])
 
   async function handleSave(data: Record<string, unknown>) {
     const res = await fetch('/api/metricas', {
@@ -552,6 +587,13 @@ export default function MetricasPage() {
           </div>
         </div>
       </div>
+
+      {/* Contas conectadas */}
+      <SocialConnect
+        connections={connections}
+        onSync={handleSync}
+        onDisconnect={handleDisconnect}
+      />
 
       {/* Formulário (nova rede) */}
       {showForm && !editTarget && (

@@ -6,10 +6,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
   }
 
   const { data, error } = await supabase
@@ -18,12 +15,8 @@ export async function GET() {
     .eq('user_id', user.id)
     .single()
 
-  // PGRST116 = row not found — perfil ainda não foi criado
   if (error && error.code !== 'PGRST116') {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 
   return new Response(JSON.stringify(data ?? null), {
@@ -36,27 +29,38 @@ export async function PUT(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
   }
 
   const body = await req.json()
-  const { nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre } = body
 
   const { data, error } = await supabase
     .from('creator_profiles')
     .upsert(
       {
         user_id: user.id,
-        nome_artistico: nome_artistico?.trim() || null,
-        nicho: nicho?.trim() || null,
-        tom_de_voz: tom_de_voz?.trim() || null,
-        plataformas: plataformas ?? [],
-        objetivo: objetivo?.trim() || null,
-        sobre: sobre?.trim() || null,
-        updated_at: new Date().toISOString(),
+        nome_artistico:     body.nome_artistico?.trim()     || null,
+        nicho:              body.nicho?.trim()              || null,
+        sub_nicho:          body.sub_nicho?.trim()          || null,
+        estagio:            body.estagio?.trim()            || null,
+        historia:           body.historia?.trim()           || null,
+        audiencia:          body.audiencia?.trim()          || null,
+        faixa_etaria:       body.faixa_etaria?.trim()       || null,
+        problema_resolvido: body.problema_resolvido?.trim() || null,
+        publico_real:       body.publico_real?.trim()       || null,
+        plataformas:        body.plataformas                ?? [],
+        formatos:           body.formatos                   ?? [],
+        frequencia:         body.frequencia?.trim()         || null,
+        conteudo_marcante:  body.conteudo_marcante?.trim()  || null,
+        tom_de_voz:         body.tom_de_voz?.trim()         || null,
+        diferencial:        body.diferencial?.trim()        || null,
+        inspiracoes:        body.inspiracoes?.trim()        || null,
+        objetivo:           body.objetivo?.trim()           || null,
+        desafio_principal:  body.desafio_principal?.trim()  || null,
+        meta_12_meses:      body.meta_12_meses?.trim()      || null,
+        proposito:          body.proposito?.trim()          || null,
+        sobre:              body.sobre?.trim()              || null,
+        updated_at:        new Date().toISOString(),
       },
       { onConflict: 'user_id' }
     )
@@ -64,10 +68,7 @@ export async function PUT(req: NextRequest) {
     .single()
 
   if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 
   return new Response(JSON.stringify(data), {
