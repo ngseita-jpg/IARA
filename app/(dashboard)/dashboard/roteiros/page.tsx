@@ -153,6 +153,12 @@ export default function RoteirosPage() {
   }
 
   const hasResult = roteiro.length > 0
+  const [abaAtiva, setAbaAtiva] = useState<'configurar' | 'resultado'>('configurar')
+
+  // auto-muda para resultado quando começa a gerar
+  useEffect(() => {
+    if (loading) setAbaAtiva('resultado')
+  }, [loading])
 
   return (
     <div className="animate-fade-in">
@@ -196,9 +202,23 @@ export default function RoteirosPage() {
         }}
       />
 
+      {/* Abas mobile */}
+      <div className="lg:hidden flex gap-1 mb-6 p-1 bg-[#0f0f1e] rounded-xl border border-[#1a1a2e]">
+        {(['configurar', 'resultado'] as const).map(aba => (
+          <button key={aba} onClick={() => setAbaAtiva(aba)}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${
+              abaAtiva === aba
+                ? 'bg-gradient-to-r from-iara-600 to-accent-purple text-white'
+                : 'text-[#5a5a7a]'
+            }`}>
+            {aba === 'configurar' ? '⚙ Configurar' : `✦ Resultado${hasResult ? ' ●' : ''}`}
+          </button>
+        ))}
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Formulário */}
-        <div>
+        <div className={abaAtiva === 'resultado' ? 'hidden lg:block' : ''}>
           {/* Modo toggle */}
           <div className="flex gap-2 mb-6 p-1 bg-[#0f0f1e] rounded-xl border border-iara-900/30">
             <button
@@ -440,7 +460,7 @@ export default function RoteirosPage() {
         </div>
 
         {/* Resultado */}
-        <div className="flex flex-col">
+        <div className={`flex flex-col ${abaAtiva === 'configurar' ? 'hidden lg:flex' : ''}`}>
           <div className="flex items-center justify-between mb-3">
             <label className="iara-label mb-0">
               {modo === 'hooks' ? 'Hooks gerados' : 'Roteiro gerado'}
