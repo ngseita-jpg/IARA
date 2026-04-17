@@ -2,121 +2,31 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
-  User, Calendar, Mic, Target, Layers, BookOpen, Image, Images,
+  User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 
+const quickAccess = [
+  { label: 'Roteiro',   href: '/dashboard/roteiros',  icon: FileText,    color: 'from-iara-600/30 to-iara-600/10',          border: 'border-iara-700/40' },
+  { label: 'Carrossel', href: '/dashboard/carrossel', icon: Layers,      color: 'from-accent-pink/25 to-accent-pink/5',     border: 'border-accent-pink/30' },
+  { label: 'Stories',   href: '/dashboard/stories',   icon: Sparkles,    color: 'from-accent-purple/25 to-accent-purple/5', border: 'border-accent-purple/30' },
+  { label: 'Thumbnail', href: '/dashboard/thumbnail', icon: Image,       color: 'from-teal-600/20 to-teal-600/5',           border: 'border-teal-700/30' },
+  { label: 'Mídia Kit', href: '/dashboard/midia-kit', icon: BookOpen,    color: 'from-amber-600/20 to-amber-600/5',         border: 'border-amber-700/30' },
+  { label: 'Oratória',  href: '/dashboard/oratorio',  icon: Mic,         color: 'from-green-600/20 to-green-600/5',         border: 'border-green-700/30' },
+]
+
 const modules = [
-  {
-    icon: FileText,
-    label: 'Gerador de Roteiros',
-    description: 'Roteiros completos com hook, desenvolvimento e CTA no seu estilo. 6 formatos + 4 hooks alternativos.',
-    href: '/dashboard/roteiros',
-    gradient: 'from-iara-600/20 to-accent-purple/10',
-    border: 'border-iara-700/30',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Mic,
-    label: 'Análise de Oratória',
-    description: 'Grave sua voz, receba score em 5 dimensões e exercícios personalizados. Sua voz entra no seu perfil.',
-    href: '/dashboard/oratorio',
-    gradient: 'from-accent-purple/20 to-iara-600/10',
-    border: 'border-accent-purple/30',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Target,
-    label: 'Metas de Postagem',
-    description: 'Organize sua agenda, crie metas de postagem e ganhe pontos que sobem seu nível de influenciador.',
-    href: '/dashboard/metas',
-    gradient: 'from-green-900/20 to-iara-600/10',
-    border: 'border-green-800/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: User,
-    label: 'Meu Perfil',
-    description: 'Configure seu nicho, tom de voz e estilo. A IA usa seu perfil para personalizar todos os módulos.',
-    href: '/dashboard/perfil',
-    gradient: 'from-accent-purple/15 to-iara-600/10',
-    border: 'border-accent-purple/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Layers,
-    label: 'Gerador de Carrossel',
-    description: 'Cole um link, texto ou vídeo e a Iara monta o carrossel completo com imagens, texto e paleta. Chat de ajustes incluso.',
-    href: '/dashboard/carrossel',
-    gradient: 'from-accent-pink/15 to-accent-purple/10',
-    border: 'border-accent-pink/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Images,
-    label: 'Banco de Fotos',
-    description: 'Salve suas fotos favoritas para usar nos geradores de thumbnail, carrossel e mídia kit. Acesso rápido de qualquer módulo.',
-    href: '/dashboard/fotos',
-    gradient: 'from-iara-600/15 to-teal-900/10',
-    border: 'border-iara-700/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Image,
-    label: 'Gerador de Thumbnail',
-    description: 'Thumbnails de alto CTR para YouTube e Reels. Sobe a foto, descreve o vídeo — a Iara cria em segundos.',
-    href: '/dashboard/thumbnail',
-    gradient: 'from-teal-900/20 to-accent-purple/10',
-    border: 'border-teal-800/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Layers,
-    label: 'Gerador de Stories',
-    description: 'Sequência de 7 slides com hook, conteúdo, virada e CTA no seu tom de voz. Pronto pra postar.',
-    href: '/dashboard/stories',
-    gradient: 'from-accent-pink/15 to-accent-purple/10',
-    border: 'border-accent-pink/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: Calendar,
-    label: 'Calendário Editorial',
-    description: 'Grade semanal integrada às suas metas. Marque postagens como feitas e acumule pontos.',
-    href: '/dashboard/calendario',
-    gradient: 'from-teal-900/20 to-iara-600/10',
-    border: 'border-teal-800/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: BookOpen,
-    label: 'Mídia Kit com IA',
-    description: 'A IA monta seu kit profissional com perfil, métricas e voz. Exporta em PDF para enviar para marcas.',
-    href: '/dashboard/midia-kit',
-    gradient: 'from-amber-900/20 to-iara-600/10',
-    border: 'border-amber-800/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
-  {
-    icon: TrendingUp,
-    label: 'Métricas das Redes',
-    description: 'Métricas consolidadas de todas as plataformas + análise estratégica personalizada com IA. O diferencial da Iara.',
-    href: '/dashboard/metricas',
-    gradient: 'from-iara-600/15 to-accent-pink/10',
-    border: 'border-iara-700/20',
-    badge: 'Disponível',
-    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
-  },
+  { icon: FileText,   label: 'Gerador de Roteiros',    desc: 'Roteiros completos com hook, desenvolvimento e CTA no seu estilo.',        href: '/dashboard/roteiros',   gradient: 'from-iara-600/20 to-accent-purple/10',   border: 'border-iara-700/30' },
+  { icon: Layers,     label: 'Gerador de Carrossel',   desc: 'Cole um link ou texto — a Iara monta o carrossel completo com imagens.',   href: '/dashboard/carrossel',  gradient: 'from-accent-pink/15 to-accent-purple/10', border: 'border-accent-pink/20' },
+  { icon: Sparkles,   label: 'Gerador de Stories',     desc: 'Sequência de 7 slides com hook, virada e CTA no seu tom de voz.',          href: '/dashboard/stories',    gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
+  { icon: Image,      label: 'Gerador de Thumbnail',   desc: 'Thumbnails de alto CTR para YouTube e Reels em segundos.',                 href: '/dashboard/thumbnail',  gradient: 'from-teal-900/20 to-accent-purple/10',   border: 'border-teal-800/20' },
+  { icon: BookOpen,   label: 'Mídia Kit com IA',        desc: 'Kit profissional com perfil, métricas e voz. Exporta em PDF.',             href: '/dashboard/midia-kit',  gradient: 'from-amber-900/20 to-iara-600/10',       border: 'border-amber-800/20' },
+  { icon: Mic,        label: 'Análise de Oratória',    desc: 'Grave sua voz, receba score em 5 dimensões e exercícios personalizados.',  href: '/dashboard/oratorio',   gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
+  { icon: TrendingUp, label: 'Métricas das Redes',     desc: 'Métricas consolidadas de todas as plataformas + análise com IA.',          href: '/dashboard/metricas',   gradient: 'from-iara-600/15 to-accent-pink/10',     border: 'border-iara-700/20' },
+  { icon: Images,     label: 'Banco de Fotos',         desc: 'Salve suas fotos para usar nos geradores. Acesso rápido de qualquer módulo.', href: '/dashboard/fotos',   gradient: 'from-iara-600/15 to-teal-900/10',        border: 'border-iara-700/20' },
+  { icon: Target,     label: 'Metas de Postagem',      desc: 'Organize sua agenda, crie metas e ganhe pontos que sobem seu nível.',      href: '/dashboard/metas',      gradient: 'from-green-900/20 to-iara-600/10',       border: 'border-green-800/20' },
+  { icon: Calendar,   label: 'Calendário Editorial',   desc: 'Grade semanal integrada às suas metas. Marque postagens e acumule pontos.',href: '/dashboard/calendario', gradient: 'from-teal-900/20 to-iara-600/10',        border: 'border-teal-800/20' },
+  { icon: User,       label: 'Meu Perfil',             desc: 'Configure seu nicho e tom de voz. A IA usa seu perfil em todos os módulos.', href: '/dashboard/perfil',  gradient: 'from-accent-purple/15 to-iara-600/10',   border: 'border-accent-purple/20' },
 ]
 
 export default async function DashboardPage() {
@@ -124,92 +34,103 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Criador'
 
-  // Buscar pontos e perfil do usuário
   const { data: profile } = await supabase
     .from('creator_profiles')
-    .select('pontos, nivel, nicho, voz_score_medio, treinos_voz')
+    .select('pontos, nivel, nicho, voz_score_medio, treinos_voz, nome_artistico')
     .eq('user_id', user?.id ?? '')
     .single()
 
   const pontos = profile?.pontos ?? 0
   const nicho = profile?.nicho ?? undefined
   const badge = getBadgeInfo(pontos, nicho)
+  const nome = profile?.nome_artistico?.split(' ')[0] ?? firstName
+
+  const hora = new Date().getHours()
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
+
+      {/* ── Welcome ── */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-iara-400 text-sm font-medium mb-2">
-          <Sparkles className="w-4 h-4" />
-          <span>Bem-vindo de volta</span>
-        </div>
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#f1f1f8]">
-              Olá, <span className="iara-gradient-text">{firstName}</span> 👋
+            <p className="text-[#5a5a7a] text-sm mb-1">{saudacao} 👋</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#f1f1f8] leading-tight">
+              Olá, <span className="iara-gradient-text">{nome}</span>
             </h1>
-            <p className="mt-2 text-[#9b9bb5]">O que vamos criar hoje?</p>
+            <p className="mt-2 text-[#6b6b8a] text-sm">O que vamos criar hoje?</p>
           </div>
 
-          {/* Badge do nível */}
-          <Link href="/dashboard/perfil" className="flex items-center gap-3 iara-card px-4 py-3 hover:scale-[1.02] transition-all duration-200">
+          <Link href="/dashboard/perfil" className="flex items-center gap-3 rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] px-4 py-3 hover:border-iara-700/40 transition-all duration-200 group">
             <div className={`w-10 h-10 rounded-xl ${badge.cor.bg} border ${badge.cor.border} flex items-center justify-center text-xl`}>
               {badge.cor.emoji}
             </div>
             <div>
               <p className={`text-sm font-bold ${badge.cor.text}`}>{badge.badge}</p>
-              <p className="text-xs text-[#5a5a7a]">{badge.pontos} pts</p>
-              {badge.nextThreshold && (
-                <div className="h-1 w-24 rounded-full bg-[#1a1a2e] mt-1 overflow-hidden">
+              <div className="flex items-center gap-2 mt-1">
+                <div className="h-1.5 w-20 rounded-full bg-[#1a1a2e] overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${badge.cor.bg.replace('/30', '')}`}
-                    style={{ width: `${badge.progress}%` }}
+                    className="h-full rounded-full bg-gradient-to-r from-iara-500 to-accent-purple"
+                    style={{ width: `${badge.progress ?? 0}%` }}
                   />
                 </div>
-              )}
+                <p className="text-[10px] text-[#5a5a7a]">{badge.pontos} pts</p>
+              </div>
             </div>
           </Link>
         </div>
       </div>
 
-      {/* Modules grid */}
+      {/* ── Acesso rápido ── */}
+      <div className="mb-10">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap className="w-3.5 h-3.5 text-iara-400" />
+          <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Acesso rápido</h2>
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+          {quickAccess.map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-2 p-3 rounded-2xl bg-gradient-to-br ${item.color} border ${item.border} hover:scale-[1.04] active:scale-[0.97] transition-all duration-150 group`}
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-iara-400 group-hover:text-iara-300 transition-colors" />
+                </div>
+                <span className="text-[11px] font-medium text-[#9b9bb5] group-hover:text-[#f1f1f8] transition-colors text-center leading-tight">
+                  {item.label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Todos os módulos ── */}
       <div>
-        <h2 className="text-lg font-semibold text-[#f1f1f8] mb-4">Módulos da plataforma</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-3.5 h-3.5 text-iara-400" />
+          <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Todos os módulos</h2>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {modules.map((mod) => {
             const Icon = mod.icon
-            const isAvailable = mod.href !== '#'
-
-            const card = (
-              <div
-                className={`iara-card p-6 border ${mod.border} bg-gradient-to-br ${mod.gradient}
-                            transition-all duration-300 h-full
-                            ${isAvailable ? 'hover:scale-[1.02] hover:shadow-xl hover:shadow-iara-900/30 cursor-pointer' : 'opacity-60'}`}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-iara-400" />
+            return (
+              <Link key={mod.label} href={mod.href} className="block group">
+                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-iara-400" />
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-iara-400 group-hover:translate-x-0.5 transition-all" />
                   </div>
-                  <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${mod.badgeColor}`}>
-                    {mod.badge}
-                  </span>
+                  <h3 className="font-semibold text-[#f1f1f8] text-sm mb-1">{mod.label}</h3>
+                  <p className="text-xs text-[#5a5a7a] leading-relaxed">{mod.desc}</p>
                 </div>
-                <h3 className="font-semibold text-[#f1f1f8] mb-2">{mod.label}</h3>
-                <p className="text-sm text-[#9b9bb5] leading-relaxed">{mod.description}</p>
-                {isAvailable && (
-                  <div className="flex items-center gap-1.5 mt-4 text-iara-400 text-sm font-medium">
-                    Acessar <ArrowRight className="w-4 h-4" />
-                  </div>
-                )}
-              </div>
-            )
-
-            return isAvailable ? (
-              <Link key={mod.label} href={mod.href} className="block h-full">
-                {card}
               </Link>
-            ) : (
-              <div key={mod.label}>{card}</div>
             )
           })}
         </div>

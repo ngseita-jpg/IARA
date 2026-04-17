@@ -101,7 +101,7 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
       </aside>
 
       {/* Mobile topbar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d1a] border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40">
+      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d1a]/95 backdrop-blur-sm border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-white" />
@@ -116,10 +116,55 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
         </button>
       </header>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile bottom tab bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d1a]/95 backdrop-blur-sm border-t border-iara-900/30 px-2 pb-safe">
+        <div className="flex items-center justify-around">
+          {[
+            { label: 'Início',     href: '/dashboard',           icon: LayoutDashboard },
+            { label: 'Roteiros',   href: '/dashboard/roteiros',  icon: FileText },
+            { label: 'Carrossel',  href: '/dashboard/carrossel', icon: Layers },
+            { label: 'Stories',    href: '/dashboard/stories',   icon: Sparkles },
+            { label: 'Mais',       href: '#mais',                icon: Menu },
+          ].map((item) => {
+            const isActive = item.href !== '#mais' && (pathname === item.href || pathname.startsWith(item.href + '/'))
+            const isMais = item.href === '#mais'
+            const Icon = item.icon
+            return (
+              <button
+                key={item.href}
+                onClick={() => isMais ? setMobileOpen(v => !v) : undefined}
+                className="flex-1"
+              >
+                {isMais ? (
+                  <div className={`flex flex-col items-center gap-1 py-3 ${mobileOpen ? 'text-iara-400' : 'text-[#5a5a7a]'}`}>
+                    <Icon className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Mais</span>
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`flex flex-col items-center gap-1 py-3 transition-colors ${
+                      isActive ? 'text-iara-400' : 'text-[#5a5a7a]'
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute w-8 h-0.5 rounded-full bg-iara-500" style={{ marginTop: -12 }} />
+                    )}
+                    <Icon className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">{item.label}</span>
+                  </Link>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Mobile menu overlay (Mais) */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-[#0a0a14]/95 backdrop-blur-sm pt-16">
-          <nav className="flex flex-col gap-1 p-4">
+        <div className="md:hidden fixed inset-0 z-30 bg-[#0a0a14]/95 backdrop-blur-sm pt-16 pb-20" onClick={() => setMobileOpen(false)}>
+          <nav className="flex flex-col gap-1 p-4" onClick={e => e.stopPropagation()}>
+            <p className="text-xs text-[#5a5a7a] font-semibold uppercase tracking-wider px-4 mb-2">Todos os módulos</p>
             {navItems.map((item) => {
               const isActive = pathname === item.href
               const Icon = item.icon
@@ -141,7 +186,7 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
             })}
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400 mt-4"
+              className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400 mt-2 border-t border-[#1a1a2e] pt-4"
             >
               <LogOut className="w-4 h-4" />
               Sair

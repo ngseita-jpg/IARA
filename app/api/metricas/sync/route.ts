@@ -15,7 +15,7 @@ function today() {
 
 // ─── sync por plataforma ───────────────────────────────────────────────────────
 
-async function syncYouTube(accessToken: string, refreshToken: string | null, userId: string, supabase: ReturnType<typeof import('@/lib/supabase/server').createClient>) {
+async function syncYouTube(accessToken: string, refreshToken: string | null, userId: string, supabase: Awaited<ReturnType<typeof import('@/lib/supabase/server').createClient>>) {
   let token = accessToken
 
   // Renovar token se expirado
@@ -72,7 +72,7 @@ async function syncYouTube(accessToken: string, refreshToken: string | null, use
   }
 }
 
-async function syncInstagram(accessToken: string, userId: string, supabase: ReturnType<typeof import('@/lib/supabase/server').createClient>) {
+async function syncInstagram(accessToken: string, userId: string, supabase: Awaited<ReturnType<typeof import('@/lib/supabase/server').createClient>>) {
   // Buscar conta Instagram Business conectada
   const pagesRes = await fetch(
     `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
