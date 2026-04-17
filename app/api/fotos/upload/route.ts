@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Imagem não informada' }, { status: 400 })
   }
 
-  // Converte base64 para buffer
   const matches = imagem_base64.match(/^data:image\/(\w+);base64,(.+)$/)
   if (!matches) {
     return NextResponse.json({ error: 'Formato de imagem inválido' }, { status: 400 })
@@ -26,11 +25,10 @@ export async function POST(req: NextRequest) {
   const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
   const buffer = Buffer.from(matches[2], 'base64')
   const tamanhoKb = Math.round(buffer.byteLength / 1024)
-
   const fileName = `${Date.now()}.${ext}`
   const storagePath = `${user.id}/${fileName}`
 
-  // Upload para Supabase Storage
+  // Upload para o bucket privado
   const { error: uploadError } = await supabase.storage
     .from('fotos-usuario')
     .upload(storagePath, buffer, {
@@ -43,20 +41,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao salvar a foto' }, { status: 500 })
   }
 
-  // Pega URL pública
-  const { data: urlData } = supabase.storage
-    .from('fotos-usuario')
-    .getPublicUrl(storagePath)
-
-  const publicUrl = urlData.publicUrl
-
-  // Salva metadados no banco
+  // Salva metadados (sem URL — gerada sob demanda)
   const { data: photo, error: dbError } = await supabase
     .from('user_photos')
     .insert({
       user_id: user.id,
       storage_path: storagePath,
-      public_url: publicUrl,
       nome: nome ?? fileName,
       tamanho_kb: tamanhoKb,
     })
@@ -64,10 +54,16 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (dbError) {
-    // Remove do storage se falhou no banco
     await supabase.storage.from('fotos-usuario').remove([storagePath])
     return NextResponse.json({ error: 'Erro ao salvar metadados' }, { status: 500 })
   }
 
-  return NextResponse.json({ photo })
+  // Gera URL assinada (válida por 1 hora) para exibição imediata
+  const { data: signed } = await supabase.storage
+    .from('fotos-usuario')
+    .createSignedUrl(storagePath, 3600)
+
+  return NextResponse.json({
+    photo: { ...photo, signed_url: signed?.signedUrl ?? null },
+  })
 }

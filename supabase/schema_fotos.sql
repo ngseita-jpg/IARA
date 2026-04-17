@@ -1,5 +1,5 @@
 -- ============================================================
--- IARA — Banco de Fotos do Usuário
+-- IARA — Banco de Fotos do Usuário (bucket PRIVADO)
 -- Execute no SQL Editor do Supabase
 -- ============================================================
 
@@ -8,7 +8,6 @@ create table if not exists public.user_photos (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid references auth.users(id) on delete cascade not null,
   storage_path text not null,
-  public_url   text not null,
   nome         text,
   tamanho_kb   int,
   created_at   timestamptz default now()
@@ -24,15 +23,12 @@ do $$ begin
 end $$;
 
 -- ============================================================
--- STORAGE: criar o bucket manualmente no Supabase Dashboard
--- Settings → Storage → New bucket → nome: "fotos-usuario" → Public: ON
--- Depois execute as policies abaixo:
+-- STORAGE: bucket PRIVADO — apenas o dono acessa as próprias fotos
 -- ============================================================
 
--- Permite upload apenas na própria pasta do usuário
 insert into storage.buckets (id, name, public)
-values ('fotos-usuario', 'fotos-usuario', true)
-on conflict (id) do nothing;
+values ('fotos-usuario', 'fotos-usuario', false)  -- false = privado
+on conflict (id) do update set public = false;    -- garante que é privado mesmo se já existia
 
 -- Policy: upload apenas na própria pasta (userId/arquivo)
 do $$ begin
@@ -50,16 +46,28 @@ do $$ begin
   end if;
 end $$;
 
--- Policy: leitura pública (bucket é público)
+-- Policy: leitura apenas na própria pasta (URLs assinadas geradas pelo servidor)
 do $$ begin
-  if not exists (
+  -- remove a policy pública anterior se existir
+  if exists (
     select 1 from pg_policies
     where schemaname = 'storage' and tablename = 'objects'
     and policyname = 'fotos-usuario: public read'
   ) then
-    create policy "fotos-usuario: public read"
+    drop policy "fotos-usuario: public read" on storage.objects;
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'storage' and tablename = 'objects'
+    and policyname = 'fotos-usuario: users read own'
+  ) then
+    create policy "fotos-usuario: users read own"
       on storage.objects for select
-      using (bucket_id = 'fotos-usuario');
+      using (
+        bucket_id = 'fotos-usuario'
+        AND auth.uid()::text = (storage.foldername(name))[1]
+      );
   end if;
 end $$;
 

@@ -15,7 +15,7 @@ import {
 type Foto = {
   id: string
   nome: string
-  public_url: string
+  signed_url: string | null
   tamanho_kb: number
   created_at: string
 }
@@ -204,7 +204,7 @@ export default function FotosPage() {
               <div key={foto.id} className="relative group rounded-xl overflow-hidden bg-[#0f0f20] border border-[#1a1a2e] aspect-square">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={foto.public_url}
+                  src={foto.signed_url ?? ''}
                   alt={foto.nome}
                   className="w-full h-full object-cover"
                 />
@@ -215,7 +215,7 @@ export default function FotosPage() {
                   <div className="flex gap-2 mt-1">
                     {/* Copiar URL */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); copiarUrl(foto.public_url, foto.id) }}
+                      onClick={(e) => { e.stopPropagation(); if (foto.signed_url) copiarUrl(foto.signed_url, foto.id) }}
                       title="Copiar URL"
                       className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                     >
