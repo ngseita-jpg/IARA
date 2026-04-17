@@ -6,7 +6,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // GET — busca métricas do usuário + última análise de IA
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
 
@@ -42,7 +42,7 @@ export async function GET() {
 
 // POST — upsert métricas de uma plataforma
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
 
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE — remove uma plataforma
 export async function DELETE(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
 

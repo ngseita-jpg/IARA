@@ -32,11 +32,14 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/register']
+  const publicRoutes = ['/login', '/register', '/preview', '/api/preview-mode']
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route))
 
+  // Modo preview de desenvolvimento — bypassa auth
+  const isPreviewMode = request.cookies.get('iara_preview')?.value === '1'
+
   // Se não autenticado e tentando acessar rota protegida → redireciona para login
-  if (!user && !isPublicRoute) {
+  if (!user && !isPublicRoute && !isPreviewMode) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

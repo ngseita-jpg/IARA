@@ -19,7 +19,7 @@ function formatarNumero(n: number): string {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
 

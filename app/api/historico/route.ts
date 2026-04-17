@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 // GET /api/historico?tipo=roteiro — lista histórico do tipo
 export async function GET(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/historico — salva item
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/historico?id=xxx — remove item
 export async function DELETE(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 

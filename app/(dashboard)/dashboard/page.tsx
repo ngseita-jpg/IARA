@@ -120,7 +120,7 @@ const modules = [
 ]
 
 export default async function DashboardPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Criador'
 

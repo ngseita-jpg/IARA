@@ -65,7 +65,7 @@ Após os 4 hooks, adicione uma linha curta de orientação sobre qual perfil de 
 - Use o perfil do criador como alma do conteúdo — é ele que fala, não você`
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {

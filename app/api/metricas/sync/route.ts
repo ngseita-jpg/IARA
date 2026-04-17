@@ -166,7 +166,7 @@ async function syncLinkedIn(accessToken: string) {
 // ─── rota principal ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
 
@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
 
 // Retornar conexões ativas do usuário
 export async function GET() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
 

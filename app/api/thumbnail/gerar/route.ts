@@ -57,7 +57,7 @@ Tom de voz: ${perfil.tom_de_voz ?? 'não informado'}` : 'Perfil não configurado
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
