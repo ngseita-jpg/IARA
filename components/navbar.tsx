@@ -20,6 +20,7 @@ import {
   BookOpen,
   Image,
   Images,
+  Smartphone,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -29,7 +30,7 @@ const navItems = [
   { label: 'Carrossel',   href: '/dashboard/carrossel',   icon: Layers },
   { label: 'Thumbnail',   href: '/dashboard/thumbnail',   icon: Image },
   { label: 'Banco de Fotos', href: '/dashboard/fotos',   icon: Images },
-  { label: 'Stories',     href: '/dashboard/stories',     icon: Layers },
+  { label: 'Stories',     href: '/dashboard/stories',     icon: Smartphone },
   { label: 'Mídia Kit',   href: '/dashboard/midia-kit',   icon: BookOpen },
   { label: 'Métricas',    href: '/dashboard/metricas',    icon: TrendingUp },
   { label: 'Calendário',  href: '/dashboard/calendario',  icon: Calendar },

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
-  ChevronRight,
+  ChevronRight, Smartphone,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 import { LIMITES, inicioMesAtual } from '@/lib/limites'
@@ -11,7 +11,7 @@ import { LIMITES, inicioMesAtual } from '@/lib/limites'
 const quickAccess = [
   { label: 'Roteiro',     href: '/dashboard/roteiros',   icon: FileText,    color: 'from-iara-600/30 to-iara-600/10',          border: 'border-iara-700/40' },
   { label: 'Carrossel',   href: '/dashboard/carrossel',  icon: Layers,      color: 'from-accent-pink/25 to-accent-pink/5',     border: 'border-accent-pink/30' },
-  { label: 'Stories',     href: '/dashboard/stories',    icon: Sparkles,    color: 'from-accent-purple/25 to-accent-purple/5', border: 'border-accent-purple/30' },
+  { label: 'Stories',     href: '/dashboard/stories',    icon: Smartphone,  color: 'from-accent-purple/25 to-accent-purple/5', border: 'border-accent-purple/30' },
   { label: 'Thumbnail',   href: '/dashboard/thumbnail',  icon: Image,       color: 'from-teal-600/20 to-teal-600/5',           border: 'border-teal-700/30' },
   { label: 'Mídia Kit',   href: '/dashboard/midia-kit',  icon: BookOpen,    color: 'from-amber-600/20 to-amber-600/5',         border: 'border-amber-700/30' },
   { label: 'Oratória',    href: '/dashboard/oratorio',   icon: Mic,         color: 'from-green-600/20 to-green-600/5',         border: 'border-green-700/30' },
@@ -25,7 +25,7 @@ const quickAccess = [
 const modules = [
   { icon: FileText,   label: 'Gerador de Roteiros',    desc: 'Roteiros completos com hook, desenvolvimento e CTA no seu estilo.',        href: '/dashboard/roteiros',   gradient: 'from-iara-600/20 to-accent-purple/10',   border: 'border-iara-700/30' },
   { icon: Layers,     label: 'Gerador de Carrossel',   desc: 'Cole um link ou texto — a Iara monta o carrossel completo com imagens.',   href: '/dashboard/carrossel',  gradient: 'from-accent-pink/15 to-accent-purple/10', border: 'border-accent-pink/20' },
-  { icon: Sparkles,   label: 'Gerador de Stories',     desc: 'Sequência de 7 slides com hook, virada e CTA no seu tom de voz.',          href: '/dashboard/stories',    gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
+  { icon: Smartphone, label: 'Gerador de Stories',     desc: 'Sequência de 7 slides com hook, virada e CTA no seu tom de voz.',          href: '/dashboard/stories',    gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
   { icon: Image,      label: 'Gerador de Thumbnail',   desc: 'Thumbnails de alto CTR para YouTube e Reels em segundos.',                 href: '/dashboard/thumbnail',  gradient: 'from-teal-900/20 to-accent-purple/10',   border: 'border-teal-800/20' },
   { icon: BookOpen,   label: 'Mídia Kit com IA',        desc: 'Kit profissional com perfil, métricas e voz. Exporta em PDF.',             href: '/dashboard/midia-kit',  gradient: 'from-amber-900/20 to-iara-600/10',       border: 'border-amber-800/20' },
   { icon: Mic,        label: 'Análise de Oratória',    desc: 'Grave sua voz, receba score em 5 dimensões e exercícios personalizados.',  href: '/dashboard/oratorio',   gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
