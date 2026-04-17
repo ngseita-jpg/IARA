@@ -396,7 +396,7 @@ export default function StoriesPage() {
 
         {/* estado vazio — sem slides ainda */}
         {!temSlides && !gerando && (
-          <div className="hidden lg:flex flex-col items-center justify-center gap-4 text-center py-16 px-8">
+          <div className={`flex-col items-center justify-center gap-4 text-center py-16 px-8 ${abaAtiva === 'configurar' ? 'hidden' : 'flex lg:flex'}`}>
             <div className="w-16 h-16 rounded-2xl bg-iara-900/30 border border-iara-700/20 flex items-center justify-center">
               <Layers className="w-7 h-7 text-iara-700" />
             </div>
@@ -408,7 +408,7 @@ export default function StoriesPage() {
 
         {/* loading skeleton */}
         {gerando && (
-          <div className="hidden lg:flex flex-col items-center gap-4">
+          <div className={`flex flex-col items-center gap-4 ${abaAtiva === 'configurar' ? 'hidden lg:flex' : ''}`}>
             <div className="w-[260px] h-[462px] rounded-2xl bg-[#13131f] border border-[#1a1a2e] animate-pulse" />
             <div className="flex gap-1.5">
               {[...Array(7)].map((_, i) => (
