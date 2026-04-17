@@ -521,8 +521,9 @@ export default function MetricasPage() {
     { seguidores: 0, alcance: 0, interacoes: 0, posts: 0 }
   )
 
-  const engMedio = metricas.length > 0
-    ? metricas.reduce((s, m) => s + (m.taxa_engajamento ?? 0), 0) / metricas.filter((m) => m.taxa_engajamento != null).length
+  const metricasComEng = metricas.filter((m) => m.taxa_engajamento != null)
+  const engMedio = metricasComEng.length > 0
+    ? metricasComEng.reduce((s, m) => s + (m.taxa_engajamento ?? 0), 0) / metricasComEng.length
     : 0
 
   const sections = analiseTexto ? parseAnalise(analiseTexto) : []
