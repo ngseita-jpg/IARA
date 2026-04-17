@@ -11,17 +11,21 @@ export const metadata: Metadata = {
   keywords: ['criador de conteúdo', 'inteligência artificial', 'roteiro', 'carrossel', 'thumbnail', 'oratória', 'criadores', 'brasil'],
   authors: [{ name: 'Iara' }],
   creator: 'Iara',
+  metadataBase: new URL('https://iarahubapp.com.br'),
   openGraph: {
     type: 'website',
+    url: 'https://iarahubapp.com.br',
     locale: 'pt_BR',
     siteName: 'Iara',
     title: 'Iara — Assessoria com IA para Criadores',
     description: 'Sua assessora de comunicação com IA. 10 módulos integrados para criadores brasileiros crescerem mais rápido.',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Iara — Assessoria com IA para Criadores' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Iara — Assessoria com IA para Criadores',
     description: 'Sua assessora de comunicação com IA. 10 módulos integrados para criadores brasileiros crescerem mais rápido.',
+    images: ['/opengraph-image'],
   },
   robots: {
     index: true,
