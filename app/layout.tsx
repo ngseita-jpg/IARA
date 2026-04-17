@@ -1,10 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { CookieConsent } from '@/components/cookie-consent'
 
 export const metadata: Metadata = {
   title: 'Iara — Assessoria com IA para Criadores',
   description: 'Plataforma de IA para criadores de conteúdo e marcas. Gere roteiros, estratégias e conteúdo com inteligência artificial.',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
