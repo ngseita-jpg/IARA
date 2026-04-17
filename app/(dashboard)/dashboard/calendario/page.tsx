@@ -218,7 +218,7 @@ export default function CalendarioPage() {
         </div>
       )}
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Calendário principal */}
         <div className="flex-1 min-w-0">
           {/* Navegação de semana */}
@@ -240,8 +240,9 @@ export default function CalendarioPage() {
             </button>
           </div>
 
-          {/* Grade semanal */}
-          <div className="grid grid-cols-7 gap-2">
+          {/* Grade semanal — scrollable horizontally on mobile */}
+          <div className="-mx-4 sm:mx-0 overflow-x-auto pb-2">
+          <div className="grid grid-cols-7 gap-2 min-w-[560px] px-4 sm:px-0">
             {weekDays.map((day, idx) => {
               const dateStr = toLocalDateStr(day)
               const isToday = dateStr === today
@@ -374,6 +375,7 @@ export default function CalendarioPage() {
               )
             })}
           </div>
+          </div>{/* end scroll wrapper */}
 
           {/* Legenda */}
           <div className="flex items-center gap-4 mt-4 flex-wrap">
@@ -391,7 +393,7 @@ export default function CalendarioPage() {
         </div>
 
         {/* Painel lateral — metas ativas */}
-        <div className="w-56 flex-shrink-0 space-y-3">
+        <div className="lg:w-56 lg:flex-shrink-0 space-y-3">
           <p className="text-xs font-semibold text-[#9b9bb5] uppercase tracking-wider flex items-center gap-1.5">
             <Target className="w-3.5 h-3.5" />
             Metas ativas

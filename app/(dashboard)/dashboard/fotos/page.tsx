@@ -208,12 +208,11 @@ export default function FotosPage() {
                   alt={foto.nome}
                   className="w-full h-full object-cover"
                 />
-                {/* Overlay ao hover */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                {/* Overlay ao hover — desktop */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex flex-col items-center justify-center gap-2 p-2">
                   <p className="text-xs text-white text-center truncate w-full px-1">{foto.nome}</p>
                   <p className="text-xs text-[#9b9bb5]">{foto.tamanho_kb} KB</p>
                   <div className="flex gap-2 mt-1">
-                    {/* Copiar URL */}
                     <button
                       onClick={(e) => { e.stopPropagation(); if (foto.signed_url) copiarUrl(foto.signed_url, foto.id) }}
                       title="Copiar URL"
@@ -224,7 +223,6 @@ export default function FotosPage() {
                         : <Copy className="w-4 h-4 text-white" />
                       }
                     </button>
-                    {/* Deletar */}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeletar(foto.id) }}
                       title="Remover"
@@ -234,6 +232,31 @@ export default function FotosPage() {
                       {deletando === foto.id
                         ? <Loader2 className="w-4 h-4 text-red-400 animate-spin" />
                         : <Trash2 className="w-4 h-4 text-red-400" />
+                      }
+                    </button>
+                  </div>
+                </div>
+                {/* Mobile: always-visible action buttons */}
+                <div className="sm:hidden absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/60 px-2 py-1.5">
+                  <span className="text-[10px] text-[#9b9bb5] truncate flex-1 mr-1">{foto.tamanho_kb} KB</span>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); if (foto.signed_url) copiarUrl(foto.signed_url, foto.id) }}
+                      className="p-1 rounded bg-white/10 active:bg-white/20"
+                    >
+                      {copiado === foto.id
+                        ? <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                        : <Copy className="w-3.5 h-3.5 text-white" />
+                      }
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletar(foto.id) }}
+                      className="p-1 rounded bg-red-500/20 active:bg-red-500/40"
+                      disabled={deletando === foto.id}
+                    >
+                      {deletando === foto.id
+                        ? <Loader2 className="w-3.5 h-3.5 text-red-400 animate-spin" />
+                        : <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       }
                     </button>
                   </div>
