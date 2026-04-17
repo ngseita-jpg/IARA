@@ -449,7 +449,7 @@ export default function PerfilPage() {
 
             <div>
               <label className="iara-label">Qual é o seu nicho? <span className="text-red-400">*</span></label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {NICHOS.map((n) => (
                   <button
                     key={n.value}
