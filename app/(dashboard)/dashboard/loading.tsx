@@ -26,8 +26,8 @@ export default function DashboardLoading() {
       {/* Usage skeleton */}
       <div className="mb-10">
         <div className="h-3 w-36 bg-[#1a1a2e] rounded mb-4" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-16 rounded-2xl bg-[#13131f] border border-[#1a1a2e]" />
           ))}
         </div>

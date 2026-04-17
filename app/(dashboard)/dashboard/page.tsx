@@ -59,13 +59,22 @@ export default async function DashboardPage() {
 
   // Uso do mês atual (plano free)
   const mesAtual = inicioMesAtual()
-  const [{ count: usoRoteiros }, { count: usoCarrossel }, { count: usoStories }, { count: usoThumbnail }] =
-    await Promise.all([
-      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'roteiro').gte('created_at', mesAtual),
-      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'carrossel').gte('created_at', mesAtual),
-      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'stories').gte('created_at', mesAtual),
-      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'thumbnail').gte('created_at', mesAtual),
-    ])
+  const uid = user?.id ?? ''
+  const [
+    { count: usoRoteiros },
+    { count: usoCarrossel },
+    { count: usoStories },
+    { count: usoThumbnail },
+    { count: usoOratorio },
+    { count: usoMidiaKit },
+  ] = await Promise.all([
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'roteiro').gte('created_at', mesAtual),
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'carrossel').gte('created_at', mesAtual),
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'stories').gte('created_at', mesAtual),
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'thumbnail').gte('created_at', mesAtual),
+    supabase.from('voice_analyses').select('*', { count: 'exact', head: true }).eq('user_id', uid).gte('created_at', mesAtual),
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'midia_kit').gte('created_at', mesAtual),
+  ])
 
   const limites = LIMITES['free']
   const usoMes = [
@@ -73,6 +82,8 @@ export default async function DashboardPage() {
     { label: 'Carrosseis', usado: usoCarrossel ?? 0, limite: limites.carrossel!, cor: 'bg-accent-pink' },
     { label: 'Stories',    usado: usoStories ?? 0,   limite: limites.stories!,   cor: 'bg-accent-purple' },
     { label: 'Thumbnails', usado: usoThumbnail ?? 0, limite: limites.thumbnail!, cor: 'bg-teal-500' },
+    { label: 'Oratória',   usado: usoOratorio ?? 0,  limite: limites.oratorio!,  cor: 'bg-green-500' },
+    { label: 'Mídia Kit',  usado: usoMidiaKit ?? 0,  limite: limites.midia_kit!, cor: 'bg-amber-500' },
   ]
 
   return (
@@ -168,7 +179,7 @@ export default async function DashboardPage() {
             Ver planos →
           </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           {usoMes.map((item) => {
             const pct = Math.min(100, Math.round((item.usado / item.limite) * 100))
             const esgotado = item.usado >= item.limite
