@@ -168,7 +168,7 @@ export default function OratorioPage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao analisar')
+      if (!res.ok) throw new Error(data.mensagem ?? data.error ?? 'Erro ao analisar')
 
       setResultado({
         scores: data.analysis.score_confianca !== undefined ? {
