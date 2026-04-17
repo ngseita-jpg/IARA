@@ -8,12 +8,14 @@ export async function GET() {
 
   const userId = user.id
 
-  const [profile, voiceAnalyses, metas, calendarItems, photos] = await Promise.all([
+  const [profile, voiceAnalyses, metas, calendarItems, photos, metricas, historico] = await Promise.all([
     supabase.from('creator_profiles').select('*').eq('user_id', userId).single(),
     supabase.from('voice_analyses').select('*').eq('user_id', userId),
     supabase.from('metas').select('*').eq('user_id', userId),
     supabase.from('calendar_items').select('*').eq('user_id', userId),
     supabase.from('user_photos').select('id, nome, public_url, tamanho_kb, created_at').eq('user_id', userId),
+    supabase.from('metricas_redes').select('*').eq('user_id', userId),
+    supabase.from('content_history').select('id, tipo, titulo, parametros, created_at').eq('user_id', userId),
   ])
 
   const payload = {
@@ -28,6 +30,8 @@ export async function GET() {
     metas: metas.data ?? [],
     calendario: calendarItems.data ?? [],
     fotos: photos.data ?? [],
+    metricas_redes: metricas.data ?? [],
+    historico_geracoes: historico.data ?? [],
   }
 
   return new NextResponse(JSON.stringify(payload, null, 2), {

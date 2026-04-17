@@ -20,13 +20,17 @@ export async function DELETE() {
     await supabase.storage.from('fotos-usuario').remove(paths)
   }
 
-  // Remove dados do banco (cascata pelo ON DELETE CASCADE já cuida das tabelas filhas)
-  // Mas fazemos explícito por garantia
-  await supabase.from('user_photos').delete().eq('user_id', userId)
-  await supabase.from('creator_profiles').delete().eq('user_id', userId)
-  await supabase.from('voice_analyses').delete().eq('user_id', userId)
-  await supabase.from('metas').delete().eq('user_id', userId)
-  await supabase.from('calendar_items').delete().eq('user_id', userId)
+  // Remove dados do banco (explícito por garantia, independente de ON DELETE CASCADE)
+  await Promise.all([
+    supabase.from('user_photos').delete().eq('user_id', userId),
+    supabase.from('creator_profiles').delete().eq('user_id', userId),
+    supabase.from('voice_analyses').delete().eq('user_id', userId),
+    supabase.from('metas').delete().eq('user_id', userId),
+    supabase.from('calendar_items').delete().eq('user_id', userId),
+    supabase.from('metricas_redes').delete().eq('user_id', userId),
+    supabase.from('content_history').delete().eq('user_id', userId),
+    supabase.from('social_connections').delete().eq('user_id', userId),
+  ])
 
   // Deleta o usuário do Auth (requer service role key)
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
