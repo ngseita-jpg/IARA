@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
-  User, Calendar, Mic, Target, Layers, BookOpen, Image,
+  User, Calendar, Mic, Target, Layers, BookOpen, Image, Images,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 
@@ -54,6 +54,16 @@ const modules = [
     href: '/dashboard/carrossel',
     gradient: 'from-accent-pink/15 to-accent-purple/10',
     border: 'border-accent-pink/20',
+    badge: 'Disponível',
+    badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
+  },
+  {
+    icon: Images,
+    label: 'Banco de Fotos',
+    description: 'Salve suas fotos favoritas para usar nos geradores de thumbnail, carrossel e mídia kit. Acesso rápido de qualquer módulo.',
+    href: '/dashboard/fotos',
+    gradient: 'from-iara-600/15 to-teal-900/10',
+    border: 'border-iara-700/20',
     badge: 'Disponível',
     badgeColor: 'bg-iara-900/50 text-iara-400 border-iara-700/40',
   },

@@ -893,6 +893,100 @@ export default function PerfilPage() {
           Ir agora →
         </Link>
       </div>
+
+      {/* Seção LGPD */}
+      <DadosPrivacidade />
+    </div>
+  )
+}
+
+// ─── Componente de privacidade / LGPD ─────────────────────────────────────────
+function DadosPrivacidade() {
+  const [exportando, setExportando] = useState(false)
+  const [deletando, setDeletando] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  async function handleExportar() {
+    setExportando(true)
+    try {
+      const res = await fetch('/api/usuario/exportar-dados')
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'meus-dados-iara.json'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Erro ao exportar dados. Tente novamente.')
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  async function handleDeletar() {
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    setDeletando(true)
+    try {
+      const res = await fetch('/api/usuario/deletar-conta', { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      window.location.href = '/login'
+    } catch {
+      alert('Erro ao deletar conta. Entre em contato: privacidade@iara.app')
+      setDeletando(false)
+      setConfirmDelete(false)
+    }
+  }
+
+  return (
+    <div className="iara-card p-6 border border-[#2a2a4e]">
+      <h3 className="text-sm font-semibold text-[#9b9bb5] mb-1">Privacidade e seus dados (LGPD)</h3>
+      <p className="text-xs text-[#5a5a7a] mb-5">
+        Conforme a Lei Geral de Proteção de Dados, você pode exportar ou excluir permanentemente
+        todos os seus dados a qualquer momento.{' '}
+        <Link href="/privacidade" className="text-iara-400 hover:underline">Ver política de privacidade</Link>
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Exportar */}
+        <button
+          onClick={handleExportar}
+          disabled={exportando}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0f0f20] border border-[#1a1a2e] hover:border-iara-700/40 text-[#9b9bb5] hover:text-[#f1f1f8] text-sm font-medium transition-all disabled:opacity-50"
+        >
+          {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+          Exportar meus dados (JSON)
+        </button>
+
+        {/* Deletar */}
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-950/30 border border-red-900/30 hover:border-red-700/50 text-red-400/70 hover:text-red-400 text-sm font-medium transition-all"
+          >
+            <X className="w-4 h-4" />
+            Excluir minha conta
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-400">Tem certeza? Isso é irreversível.</span>
+            <button
+              onClick={handleDeletar}
+              disabled={deletando}
+              className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-medium transition-all disabled:opacity-50"
+            >
+              {deletando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Sim, excluir tudo'}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#6b6b8a] text-xs transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

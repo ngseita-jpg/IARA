@@ -19,6 +19,7 @@ import {
   Layers,
   BookOpen,
   Image,
+  Images,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -27,6 +28,7 @@ const navItems = [
   { label: 'Roteiros',    href: '/dashboard/roteiros',    icon: FileText },
   { label: 'Carrossel',   href: '/dashboard/carrossel',   icon: Layers },
   { label: 'Thumbnail',   href: '/dashboard/thumbnail',   icon: Image },
+  { label: 'Banco de Fotos', href: '/dashboard/fotos',   icon: Images },
   { label: 'Stories',     href: '/dashboard/stories',     icon: Layers },
   { label: 'Mídia Kit',   href: '/dashboard/midia-kit',   icon: BookOpen },
   { label: 'Métricas',    href: '/dashboard/metricas',    icon: TrendingUp },

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { CookieConsent } from '@/components/cookie-consent'
 
 export const metadata: Metadata = {
   title: 'Iara — Assessoria com IA para Criadores',
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="pt-BR" className="dark">
       <body className="min-h-screen bg-[#0a0a14] text-[#f1f1f8] antialiased">
         {children}
+        <CookieConsent />
       </body>
     </html>
   )
