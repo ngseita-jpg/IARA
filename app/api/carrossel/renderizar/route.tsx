@@ -2,11 +2,21 @@ import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 import type { Slide } from '../gerar/route'
 
-async function fetchFont(): Promise<ArrayBuffer> {
-  const res = await fetch(
-    'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff'
-  )
-  return res.arrayBuffer()
+let _fontCache: ArrayBuffer | null = null
+
+async function fetchFont(): Promise<ArrayBuffer | null> {
+  if (_fontCache) return _fontCache
+  try {
+    const res = await fetch(
+      'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff',
+      { signal: AbortSignal.timeout(4000) }
+    )
+    if (!res.ok) return null
+    _fontCache = await res.arrayBuffer()
+    return _fontCache
+  } catch {
+    return null
+  }
 }
 
 const FONT_SIZE = { pequeno: 26, medio: 36, grande: 50, gigante: 66 }
@@ -36,6 +46,9 @@ export async function POST(req: NextRequest) {
   const p = pos[slide.layout] ?? pos.centro
 
   const fontData = await fetchFont()
+  const fontOptions = fontData
+    ? [{ name: 'Inter', data: fontData, weight: 700 as const, style: 'normal' as const }]
+    : []
 
   return new ImageResponse(
     (
@@ -176,7 +189,7 @@ export async function POST(req: NextRequest) {
     {
       width: 1080,
       height: 1080,
-      fonts: [{ name: 'Inter', data: fontData, weight: 700, style: 'normal' }],
+      fonts: fontOptions,
     }
   )
 }
