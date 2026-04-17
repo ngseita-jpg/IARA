@@ -480,7 +480,7 @@ export default function RoteirosPage() {
           </div>
 
           <div
-            className={`flex-1 min-h-[500px] rounded-2xl border transition-all duration-300 relative overflow-hidden
+            className={`flex-1 min-h-[300px] sm:min-h-[500px] rounded-2xl border transition-all duration-300 relative overflow-hidden
               ${hasResult || loading
                 ? 'border-iara-700/30 bg-[#0d0d1e]'
                 : 'border-dashed border-iara-900/30 bg-[#0a0a14]'
