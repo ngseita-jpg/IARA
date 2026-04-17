@@ -3,8 +3,30 @@ import './globals.css'
 import { CookieConsent } from '@/components/cookie-consent'
 
 export const metadata: Metadata = {
-  title: 'Iara — Assessoria com IA para Criadores',
-  description: 'Plataforma de IA para criadores de conteúdo e marcas. Gere roteiros, estratégias e conteúdo com inteligência artificial.',
+  title: {
+    default: 'Iara — Assessoria com IA para Criadores',
+    template: '%s | Iara',
+  },
+  description: 'Sua assessora de comunicação com IA. 10 módulos integrados: roteiros, carrosseis, thumbnails, oratória, média kit e muito mais. Feito para criadores brasileiros.',
+  keywords: ['criador de conteúdo', 'inteligência artificial', 'roteiro', 'carrossel', 'thumbnail', 'oratória', 'criadores', 'brasil'],
+  authors: [{ name: 'Iara' }],
+  creator: 'Iara',
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Iara',
+    title: 'Iara — Assessoria com IA para Criadores',
+    description: 'Sua assessora de comunicação com IA. 10 módulos integrados para criadores brasileiros crescerem mais rápido.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Iara — Assessoria com IA para Criadores',
+    description: 'Sua assessora de comunicação com IA. 10 módulos integrados para criadores brasileiros crescerem mais rápido.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export const viewport: Viewport = {

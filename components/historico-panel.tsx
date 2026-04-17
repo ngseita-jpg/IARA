@@ -132,7 +132,7 @@ export function HistoricoPanel({ tipo, aberto, onFechar, onCarregar }: Props) {
                   </div>
 
                   {/* Ações */}
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       title="Carregar"
                       onClick={(e) => { e.stopPropagation(); onCarregar(item); onFechar() }}
