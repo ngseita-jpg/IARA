@@ -22,7 +22,9 @@ import {
   Sliders,
   Newspaper,
   History,
+  User,
 } from 'lucide-react'
+import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
@@ -690,6 +692,20 @@ export default function CarrosselPage() {
                 className="w-full bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-3 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500 resize-none"
               />
             </div>
+
+            {/* perfil nudge */}
+            <Link
+              href="/dashboard/perfil"
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-iara-700/30 bg-iara-900/20 hover:bg-iara-900/30 transition-all duration-200 group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-iara-600/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-iara-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-iara-300">A IA usa seu perfil como contexto</p>
+                <p className="text-[10px] text-[#5a5a7a] truncate">Configure seu nicho e tom de voz para resultados mais personalizados →</p>
+              </div>
+            </Link>
 
             {/* Resumo do que será gerado */}
             <div className="p-4 rounded-xl bg-[#0f0f20] border border-[#1a1a2e] space-y-2">

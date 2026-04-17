@@ -4,8 +4,9 @@ import { useState } from 'react'
 import {
   BookOpen, Sparkles, RefreshCw, Printer,
   Users, TrendingUp, Star, Package,
-  ChevronDown, ChevronUp, Check,
+  ChevronDown, ChevronUp, Check, User,
 } from 'lucide-react'
+import Link from 'next/link'
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
 
@@ -489,9 +490,18 @@ export default function MidiaKitPage() {
               </button>
 
               {!kitData && (
-                <p className="text-xs text-[#5a5a7a] text-center">
-                  A IA vai usar seu perfil, métricas e análise de voz para personalizar tudo
-                </p>
+                <Link
+                  href="/dashboard/perfil"
+                  className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-iara-700/30 bg-iara-900/20 hover:bg-iara-900/30 transition-all duration-200 group"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-iara-600/20 flex items-center justify-center flex-shrink-0">
+                    <User className="w-3.5 h-3.5 text-iara-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-iara-300">A IA usa seu perfil como contexto</p>
+                    <p className="text-[10px] text-[#5a5a7a] truncate">Configure seu nicho, métricas e análise de voz para um kit mais personalizado →</p>
+                  </div>
+                </Link>
               )}
             </div>
           </div>

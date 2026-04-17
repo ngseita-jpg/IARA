@@ -20,7 +20,9 @@ import {
   Sliders,
   Images,
   History,
+  User,
 } from 'lucide-react'
+import Link from 'next/link'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 
@@ -437,6 +439,20 @@ export default function ThumbnailPage() {
                 performam melhor do que só texto. Use uma foto de qualidade!
               </p>
             </div>
+
+            {/* perfil nudge */}
+            <Link
+              href="/dashboard/perfil"
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-iara-700/30 bg-iara-900/20 hover:bg-iara-900/30 transition-all duration-200 group"
+            >
+              <div className="w-7 h-7 rounded-lg bg-iara-600/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-iara-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-iara-300">A IA usa seu perfil como contexto</p>
+                <p className="text-[10px] text-[#5a5a7a] truncate">Configure seu nicho e tom de voz para resultados mais personalizados →</p>
+              </div>
+            </Link>
 
             <div className="flex justify-between">
               <button
