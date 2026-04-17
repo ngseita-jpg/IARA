@@ -30,9 +30,6 @@ export async function POST(req: NextRequest) {
   }
   const pos = posMap[layout.posicao_texto] ?? posMap.centro
 
-  // Fundo gradiente quando não tem foto
-  const gradientBg = `linear-gradient(135deg, ${layout.cor_primaria} 0%, ${layout.cor_secundaria} 100%)`
-
   const fontData = await fetchFont()
 
   return new ImageResponse(
@@ -43,11 +40,19 @@ export async function POST(req: NextRequest) {
           width: '100%',
           height: '100%',
           position: 'relative',
-          background: hasBg ? layout.cor_primaria : gradientBg,
+          backgroundColor: layout.cor_primaria,
           overflow: 'hidden',
           fontFamily: 'Inter',
         }}
       >
+        {/* Fundo gradiente quando não tem foto */}
+        {!hasBg && (
+          <>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: layout.cor_primaria, display: 'flex' }} />
+            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '70%', height: '70%', backgroundColor: layout.cor_secundaria, opacity: 0.6, borderRadius: '50% 0 0 0', display: 'flex' }} />
+          </>
+        )}
+
         {/* Imagem de fundo */}
         {hasBg && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -58,13 +63,9 @@ export async function POST(req: NextRequest) {
           />
         )}
 
-        {/* Overlay para melhorar legibilidade */}
+        {/* Overlay escuro sobre a foto */}
         {hasBg && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)',
-            display: 'flex',
-          }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex' }} />
         )}
 
         {/* Badge */}
@@ -124,7 +125,6 @@ export async function POST(req: NextRequest) {
               display: 'flex',
               flexWrap: 'wrap',
               letterSpacing: '-0.03em',
-              textShadow: layout.estilo_titulo === 'sombra' ? '3px 3px 12px rgba(0,0,0,0.8)' : 'none',
             }}
           >
             {layout.titulo_principal.toUpperCase()}
