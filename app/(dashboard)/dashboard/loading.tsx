@@ -16,9 +16,9 @@ export default function DashboardLoading() {
       {/* Quick access skeleton */}
       <div className="mb-10">
         <div className="h-3 w-24 bg-[#1a1a2e] rounded mb-4" />
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-20 rounded-2xl bg-[#13131f] border border-[#1a1a2e]" />
+        <div className="flex gap-2.5 overflow-hidden">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex-none h-20 rounded-2xl bg-[#13131f] border border-[#1a1a2e]" style={{ width: '4.75rem' }} />
           ))}
         </div>
       </div>

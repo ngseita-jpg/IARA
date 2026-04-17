@@ -9,12 +9,17 @@ import { getBadgeInfo } from '@/lib/badges'
 import { LIMITES, inicioMesAtual } from '@/lib/limites'
 
 const quickAccess = [
-  { label: 'Roteiro',   href: '/dashboard/roteiros',  icon: FileText,    color: 'from-iara-600/30 to-iara-600/10',          border: 'border-iara-700/40' },
-  { label: 'Carrossel', href: '/dashboard/carrossel', icon: Layers,      color: 'from-accent-pink/25 to-accent-pink/5',     border: 'border-accent-pink/30' },
-  { label: 'Stories',   href: '/dashboard/stories',   icon: Sparkles,    color: 'from-accent-purple/25 to-accent-purple/5', border: 'border-accent-purple/30' },
-  { label: 'Thumbnail', href: '/dashboard/thumbnail', icon: Image,       color: 'from-teal-600/20 to-teal-600/5',           border: 'border-teal-700/30' },
-  { label: 'Mídia Kit', href: '/dashboard/midia-kit', icon: BookOpen,    color: 'from-amber-600/20 to-amber-600/5',         border: 'border-amber-700/30' },
-  { label: 'Oratória',  href: '/dashboard/oratorio',  icon: Mic,         color: 'from-green-600/20 to-green-600/5',         border: 'border-green-700/30' },
+  { label: 'Roteiro',     href: '/dashboard/roteiros',   icon: FileText,    color: 'from-iara-600/30 to-iara-600/10',          border: 'border-iara-700/40' },
+  { label: 'Carrossel',   href: '/dashboard/carrossel',  icon: Layers,      color: 'from-accent-pink/25 to-accent-pink/5',     border: 'border-accent-pink/30' },
+  { label: 'Stories',     href: '/dashboard/stories',    icon: Sparkles,    color: 'from-accent-purple/25 to-accent-purple/5', border: 'border-accent-purple/30' },
+  { label: 'Thumbnail',   href: '/dashboard/thumbnail',  icon: Image,       color: 'from-teal-600/20 to-teal-600/5',           border: 'border-teal-700/30' },
+  { label: 'Mídia Kit',   href: '/dashboard/midia-kit',  icon: BookOpen,    color: 'from-amber-600/20 to-amber-600/5',         border: 'border-amber-700/30' },
+  { label: 'Oratória',    href: '/dashboard/oratorio',   icon: Mic,         color: 'from-green-600/20 to-green-600/5',         border: 'border-green-700/30' },
+  { label: 'Métricas',    href: '/dashboard/metricas',   icon: TrendingUp,  color: 'from-iara-600/20 to-accent-pink/5',        border: 'border-iara-700/30' },
+  { label: 'Fotos',       href: '/dashboard/fotos',      icon: Images,      color: 'from-iara-600/15 to-teal-600/5',           border: 'border-iara-700/20' },
+  { label: 'Metas',       href: '/dashboard/metas',      icon: Target,      color: 'from-green-600/15 to-iara-600/5',          border: 'border-green-700/20' },
+  { label: 'Calendário',  href: '/dashboard/calendario', icon: Calendar,    color: 'from-teal-600/15 to-iara-600/5',           border: 'border-teal-700/20' },
+  { label: 'Perfil',      href: '/dashboard/perfil',     icon: User,        color: 'from-accent-purple/15 to-iara-600/5',      border: 'border-accent-purple/20' },
 ]
 
 const modules = [
@@ -130,19 +135,20 @@ export default async function DashboardPage() {
           <Zap className="w-3.5 h-3.5 text-iara-400" />
           <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Acesso rápido</h2>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+        <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
           {quickAccess.map((item) => {
             const Icon = item.icon
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-2 p-3 rounded-2xl bg-gradient-to-br ${item.color} border ${item.border} hover:scale-[1.04] active:scale-[0.97] transition-all duration-150 group`}
+                className={`flex-none flex flex-col items-center gap-2 p-3 rounded-2xl bg-gradient-to-br ${item.color} border ${item.border} hover:scale-[1.04] active:scale-[0.97] transition-all duration-150 group`}
+                style={{ width: '4.75rem' }}
               >
                 <div className="w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center">
                   <Icon className="w-4 h-4 text-iara-400 group-hover:text-iara-300 transition-colors" />
                 </div>
-                <span className="text-[11px] font-medium text-[#9b9bb5] group-hover:text-[#f1f1f8] transition-colors text-center leading-tight">
+                <span className="text-[10px] font-medium text-[#9b9bb5] group-hover:text-[#f1f1f8] transition-colors text-center leading-tight w-full">
                   {item.label}
                 </span>
               </Link>
