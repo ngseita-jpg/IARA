@@ -117,7 +117,10 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d1a]/95 backdrop-blur-sm border-t border-iara-900/30 px-2 pb-safe">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d1a]/95 backdrop-blur-sm border-t border-iara-900/30 px-2"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         <div className="flex items-center justify-around">
           {[
             { label: 'Início',     href: '/dashboard',           icon: LayoutDashboard },
@@ -136,19 +139,19 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
                 className="flex-1"
               >
                 {isMais ? (
-                  <div className={`flex flex-col items-center gap-1 py-3 ${mobileOpen ? 'text-iara-400' : 'text-[#5a5a7a]'}`}>
+                  <div className={`flex flex-col items-center gap-1 py-3 transition-colors ${mobileOpen ? 'text-iara-400' : 'text-[#5a5a7a]'}`}>
                     <Icon className="w-5 h-5" />
                     <span className="text-[10px] font-medium">Mais</span>
                   </div>
                 ) : (
                   <Link
                     href={item.href}
-                    className={`flex flex-col items-center gap-1 py-3 transition-colors ${
+                    className={`relative flex flex-col items-center gap-1 py-3 transition-colors ${
                       isActive ? 'text-iara-400' : 'text-[#5a5a7a]'
                     }`}
                   >
                     {isActive && (
-                      <div className="absolute w-8 h-0.5 rounded-full bg-iara-500" style={{ marginTop: -12 }} />
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-iara-500" />
                     )}
                     <Icon className="w-5 h-5" />
                     <span className="text-[10px] font-medium">{item.label}</span>

@@ -17,7 +17,7 @@ export default async function DashboardLayout({
     return (
       <div className="min-h-screen bg-[#0a0a14]">
         <Navbar userEmail="demo@iara.app" />
-        <main className="md:ml-64 pt-16 md:pt-0 min-h-screen pb-20 md:pb-0">
+        <main className="md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
           <div className="p-6 md:p-8 max-w-6xl">
             {children}
           </div>
@@ -52,7 +52,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-[#0a0a14]">
       <Navbar userEmail={user.email} />
-      <main className="md:ml-64 pt-16 md:pt-0 min-h-screen">
+      <main className="md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
         <div className="p-6 md:p-8 max-w-6xl">
           {children}
         </div>

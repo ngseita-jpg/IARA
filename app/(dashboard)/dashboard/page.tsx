@@ -3,6 +3,7 @@ import Link from 'next/link'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
+  ChevronRight,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 
@@ -48,8 +49,30 @@ export default async function DashboardPage() {
   const hora = new Date().getHours()
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
 
+  const perfilIncompleto = !profile?.nicho || !profile?.nome_artistico
+
   return (
     <div className="animate-fade-in">
+
+      {/* ── Banner perfil incompleto ── */}
+      {perfilIncompleto && (
+        <Link href="/dashboard/perfil" className="block mb-6">
+          <div className="rounded-2xl border border-iara-700/40 bg-gradient-to-r from-iara-900/40 to-accent-purple/10 p-4 hover:border-iara-600/60 transition-all duration-200 group">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-iara-600/20 border border-iara-700/30 flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-iara-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#f1f1f8]">Complete seu perfil</p>
+                  <p className="text-xs text-[#6b6b8a]">A Iara precisa te conhecer para personalizar todos os módulos</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-iara-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* ── Welcome ── */}
       <div className="mb-8">

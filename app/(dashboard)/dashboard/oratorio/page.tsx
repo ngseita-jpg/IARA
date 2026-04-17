@@ -349,23 +349,23 @@ export default function OratorioPage() {
         <div className="space-y-5 animate-fade-in">
 
           {/* Score total + pontos ganhos */}
-          <div className="iara-card p-6 flex items-center gap-6">
-            <div className="flex-shrink-0 text-center">
-              <div className={`text-5xl font-black ${scoreTextColor(resultado.score_total)}`}>
-                {resultado.score_total}
+          <div className="iara-card p-5 sm:p-6">
+            <div className="flex items-start gap-4 sm:gap-6">
+              <div className="flex-shrink-0 text-center">
+                <div className={`text-5xl font-black ${scoreTextColor(resultado.score_total)}`}>
+                  {resultado.score_total}
+                </div>
+                <p className="text-xs text-[#5a5a7a] mt-1">Score total</p>
               </div>
-              <p className="text-xs text-[#5a5a7a] mt-1">Score total</p>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-[#f1f1f8] mb-1">{resultado.perfil_voz}</p>
-              <p className="text-xs text-[#9b9bb5] leading-relaxed">{resultado.feedback}</p>
-            </div>
-            <div className="flex-shrink-0 flex flex-col items-center gap-1">
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-iara-900/40 border border-iara-700/30">
-                <Trophy className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm font-bold text-yellow-400">+{resultado.pontos_ganhos} pts</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[#f1f1f8] mb-1">{resultado.perfil_voz}</p>
+                <p className="text-xs text-[#9b9bb5] leading-relaxed">{resultado.feedback}</p>
               </div>
-              <p className="text-[10px] text-[#5a5a7a]">{resultado.pontos_total} pts total</p>
+            </div>
+            <div className="flex items-center gap-1.5 mt-4 px-3 py-2 rounded-xl bg-iara-900/40 border border-iara-700/30 w-fit">
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm font-bold text-yellow-400">+{resultado.pontos_ganhos} pts</span>
+              <span className="text-xs text-[#5a5a7a] ml-1">· {resultado.pontos_total} pts total</span>
             </div>
           </div>
 
@@ -398,7 +398,7 @@ export default function OratorioPage() {
 
           {/* Pontos fortes e a melhorar */}
           {(resultado.ponto_forte || resultado.ponto_melhorar) && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {resultado.ponto_forte && (
                 <div className="iara-card p-4 border-green-800/20 bg-green-900/10">
                   <p className="text-xs font-semibold text-green-400 mb-1 uppercase tracking-wider">✓ Ponto forte</p>

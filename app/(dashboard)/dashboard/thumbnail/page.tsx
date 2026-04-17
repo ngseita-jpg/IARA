@@ -237,34 +237,68 @@ export default function ThumbnailPage() {
           </div>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 mb-8">
-          {steps.map((s, i) => {
-            const Icon = stepIcons[i]
-            const isActive = s === step
-            const isDone = i < currentStepIdx
-            return (
-              <div key={s} className="flex items-center gap-2">
-                <button
-                  onClick={() => isDone && setStep(s)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    isActive
-                      ? 'bg-accent-purple/20 text-purple-300 border border-accent-purple/40'
-                      : isDone
-                      ? 'text-[#9b9bb5] hover:text-purple-300 cursor-pointer'
-                      : 'text-[#3a3a5a] cursor-default'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {stepLabels[i]}
-                  {isDone && <CheckCircle className="w-3 h-3 text-green-400" />}
-                </button>
-                {i < steps.length - 1 && (
-                  <ChevronRight className={`w-4 h-4 ${i < currentStepIdx ? 'text-accent-purple' : 'text-[#2a2a3a]'}`} />
-                )}
-              </div>
-            )
-          })}
+        {/* Step indicator — mobile: numbered circles, desktop: labeled buttons */}
+        <div className="mb-8">
+          {/* Mobile compact */}
+          <div className="flex items-center sm:hidden mb-2">
+            {steps.map((s, i) => {
+              const isActive = s === step
+              const isDone = i < currentStepIdx
+              return (
+                <div key={s} className="flex items-center flex-1 last:flex-none">
+                  <button
+                    onClick={() => isDone && setStep(s)}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all ${
+                      isActive
+                        ? 'bg-accent-purple text-white ring-2 ring-accent-purple/30'
+                        : isDone
+                        ? 'bg-green-600/30 text-green-400 cursor-pointer'
+                        : 'bg-[#1a1a2e] text-[#4a4a6a]'
+                    }`}
+                  >
+                    {isDone ? '✓' : i + 1}
+                  </button>
+                  {i < steps.length - 1 && (
+                    <div className={`flex-1 h-px mx-1 ${i < currentStepIdx ? 'bg-accent-purple/60' : 'bg-[#2a2a4a]'}`} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-xs text-[#6b6b8a] sm:hidden">
+            <span className="text-purple-300 font-medium">{stepLabels[currentStepIdx]}</span>
+            <span className="ml-1 text-[#4a4a6a]">· passo {currentStepIdx + 1} de {steps.length}</span>
+          </p>
+
+          {/* Desktop full labels */}
+          <div className="hidden sm:flex items-center gap-2">
+            {steps.map((s, i) => {
+              const Icon = stepIcons[i]
+              const isActive = s === step
+              const isDone = i < currentStepIdx
+              return (
+                <div key={s} className="flex items-center gap-2">
+                  <button
+                    onClick={() => isDone && setStep(s)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      isActive
+                        ? 'bg-accent-purple/20 text-purple-300 border border-accent-purple/40'
+                        : isDone
+                        ? 'text-[#9b9bb5] hover:text-purple-300 cursor-pointer'
+                        : 'text-[#3a3a5a] cursor-default'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {stepLabels[i]}
+                    {isDone && <CheckCircle className="w-3 h-3 text-green-400" />}
+                  </button>
+                  {i < steps.length - 1 && (
+                    <ChevronRight className={`w-4 h-4 ${i < currentStepIdx ? 'text-accent-purple' : 'text-[#2a2a3a]'}`} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* ═══════════════════════════════════ */}
