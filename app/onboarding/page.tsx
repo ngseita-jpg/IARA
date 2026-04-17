@@ -54,6 +54,7 @@ export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [salvando, setSalvando] = useState(false)
+  const [erroSalvar, setErroSalvar] = useState(false)
   const [nomeArtistico, setNomeArtistico] = useState('')
   const [nicho, setNicho] = useState('')
   const [plataformas, setPlataformas] = useState<string[]>([])
@@ -73,14 +74,17 @@ export default function OnboardingPage() {
 
   async function handleFinalizar() {
     setSalvando(true)
+    setErroSalvar(false)
     try {
-      await fetch('/api/onboarding', {
+      const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome_artistico: nomeArtistico, nicho, plataformas, tom_de_voz: tomDeVoz, objetivo }),
       })
+      if (!res.ok) throw new Error()
       router.push('/dashboard')
     } catch {
+      setErroSalvar(true)
       setSalvando(false)
     }
   }
@@ -317,14 +321,19 @@ export default function OnboardingPage() {
                   Continuar <ArrowRight className="w-4 h-4" />
                 </button>
               ) : (
+                <div className="flex-1 flex flex-col gap-2">
                 <button onClick={handleFinalizar} disabled={salvando}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 disabled:opacity-50"
                   style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7)' }}>
                   {salvando
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
                     : <><Sparkles className="w-4 h-4" /> Entrar na Iara</>
                   }
                 </button>
+                {erroSalvar && (
+                  <p className="text-xs text-red-400 text-center">Erro ao salvar. Tente novamente.</p>
+                )}
+              </div>
               )}
             </div>
           </div>

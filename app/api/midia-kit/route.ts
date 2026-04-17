@@ -121,6 +121,15 @@ Retorne SOMENTE JSON válido:
 
     const kit = JSON.parse(jsonMatch[0])
 
+    // Registra uso para controle de limite (fire-and-forget)
+    supabase.from('content_history').insert({
+      user_id: user.id,
+      tipo: 'midia_kit',
+      titulo: profile?.nome_artistico ?? 'Mídia Kit',
+      parametros: {},
+      conteudo: { bio_comercial: kit.bio_comercial?.slice(0, 200) },
+    }).then(() => {})
+
     return new Response(
       JSON.stringify({
         kit,

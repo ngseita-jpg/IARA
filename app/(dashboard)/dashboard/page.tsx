@@ -190,6 +190,22 @@ export default async function DashboardPage() {
             )
           })}
         </div>
+
+        {/* Banner de upgrade quando qualquer limite está atingido */}
+        {usoMes.some((item) => item.usado >= item.limite) && (
+          <Link href="/#planos" className="group mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-iara-900/40 to-accent-purple/10 border border-iara-700/30 hover:border-iara-600/50 transition-all duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-iara-600/30 to-accent-purple/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 text-iara-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#f1f1f8]">Você chegou no limite do plano gratuito</p>
+                <p className="text-xs text-[#6b6b8a]">Faça upgrade e gere muito mais a partir de R$49/mês</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-iara-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+          </Link>
+        )}
       </div>
 
       {/* ── Todos os módulos ── */}

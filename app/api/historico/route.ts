@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getLevel } from '@/lib/badges'
+
+// Pontos concedidos ao salvar cada tipo de conteúdo gerado
+const PONTOS_GERACAO: Record<string, number> = {
+  roteiro:   5,
+  carrossel: 5,
+  stories:   5,
+  thumbnail: 5,
+}
 
 // GET /api/historico?tipo=roteiro — lista histórico do tipo
 export async function GET(req: NextRequest) {
@@ -23,7 +32,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ items: data ?? [] })
 }
 
-// POST /api/historico — salva item
+// POST /api/historico — salva item e concede pontos de gamificação
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,7 +55,26 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ ok: true })
+  // Concede pontos de gamificação (fire-and-forget, não bloqueia resposta)
+  const pontos = PONTOS_GERACAO[body.tipo] ?? 0
+  if (pontos > 0) {
+    const { data: profile } = await supabase
+      .from('creator_profiles')
+      .select('pontos')
+      .eq('user_id', user.id)
+      .single()
+
+    const novoTotal = (profile?.pontos ?? 0) + pontos
+
+    supabase.from('creator_profiles').upsert({
+      user_id: user.id,
+      pontos: novoTotal,
+      nivel: getLevel(novoTotal),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' }).then(() => {})
+  }
+
+  return NextResponse.json({ ok: true, pontos_ganhos: pontos })
 }
 
 // DELETE /api/historico?id=xxx — remove item
