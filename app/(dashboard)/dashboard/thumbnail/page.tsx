@@ -482,17 +482,24 @@ export default function ThumbnailPage() {
             {erroGeracao && (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-red-900/20 border border-red-700/30 text-red-400">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium">Erro ao gerar</p>
-                  <p className="text-xs mt-0.5 text-red-400/70">{erroGeracao}</p>
+                  <p className="text-xs mt-0.5 text-red-400/70">
+                    {erroGeracao}
+                    {erroGeracao.includes('Faça upgrade') && (
+                      <a href="/#planos" className="ml-1 underline text-red-300 hover:text-red-200 transition-colors">Ver planos →</a>
+                    )}
+                  </p>
                 </div>
-                <button
-                  onClick={handleGerar}
-                  className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-700/30 hover:bg-red-700/50 text-xs font-medium transition-all"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Tentar de novo
-                </button>
+                {!erroGeracao.includes('Faça upgrade') && (
+                  <button
+                    onClick={handleGerar}
+                    className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-700/30 hover:bg-red-700/50 text-xs font-medium transition-all"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Tentar de novo
+                  </button>
+                )}
               </div>
             )}
 

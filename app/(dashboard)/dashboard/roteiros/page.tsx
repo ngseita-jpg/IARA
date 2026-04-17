@@ -402,6 +402,9 @@ export default function RoteirosPage() {
             {error && (
               <div className="px-4 py-3 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm animate-fade-in">
                 {error}
+                {error.includes('Faça upgrade') && (
+                  <a href="/#planos" className="ml-1 underline text-red-300 hover:text-red-200 transition-colors">Ver planos →</a>
+                )}
               </div>
             )}
 

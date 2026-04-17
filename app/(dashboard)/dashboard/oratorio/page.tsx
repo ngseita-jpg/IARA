@@ -302,7 +302,12 @@ export default function OratorioPage() {
             {error && (
               <div className="flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
+                <span>
+                  {error}
+                  {error.includes('Faça upgrade') && (
+                    <a href="/#planos" className="ml-1 underline text-red-300 hover:text-red-200 transition-colors">Ver planos →</a>
+                  )}
+                </span>
               </div>
             )}
 

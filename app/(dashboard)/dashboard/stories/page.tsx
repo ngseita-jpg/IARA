@@ -324,6 +324,9 @@ export default function StoriesPage() {
           {erro && (
             <p className="text-sm text-red-400 bg-red-900/20 border border-red-800/30 rounded-xl px-4 py-3">
               {erro}
+              {erro.includes('Faça upgrade') && (
+                <a href="/#planos" className="ml-1 underline text-red-300 hover:text-red-200 transition-colors">Ver planos →</a>
+              )}
             </p>
           )}
 
