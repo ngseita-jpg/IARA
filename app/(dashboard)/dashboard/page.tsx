@@ -6,6 +6,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
+import { LIMITES, inicioMesAtual } from '@/lib/limites'
 
 const quickAccess = [
   { label: 'Roteiro',   href: '/dashboard/roteiros',  icon: FileText,    color: 'from-iara-600/30 to-iara-600/10',          border: 'border-iara-700/40' },
@@ -50,6 +51,24 @@ export default async function DashboardPage() {
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
 
   const perfilIncompleto = !profile?.nicho || !profile?.nome_artistico
+
+  // Uso do mês atual (plano free)
+  const mesAtual = inicioMesAtual()
+  const [{ count: usoRoteiros }, { count: usoCarrossel }, { count: usoStories }, { count: usoThumbnail }] =
+    await Promise.all([
+      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'roteiro').gte('created_at', mesAtual),
+      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'carrossel').gte('created_at', mesAtual),
+      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'stories').gte('created_at', mesAtual),
+      supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', user?.id ?? '').eq('tipo', 'thumbnail').gte('created_at', mesAtual),
+    ])
+
+  const limites = LIMITES['free']
+  const usoMes = [
+    { label: 'Roteiros',   usado: usoRoteiros ?? 0,  limite: limites.roteiro!,   cor: 'bg-iara-500' },
+    { label: 'Carrosseis', usado: usoCarrossel ?? 0, limite: limites.carrossel!, cor: 'bg-accent-pink' },
+    { label: 'Stories',    usado: usoStories ?? 0,   limite: limites.stories!,   cor: 'bg-accent-purple' },
+    { label: 'Thumbnails', usado: usoThumbnail ?? 0, limite: limites.thumbnail!, cor: 'bg-teal-500' },
+  ]
 
   return (
     <div className="animate-fade-in">
@@ -127,6 +146,41 @@ export default async function DashboardPage() {
                   {item.label}
                 </span>
               </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Uso do mês ── */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-iara-400" />
+            <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Uso este mês · Plano Gratuito</h2>
+          </div>
+          <Link href="/#planos" className="text-[10px] text-iara-400 hover:text-iara-300 transition-colors font-medium">
+            Ver planos →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {usoMes.map((item) => {
+            const pct = Math.min(100, Math.round((item.usado / item.limite) * 100))
+            const esgotado = item.usado >= item.limite
+            return (
+              <div key={item.label} className={`rounded-2xl p-3.5 bg-[#0f0f1e] border ${esgotado ? 'border-red-800/40' : 'border-[#1a1a2e]'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-medium text-[#9b9bb5]">{item.label}</span>
+                  <span className={`text-[11px] font-bold ${esgotado ? 'text-red-400' : 'text-[#6b6b8a]'}`}>
+                    {item.usado}/{item.limite}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-[#1a1a2e] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${esgotado ? 'bg-red-500' : item.cor}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
             )
           })}
         </div>
