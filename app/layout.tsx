@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     default: 'Iara — Assessoria com IA para Criadores',
     template: '%s | Iara',
   },
-  description: 'Sua assessora de comunicação com IA. 10 módulos integrados: roteiros, carrosseis, thumbnails, oratória, média kit e muito mais. Feito para criadores brasileiros.',
+  description: 'Sua assessora de comunicação com IA. 10 módulos integrados: roteiros, carrosseis, thumbnails, oratória, mídia kit e muito mais. Feito para criadores brasileiros.',
   keywords: ['criador de conteúdo', 'inteligência artificial', 'roteiro', 'carrossel', 'thumbnail', 'oratória', 'criadores', 'brasil'],
   authors: [{ name: 'Iara' }],
   creator: 'Iara',
