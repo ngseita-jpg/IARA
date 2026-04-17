@@ -601,7 +601,7 @@ export default function CarrosselPage() {
                       alt={`Imagem ${i + 1}`}
                       className="w-full h-full object-cover rounded-lg border border-[#1a1a2e]"
                     />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
                       <button
                         onClick={() => removerImagem(i)}
                         className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 transition-colors"

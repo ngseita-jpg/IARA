@@ -286,7 +286,7 @@ export default function CalendarioPage() {
                               <span>{tipo.icon}</span>
                               <button
                                 onClick={() => deletarItem(item.id)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity text-[#5a5a7a] hover:text-red-400"
+                                className="opacity-40 sm:opacity-0 group-hover:opacity-100 transition-opacity text-[#5a5a7a] hover:text-red-400"
                               >
                                 <X className="w-2.5 h-2.5" />
                               </button>
