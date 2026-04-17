@@ -21,9 +21,11 @@ import {
   FileText,
   Sliders,
   Newspaper,
+  History,
 } from 'lucide-react'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
+import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 
 type Step = 'conteudo' | 'imagens' | 'config' | 'preview'
 
@@ -73,6 +75,7 @@ export default function CarrosselPage() {
   const [msgChat, setMsgChat] = useState('')
   const [enviandoChat, setEnviandoChat] = useState(false)
   const [historicoClaude, setHistoricoClaude] = useState<{ role: string; content: string }[]>([])
+  const [historicoAberto, setHistoricoAberto] = useState(false)
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -167,6 +170,8 @@ export default function CarrosselPage() {
         { role: 'user', content: `Gerei um carrossel sobre: ${conteudo.slice(0, 200)}` },
         { role: 'assistant', content: data.assistant_message },
       ])
+      const tituloHistorico = leitura?.titulo || textoManual.slice(0, 80) || url
+      salvarHistorico('carrossel', tituloHistorico, carrosselGerado, { numSlides, instrucoes: instrucoes.slice(0, 60) })
 
       // Renderizar slides em paralelo
       await renderizarTodos(carrosselGerado)
@@ -303,16 +308,37 @@ export default function CarrosselPage() {
     <div className="min-h-screen bg-[#080810] text-[#f1f1f8]">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
+        <HistoricoPanel
+          tipo="carrossel"
+          aberto={historicoAberto}
+          onFechar={() => setHistoricoAberto(false)}
+          onCarregar={(item: HistoricoItem) => {
+            const c = item.conteudo as CarrosselData
+            setCarrossel(c)
+            setSlidePngs({})
+            setStep('preview')
+          }}
+        />
+
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
-              <Layers className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between gap-4 mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
+                <Layers className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-[#f1f1f8]">Gerador de Carrossel</h1>
+                <p className="text-sm text-[#6b6b8a]">Cole um link, texto ou vídeo — a Iara monta o carrossel por você</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[#f1f1f8]">Gerador de Carrossel</h1>
-              <p className="text-sm text-[#6b6b8a]">Cole um link, texto ou vídeo — a Iara monta o carrossel por você</p>
-            </div>
+            <button
+              onClick={() => setHistoricoAberto(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] hover:border-iara-700/40 text-[#6b6b8a] hover:text-iara-400 text-xs font-medium transition-all flex-shrink-0"
+            >
+              <History className="w-3.5 h-3.5" />
+              Histórico
+            </button>
           </div>
         </div>
 

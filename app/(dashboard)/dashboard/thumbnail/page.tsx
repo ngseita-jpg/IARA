@@ -18,8 +18,11 @@ import {
   Play,
   FileText,
   Sliders,
+  Images,
+  History,
 } from 'lucide-react'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
+import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 
 type Step = 'info' | 'foto' | 'gerar'
 type MensagemChat = { role: 'user' | 'assistant'; content: string }
@@ -48,6 +51,7 @@ export default function ThumbnailPage() {
   const [msgChat, setMsgChat] = useState('')
   const [enviandoChat, setEnviandoChat] = useState(false)
   const [historicoClaude, setHistoricoClaude] = useState<{ role: string; content: string }[]>([])
+  const [historicoAberto, setHistoricoAberto] = useState(false)
 
   // ───────────────────────────────────────────
   // Upload de foto
@@ -97,6 +101,7 @@ export default function ThumbnailPage() {
         { role: 'user', content: `Thumbnail para: ${tituloVideo}` },
         { role: 'assistant', content: data.assistant_message },
       ])
+      salvarHistorico('thumbnail', tituloVideo, layoutGerado, { descricao: descricao.slice(0, 80) })
 
       await renderizarThumbnail(layoutGerado)
     } catch (e: unknown) {
@@ -196,16 +201,39 @@ export default function ThumbnailPage() {
     <div className="min-h-screen bg-[#080810] text-[#f1f1f8]">
       <div className="max-w-4xl mx-auto px-4 py-8">
 
+        <HistoricoPanel
+          tipo="thumbnail"
+          aberto={historicoAberto}
+          onFechar={() => setHistoricoAberto(false)}
+          onCarregar={(item: HistoricoItem) => {
+            const l = item.conteudo as ThumbnailLayout
+            setLayout(l)
+            setTituloVideo(item.titulo)
+            if (item.parametros.descricao) setDescricao(item.parametros.descricao as string)
+            setStep('gerar')
+            renderizarThumbnail(l)
+          }}
+        />
+
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-purple to-iara-500 flex items-center justify-center">
-              <ImageIcon className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between gap-4 mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-purple to-iara-500 flex items-center justify-center">
+                <ImageIcon className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-[#f1f1f8]">Gerador de Thumbnail</h1>
+                <p className="text-sm text-[#6b6b8a]">Crie thumbnails de alto CTR para seus vídeos em segundos</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[#f1f1f8]">Gerador de Thumbnail</h1>
-              <p className="text-sm text-[#6b6b8a]">Crie thumbnails de alto CTR para seus vídeos em segundos</p>
-            </div>
+            <button
+              onClick={() => setHistoricoAberto(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] hover:border-accent-purple/40 text-[#6b6b8a] hover:text-purple-400 text-xs font-medium transition-all flex-shrink-0"
+            >
+              <History className="w-3.5 h-3.5" />
+              Histórico
+            </button>
           </div>
         </div>
 

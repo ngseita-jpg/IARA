@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   FileText,
   Sparkles,
@@ -14,9 +14,11 @@ import {
   User,
   Layers,
   Radio,
+  History,
 } from 'lucide-react'
 import Link from 'next/link'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
+import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 
 const FORMATOS = [
   { value: 'Reel (até 90s)',         iconKey: 'reel',    desc: 'Instagram / TikTok' },
@@ -75,6 +77,17 @@ export default function RoteirosPage() {
   const [inspiracaoUrl, setInspiacaoUrl] = useState('')
   const [inspiracaoVideo, setInspiracaoVideo] = useState<{ titulo: string; thumbnail?: string; transcricao?: string | null; aviso?: string } | null>(null)
   const [analisandoInspiracao, setAnalisandoInspiracao] = useState(false)
+  const [historicoAberto, setHistoricoAberto] = useState(false)
+
+  // Salva no histórico quando o streaming termina
+  const roteiroRef = useRef('')
+  useEffect(() => { roteiroRef.current = roteiro }, [roteiro])
+  useEffect(() => {
+    if (!loading && roteiroRef.current.length > 100 && tema) {
+      salvarHistorico('roteiro', tema, { texto: roteiroRef.current }, { formato, duracao, objetivo, modo })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
@@ -149,13 +162,39 @@ export default function RoteirosPage() {
           <FileText className="w-4 h-4" />
           <span>Módulo</span>
         </div>
-        <h1 className="text-3xl font-bold text-[#f1f1f8]">
-          Gerador de <span className="iara-gradient-text">Roteiros</span>
-        </h1>
-        <p className="mt-2 text-[#9b9bb5]">
-          Descreva o tema e deixe a Iara criar um roteiro completo no seu estilo.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-[#f1f1f8]">
+              Gerador de <span className="iara-gradient-text">Roteiros</span>
+            </h1>
+            <p className="mt-2 text-[#9b9bb5]">
+              Descreva o tema e deixe a Iara criar um roteiro completo no seu estilo.
+            </p>
+          </div>
+          <button
+            onClick={() => setHistoricoAberto(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] hover:border-iara-700/40 text-[#6b6b8a] hover:text-iara-400 text-xs font-medium transition-all flex-shrink-0 mt-1"
+          >
+            <History className="w-3.5 h-3.5" />
+            Histórico
+          </button>
+        </div>
       </div>
+
+      <HistoricoPanel
+        tipo="roteiro"
+        aberto={historicoAberto}
+        onFechar={() => setHistoricoAberto(false)}
+        onCarregar={(item: HistoricoItem) => {
+          const c = item.conteudo as { texto: string }
+          setRoteiro(c.texto)
+          if (item.parametros.formato) setFormato(item.parametros.formato as string)
+          if (item.parametros.duracao) setDuracao(item.parametros.duracao as string)
+          if (item.parametros.objetivo) setObjetivo(item.parametros.objetivo as string)
+          if (item.parametros.modo) setModo(item.parametros.modo as Modo)
+          setTema(item.titulo)
+        }}
+      />
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Formulário */}
