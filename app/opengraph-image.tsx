@@ -18,10 +18,9 @@ export default function OGImage() {
           justifyContent: 'center',
           fontFamily: 'sans-serif',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Background glow blobs */}
+        {/* Background glow */}
         <div
           style={{
             position: 'absolute',
@@ -31,36 +30,13 @@ export default function OGImage() {
             width: 800,
             height: 500,
             borderRadius: '50%',
-            background: 'radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 70%)',
-            filter: 'blur(60px)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: '30%',
-            left: '20%',
-            width: 300,
-            height: 300,
-            borderRadius: '50%',
-            background: 'radial-gradient(ellipse, rgba(168,85,247,0.10) 0%, transparent 70%)',
-            filter: 'blur(50px)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: '30%',
-            right: '20%',
-            width: 250,
-            height: 250,
-            borderRadius: '50%',
-            background: 'radial-gradient(ellipse, rgba(236,72,153,0.08) 0%, transparent 70%)',
-            filter: 'blur(40px)',
+            background: 'rgba(99,102,241,0.12)',
+            filter: 'blur(80px)',
+            display: 'flex',
           }}
         />
 
-        {/* Logo */}
+        {/* Logo row */}
         <div
           style={{
             display: 'flex',
@@ -78,10 +54,9 @@ export default function OGImage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 40px rgba(99,102,241,0.4)',
             }}
           >
-            <div style={{ color: 'white', fontSize: 28, fontWeight: 900 }}>✦</div>
+            <span style={{ color: 'white', fontSize: 28, fontWeight: 900 }}>I</span>
           </div>
           <span
             style={{
@@ -100,26 +75,37 @@ export default function OGImage() {
         {/* Headline */}
         <div
           style={{
-            fontSize: 52,
-            fontWeight: 800,
-            color: '#f1f1f8',
-            textAlign: 'center',
-            lineHeight: 1.15,
-            maxWidth: 900,
-            letterSpacing: '-1px',
-            marginBottom: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 0,
           }}
         >
-          Sua assessora de comunicação{' '}
-          <span
+          <div
             style={{
-              background: 'linear-gradient(90deg, #818cf8, #c084fc)',
-              backgroundClip: 'text',
-              color: 'transparent',
+              fontSize: 52,
+              fontWeight: 800,
+              color: '#f1f1f8',
+              textAlign: 'center',
+              lineHeight: 1.15,
+              maxWidth: 900,
+              letterSpacing: '-1px',
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
             }}
           >
-            com IA
-          </span>
+            <span>Sua assessora de comunicação&nbsp;</span>
+            <span
+              style={{
+                background: 'linear-gradient(90deg, #818cf8, #c084fc)',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              com IA
+            </span>
+          </div>
         </div>
 
         {/* Sub */}
@@ -130,7 +116,9 @@ export default function OGImage() {
             textAlign: 'center',
             maxWidth: 700,
             lineHeight: 1.5,
+            marginTop: 20,
             marginBottom: 44,
+            display: 'flex',
           }}
         >
           10 módulos integrados para criadores brasileiros crescerem mais rápido.
@@ -142,6 +130,7 @@ export default function OGImage() {
             <div
               key={m}
               style={{
+                display: 'flex',
                 padding: '8px 18px',
                 borderRadius: 999,
                 border: '1px solid rgba(99,102,241,0.25)',
@@ -164,6 +153,7 @@ export default function OGImage() {
             fontSize: 16,
             color: '#3a3a5a',
             letterSpacing: '0.5px',
+            display: 'flex',
           }}
         >
           iarahubapp.com.br
