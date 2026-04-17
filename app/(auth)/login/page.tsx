@@ -1,17 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Sparkles, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
+
+  useEffect(() => {
+    const mensagem = searchParams.get('mensagem')
+    if (mensagem === 'link-expirado') {
+      setInfo('O link de confirmação expirou. Entre com seu e-mail e senha.')
+    }
+  }, [searchParams])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -49,6 +58,12 @@ export default function LoginPage() {
       <div className="rounded-3xl border border-[#1a1a2e] bg-[#0f0f1e]/80 backdrop-blur-xl p-8 shadow-2xl shadow-black/40">
         <h2 className="text-xl font-bold text-[#f1f1f8] mb-1">Bem-vindo de volta</h2>
         <p className="text-sm text-[#5a5a7a] mb-7">Entre para continuar criando com IA</p>
+
+        {info && (
+          <div className="mb-5 px-4 py-3 rounded-xl bg-iara-900/20 border border-iara-700/40 text-iara-300 text-sm animate-fade-in flex items-center gap-2">
+            <span>ℹ</span> {info}
+          </div>
+        )}
 
         {error && (
           <div className="mb-5 px-4 py-3 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm animate-fade-in flex items-center gap-2">
@@ -124,5 +139,13 @@ export default function LoginPage() {
         Plataforma de IA para criadores de conteúdo 🇧🇷
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
