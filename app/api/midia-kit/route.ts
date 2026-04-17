@@ -18,6 +18,10 @@ export async function POST(req: NextRequest) {
     site,
   } = await req.json()
 
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const check = await verificarLimite(supabase, user.id, 'midia_kit')
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+
   // Buscar tudo do sistema
   const [
     { data: profile },

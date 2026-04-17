@@ -17,6 +17,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Imagem não informada' }, { status: 400 })
   }
 
+  // Verificar limite de fotos (conta total no banco, não mensal)
+  const { count } = await supabase
+    .from('user_photos')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  const { getLimite } = await import('@/lib/limites')
+  const limite = getLimite('free', 'fotos') // TODO: ler plano real do perfil quando Stripe for integrado
+  if (limite !== null && (count ?? 0) >= limite) {
+    return NextResponse.json({
+      error: 'limite_atingido',
+      mensagem: `Você atingiu o limite de ${limite} fotos no plano Gratuito. Faça upgrade para continuar.`,
+      limite,
+      usado: count ?? 0,
+      plano: 'Gratuito',
+    }, { status: 429 })
+  }
+
   const matches = imagem_base64.match(/^data:image\/(\w+);base64,(.+)$/)
   if (!matches) {
     return NextResponse.json({ error: 'Formato de imagem inválido' }, { status: 400 })

@@ -75,6 +75,13 @@ export async function POST(req: NextRequest) {
 
   const { conteudo, instrucoes, num_slides, imagens_base64, historico } = await req.json()
 
+  // Só conta como nova geração (não como ajuste via chat)
+  if (!historico?.length) {
+    const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+    const check = await verificarLimite(supabase, user.id, 'carrossel')
+    if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+  }
+
   const { data: perfil } = await supabase
     .from('creator_profiles')
     .select('nome_artistico, nicho, tom_de_voz, sobre')

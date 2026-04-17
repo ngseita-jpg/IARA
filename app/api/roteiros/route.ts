@@ -85,6 +85,11 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Verificar limite de uso
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const check = await verificarLimite(supabase, user.id, 'roteiro')
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+
   // Buscar perfil do criador para personalização (incluindo voz)
   const { data: profile } = await supabase
     .from('creator_profiles')

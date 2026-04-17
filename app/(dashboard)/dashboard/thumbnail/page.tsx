@@ -93,7 +93,7 @@ export default function ThumbnailPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao gerar')
+      if (!res.ok) throw new Error(data.mensagem || data.error || 'Erro ao gerar')
 
       const layoutGerado: ThumbnailLayout = data.layout
       setLayout(layoutGerado)

@@ -111,7 +111,7 @@ export default function RoteirosPage() {
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Erro ao gerar roteiro')
+        throw new Error(data.mensagem || data.error || 'Erro ao gerar roteiro')
       }
 
       const reader = res.body?.getReader()

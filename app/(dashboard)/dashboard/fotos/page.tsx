@@ -69,7 +69,7 @@ export default function FotosPage() {
         body: JSON.stringify({ imagem_base64: base64, nome: file.name }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) throw new Error(data.mensagem || data.error)
 
       setFotos((prev) => [data.photo, ...prev])
       setSucesso('Foto adicionada ao banco!')

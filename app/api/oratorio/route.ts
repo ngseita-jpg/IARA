@@ -33,6 +33,10 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Transcrição muito curta para análise' }), { status: 400 })
   }
 
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const check = await verificarLimite(supabase, user.id, 'oratorio')
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+
   const ppm = duracao_segundos > 0
     ? Math.round((word_count / duracao_segundos) * 60)
     : 0

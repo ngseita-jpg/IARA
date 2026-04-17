@@ -162,7 +162,7 @@ export default function CarrosselPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao gerar')
+      if (!res.ok) throw new Error(data.mensagem || data.error || 'Erro ao gerar')
 
       const carrosselGerado: CarrosselData = data.carrossel
       setCarrossel(carrosselGerado)

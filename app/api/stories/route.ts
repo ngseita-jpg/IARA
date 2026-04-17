@@ -36,6 +36,10 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Tema é obrigatório' }), { status: 400 })
   }
 
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const check = await verificarLimite(supabase, user.id, 'stories')
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+
   // Buscar perfil do criador
   const { data: profile } = await supabase
     .from('creator_profiles')

@@ -323,7 +323,7 @@ export default function MidiaKitPage() {
 
       if (!res.ok) {
         const d = await res.json()
-        setErro(d.error ?? 'Erro ao gerar mídia kit')
+        setErro(d.mensagem ?? d.error ?? 'Erro ao gerar mídia kit')
         return
       }
 

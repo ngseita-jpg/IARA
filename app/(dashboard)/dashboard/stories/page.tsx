@@ -167,7 +167,7 @@ export default function StoriesPage() {
 
       if (!res.ok) {
         const d = await res.json()
-        setErro(d.error ?? 'Erro ao gerar stories')
+        setErro(d.mensagem ?? d.error ?? 'Erro ao gerar stories')
         return
       }
 
