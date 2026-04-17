@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Layers, Sparkles, ChevronLeft, ChevronRight,
   Copy, Check, RefreshCw, Lightbulb, Clock, History,
@@ -146,6 +146,11 @@ export default function StoriesPage() {
 
   const [erro, setErro] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [abaAtiva, setAbaAtiva] = useState<'configurar' | 'preview'>('configurar')
+
+  useEffect(() => {
+    if (slides.length > 0) setAbaAtiva('preview')
+  }, [slides.length])
 
   async function handleGerar() {
     if (!tema.trim()) return
@@ -227,10 +232,24 @@ export default function StoriesPage() {
         </p>
       </div>
 
+      {/* Abas mobile */}
+      <div className="lg:hidden flex gap-1 mb-6 p-1 bg-[#0f0f1e] rounded-xl border border-[#1a1a2e]">
+        {(['configurar', 'preview'] as const).map(aba => (
+          <button key={aba} onClick={() => setAbaAtiva(aba)}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+              abaAtiva === aba
+                ? 'bg-gradient-to-r from-iara-600 to-accent-purple text-white'
+                : 'text-[#5a5a7a]'
+            }`}>
+            {aba === 'configurar' ? '⚙ Configurar' : `✦ Preview${temSlides ? ' ●' : ''}`}
+          </button>
+        ))}
+      </div>
+
       <div className="grid lg:grid-cols-[1fr_auto] gap-8 items-start">
 
         {/* ── painel esquerdo: configuração ───────────────────────────── */}
-        <div className="space-y-6">
+        <div className={`space-y-6 ${abaAtiva === 'preview' ? 'hidden lg:block' : ''}`}>
 
           {/* tipo de story */}
           <div>
@@ -322,7 +341,7 @@ export default function StoriesPage() {
 
         {/* ── painel direito: preview dos slides ──────────────────────── */}
         {temSlides && slide && (
-          <div className="flex flex-col items-center gap-5 lg:sticky lg:top-6">
+          <div className={`flex flex-col items-center gap-5 lg:sticky lg:top-6 ${abaAtiva === 'configurar' ? 'hidden lg:flex' : ''}`}>
 
             {/* navegação */}
             <div className="flex items-center gap-4">
