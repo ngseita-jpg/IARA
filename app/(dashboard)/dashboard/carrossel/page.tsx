@@ -336,19 +336,22 @@ export default function CarrosselPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between gap-4 mb-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
-                <Layers className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#f1f1f8]">Gerador de Carrossel</h1>
-                <p className="text-sm text-[#6b6b8a]">Cole um link, texto ou vídeo — a Iara monta o carrossel por você</p>
-              </div>
+          <div className="flex items-center gap-2 text-iara-400 text-sm font-medium mb-2">
+            <Layers className="w-4 h-4" />
+            <span>Módulo</span>
+          </div>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-[#f1f1f8]">
+                Gerador de <span className="iara-gradient-text">Carrossel</span>
+              </h1>
+              <p className="mt-1 text-[#9b9bb5] text-sm">
+                Cole um link, texto ou vídeo — a Iara monta o carrossel por você.
+              </p>
             </div>
             <button
               onClick={() => setHistoricoAberto(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] hover:border-iara-700/40 text-[#6b6b8a] hover:text-iara-400 text-xs font-medium transition-all flex-shrink-0"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] hover:border-iara-700/40 text-[#6b6b8a] hover:text-iara-400 text-xs font-medium transition-all flex-shrink-0 mt-1"
             >
               <History className="w-3.5 h-3.5" />
               Histórico
