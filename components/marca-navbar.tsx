@@ -35,11 +35,21 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
       <aside className="hidden md:flex flex-col w-64 min-h-screen bg-[#0d0d1a] border-r border-marca-900/30 px-4 py-6 fixed left-0 top-0 z-40">
         {/* Logo */}
         <Link href="/marca/dashboard" className="flex items-center gap-2.5 px-2 mb-2 group">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shadow-marca-900/50"
-            style={{ background: 'linear-gradient(135deg, #C9A84C, #a855f7)' }}>
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full bg-[#0d0d20] border border-[#C9A84C]/35 flex items-center justify-center shadow-lg flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="star-mk" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#E2C068" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#star-mk)" />
+            </svg>
           </div>
-          <span className="text-xl font-bold marca-gradient-text">Iara</span>
+          <div className="flex flex-col leading-none">
+            <span className="text-base font-black marca-gradient-text tracking-tight">IARA</span>
+            <span className="text-[9px] font-bold text-[#5a4a2a] tracking-[0.2em] uppercase">HUB</span>
+          </div>
         </Link>
 
         {/* Badge marca */}
@@ -99,12 +109,21 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
       {/* Mobile topbar */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d1a]/95 backdrop-blur-sm border-b border-marca-900/30 fixed top-0 left-0 right-0 z-40">
         <Link href="/marca/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #C9A84C, #a855f7)' }}>
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+          <div className="w-7 h-7 rounded-full bg-[#0d0d20] border border-[#C9A84C]/35 flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="star-mkm" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#E2C068" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#star-mkm)" />
+            </svg>
           </div>
-          <span className="text-lg font-bold marca-gradient-text">Iara</span>
-          <span className="text-[10px] text-[#C9A84C]/70 font-semibold uppercase ml-1">Marca</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-base font-black marca-gradient-text tracking-tight">IARA</span>
+            <span className="text-[9px] font-bold text-[#5a4a2a] tracking-[0.2em] uppercase">HUB</span>
+          </div>
         </Link>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}

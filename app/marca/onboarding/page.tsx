@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Sparkles, ArrowRight, ArrowLeft, Check, Loader2,
+  ArrowRight, ArrowLeft, Check, Loader2,
   Building2, Globe, Instagram, Target,
 } from 'lucide-react'
 
@@ -139,19 +139,29 @@ export default function MarcaOnboardingPage() {
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-iara-500 to-accent-purple blur-xl opacity-50" />
-            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center shadow-2xl">
-              <Sparkles className="w-7 h-7 text-white" />
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-10 h-10 rounded-full bg-[#0d0d20] border border-[#C9A84C]/35 flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <defs>
+                  <linearGradient id="ob-g" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#E2C068" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+                <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#ob-g)" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-lg font-black tracking-tight marca-gradient-text">IARA</span>
+              <span className="text-[9px] font-bold text-[#5a4a2a] tracking-[0.2em] uppercase">HUB</span>
             </div>
           </div>
-          <h1 className="text-2xl font-bold iara-gradient-text">Área da Marca</h1>
-          <p className="text-sm text-[#5a5a7a] mt-1">Configure sua empresa em 3 passos</p>
+          <p className="text-sm text-[#5a5a7a] mt-2">Configure sua empresa em 3 passos</p>
         </div>
 
         {/* Step indicators */}
         <div className="flex items-center gap-2 mb-8 justify-center">
-          {STEPS.map((s, i) => (
+          {STEPS.map((_s, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all ${
                 i < step

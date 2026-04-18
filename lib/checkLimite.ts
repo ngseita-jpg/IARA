@@ -14,6 +14,7 @@ const FONTE: Record<TipoUso, { tabela: string; campo_tipo?: string; valor_tipo?:
   oratorio:   { tabela: 'voice_analyses' },
   midia_kit:  { tabela: 'content_history', campo_tipo: 'tipo', valor_tipo: 'midia_kit' },
   fotos:      { tabela: 'user_photos' },
+  temas:      { tabela: 'content_history', campo_tipo: 'tipo', valor_tipo: 'temas' },
 }
 
 /**
