@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Layers, Sparkles, ChevronLeft, ChevronRight,
+  Smartphone, Sparkles, ChevronLeft, ChevronRight,
   Copy, Check, RefreshCw, Lightbulb, Clock, History, User, Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -224,8 +224,8 @@ export default function StoriesPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-iara-400 text-sm font-medium mb-2">
-          <Layers className="w-4 h-4" />
-          <span>Geração de conteúdo</span>
+          <Smartphone className="w-4 h-4" />
+          <span>Módulo</span>
         </div>
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-3xl font-bold text-[#f1f1f8]">
@@ -427,7 +427,7 @@ export default function StoriesPage() {
         {!temSlides && !gerando && (
           <div className={`flex-col items-center justify-center gap-4 text-center py-16 px-8 ${abaAtiva === 'configurar' ? 'hidden' : 'flex lg:flex'}`}>
             <div className="w-16 h-16 rounded-2xl bg-iara-900/30 border border-iara-700/20 flex items-center justify-center">
-              <Layers className="w-7 h-7 text-iara-700" />
+              <Smartphone className="w-7 h-7 text-iara-700" />
             </div>
             <p className="text-sm text-[#5a5a7a] max-w-[200px] leading-relaxed">
               Preencha o tema e gere sua sequência de stories
