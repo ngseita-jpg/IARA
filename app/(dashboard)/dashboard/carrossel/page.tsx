@@ -24,11 +24,13 @@ import {
   History,
   User,
   Trophy,
+  Images,
 } from 'lucide-react'
 import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
+import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 
 type Step = 'conteudo' | 'imagens' | 'config' | 'preview'
 
@@ -80,6 +82,7 @@ export default function CarrosselPage() {
   const [historicoClaude, setHistoricoClaude] = useState<{ role: string; content: string }[]>([])
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
+  const [bancoAberto, setBancoAberto] = useState(false)
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -607,6 +610,17 @@ export default function CarrosselPage() {
               />
             </div>
 
+            {/* Banco de Fotos */}
+            {imagens.length < 8 && (
+              <button
+                onClick={() => setBancoAberto(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-iara-700/40 hover:border-iara-500/60 text-sm text-iara-400 hover:text-iara-300 hover:bg-iara-900/20 transition-all"
+              >
+                <Images className="w-4 h-4" />
+                Usar fotos do Banco de Fotos
+              </button>
+            )}
+
             {/* Preview das imagens */}
             {imagensPreview.length > 0 && (
               <div className="grid grid-cols-4 gap-3">
@@ -975,6 +989,20 @@ export default function CarrosselPage() {
           </div>
         )}
       </div>
+
+      {bancoAberto && (
+        <BancoFotosPicker
+          multiple
+          maxSelect={8 - imagens.length}
+          onClose={() => setBancoAberto(false)}
+          onConfirm={(dataUrls) => {
+            const novasBase64 = dataUrls.map(d => d.replace(/^data:image\/\w+;base64,/, ''))
+            setImagens(prev => [...prev, ...novasBase64].slice(0, 8))
+            setImagensPreview(prev => [...prev, ...dataUrls].slice(0, 8))
+            setBancoAberto(false)
+          }}
+        />
+      )}
     </div>
   )
 }

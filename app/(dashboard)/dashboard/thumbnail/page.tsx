@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
+import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 
 type Step = 'info' | 'foto' | 'gerar'
 type MensagemChat = { role: 'user' | 'assistant'; content: string }
@@ -56,6 +57,7 @@ export default function ThumbnailPage() {
   const [historicoClaude, setHistoricoClaude] = useState<{ role: string; content: string }[]>([])
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
+  const [bancoAberto, setBancoAberto] = useState(false)
 
   // ───────────────────────────────────────────
   // Upload de foto
@@ -407,24 +409,33 @@ export default function ThumbnailPage() {
 
             {/* Upload */}
             {!imagemPreview ? (
-              <div
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#2a2a4a] hover:border-accent-purple/50 rounded-xl p-10 text-center cursor-pointer transition-all group"
-              >
-                <Upload className="w-8 h-8 text-[#3a3a5a] group-hover:text-accent-purple mx-auto mb-3 transition-colors" />
-                <p className="text-sm text-[#6b6b8a] group-hover:text-[#9b9bb5] transition-colors">
-                  Arraste a foto ou <span className="text-accent-purple">clique para selecionar</span>
-                </p>
-                <p className="text-xs text-[#3a3a5a] mt-1">JPG ou PNG — 1 foto</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFile(e.target.files?.[0] || null)}
-                />
+              <div className="space-y-3">
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-[#2a2a4a] hover:border-accent-purple/50 rounded-xl p-10 text-center cursor-pointer transition-all group"
+                >
+                  <Upload className="w-8 h-8 text-[#3a3a5a] group-hover:text-accent-purple mx-auto mb-3 transition-colors" />
+                  <p className="text-sm text-[#6b6b8a] group-hover:text-[#9b9bb5] transition-colors">
+                    Arraste a foto ou <span className="text-accent-purple">clique para selecionar</span>
+                  </p>
+                  <p className="text-xs text-[#3a3a5a] mt-1">JPG ou PNG — 1 foto</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFile(e.target.files?.[0] || null)}
+                  />
+                </div>
+                <button
+                  onClick={() => setBancoAberto(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-purple-700/40 hover:border-purple-500/60 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 transition-all"
+                >
+                  <Images className="w-4 h-4" />
+                  Usar foto do Banco de Fotos
+                </button>
               </div>
             ) : (
               <div className="relative">
@@ -692,6 +703,20 @@ export default function ThumbnailPage() {
           </div>
         )}
       </div>
+
+      {bancoAberto && (
+        <BancoFotosPicker
+          onClose={() => setBancoAberto(false)}
+          onConfirm={(dataUrls) => {
+            const url = dataUrls[0]
+            if (url) {
+              setImagemPreview(url)
+              setImagemBase64(url)
+            }
+            setBancoAberto(false)
+          }}
+        />
+      )}
     </div>
   )
 }
