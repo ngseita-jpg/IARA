@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {
   Sparkles, FileText, Mic, Target, Calendar,
   TrendingUp, User, ArrowRight, Check, ChevronRight,
-  Zap, Shield, Star, Layers, Image, Images, BookOpen,
+  Zap, Shield, Star, Layers, Image, Images, BookOpen, Smartphone,
 } from 'lucide-react'
 import { PricingSection } from '@/components/pricing-section'
 
@@ -34,7 +34,7 @@ const modules = [
     tag: 'text-accent-purple',
   },
   {
-    icon: Layers,
+    icon: Smartphone,
     title: 'Gerador de Stories',
     desc: 'Sequência de 7 slides com hook, virada e CTA personalizados para o seu estilo. Pronto para postar.',
     color: 'from-accent-pink/15 to-iara-600/10',
