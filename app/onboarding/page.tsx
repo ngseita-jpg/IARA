@@ -57,10 +57,14 @@ export default function OnboardingPage() {
   const [salvando, setSalvando] = useState(false)
   const [erroSalvar, setErroSalvar] = useState(false)
   const [nomeArtistico, setNomeArtistico] = useState('')
-  const [nicho, setNicho] = useState('')
+  const [nichos, setNichos] = useState<string[]>([])
   const [plataformas, setPlataformas] = useState<string[]>([])
   const [tomDeVoz, setTomDeVoz] = useState('')
   const [objetivo, setObjetivo] = useState('')
+
+  function toggleNicho(n: string) {
+    setNichos(prev => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n])
+  }
 
   function togglePlataforma(p: string) {
     setPlataformas(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
@@ -68,7 +72,7 @@ export default function OnboardingPage() {
 
   function podeProsseguir() {
     if (step === 1) return nomeArtistico.trim().length > 0
-    if (step === 2) return !!nicho && plataformas.length > 0
+    if (step === 2) return nichos.length > 0 && plataformas.length > 0
     if (step === 3) return !!tomDeVoz && !!objetivo
     return true
   }
@@ -80,7 +84,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome_artistico: nomeArtistico, nicho, plataformas, tom_de_voz: tomDeVoz, objetivo }),
+        body: JSON.stringify({ nome_artistico: nomeArtistico, nicho: nichos.join(', '), plataformas, tom_de_voz: tomDeVoz, objetivo }),
       })
       if (!res.ok) throw new Error()
       router.push('/dashboard')
@@ -178,12 +182,14 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2.5">Nicho *</p>
+                  <p className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2.5">
+                    Nicho * <span className="normal-case text-[#3a3a5a] font-normal">(pode marcar vários)</span>
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {NICHOS.map(n => (
-                      <button key={n.label} onClick={() => setNicho(n.label)}
+                      <button key={n.label} onClick={() => toggleNicho(n.label)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                          nicho === n.label
+                          nichos.includes(n.label)
                             ? 'bg-iara-600/25 border-iara-500/50 text-iara-300'
                             : 'bg-[#0a0a14] border-[#1a1a2e] text-[#5a5a7a] hover:border-iara-700/40 hover:text-[#9b9bb5]'
                         }`}>
@@ -286,7 +292,7 @@ export default function OnboardingPage() {
 
                 <div className="grid grid-cols-2 gap-2 text-left">
                   {[
-                    { label: 'Nicho', value: nicho },
+                    { label: 'Nicho', value: nichos.join(', ') },
                     { label: 'Tom de voz', value: tomDeVoz.split(' e ')[0] },
                     { label: 'Plataformas', value: plataformas.slice(0, 3).join(', ') },
                     { label: 'Objetivo', value: objetivo.split(' ').slice(0, 3).join(' ') + '…' },
