@@ -168,8 +168,13 @@ export default function CarrosselPage() {
           imagens_base64: imagens.length > 0 ? imagens : undefined,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.mensagem || data.error || 'Erro ao gerar')
+      let data: Record<string, unknown> = {}
+      try {
+        data = await res.json()
+      } catch (jsonErr) {
+        throw new Error(`HTTP ${res.status} — resposta não é JSON: ${jsonErr instanceof Error ? jsonErr.message : String(jsonErr)}`)
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${data.mensagem || data.error || 'Erro ao gerar'}`)
 
       const carrosselGerado: CarrosselData = data.carrossel
       setCarrossel(carrosselGerado)
@@ -185,7 +190,8 @@ export default function CarrosselPage() {
       // Renderizar slides em paralelo
       await renderizarTodos(carrosselGerado)
     } catch (e: unknown) {
-      setErroGeracao(e instanceof Error ? e.message : 'Erro ao gerar carrossel')
+      const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+      setErroGeracao(msg)
     } finally {
       setGerando(false)
     }
