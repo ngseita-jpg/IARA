@@ -41,7 +41,7 @@ const navItems = [
   { label: 'Calendário',     href: '/dashboard/calendario', icon: Calendar },
   { label: 'Metas',          href: '/dashboard/metas',      icon: Target },
   { label: 'Oratória',       href: '/dashboard/oratorio',   icon: Mic },
-  { label: 'Vagas de Marcas', href: '/dashboard/vagas',     icon: Briefcase },
+  { label: 'Oportunidades',   href: '/dashboard/vagas',     icon: Briefcase },
   { label: 'Meu Perfil',     href: '/dashboard/perfil',    icon: User },
   { label: 'Histórico',      href: '/dashboard/historico', icon: History },
 ]

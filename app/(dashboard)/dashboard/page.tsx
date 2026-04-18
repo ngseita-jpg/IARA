@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
-  ChevronRight, Smartphone, Lightbulb,
+  ChevronRight, Smartphone, Lightbulb, Briefcase,
 } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -26,6 +26,7 @@ const quickAccess = [
   { label: 'Fotos',       href: '/dashboard/fotos',      icon: Images,      color: 'from-iara-600/15 to-teal-600/5',           border: 'border-iara-700/20' },
   { label: 'Metas',       href: '/dashboard/metas',      icon: Target,      color: 'from-green-600/15 to-iara-600/5',          border: 'border-green-700/20' },
   { label: 'Calendário',  href: '/dashboard/calendario', icon: Calendar,    color: 'from-teal-600/15 to-iara-600/5',           border: 'border-teal-700/20' },
+  { label: 'Oportunidades', href: '/dashboard/vagas',    icon: Briefcase,   color: 'from-amber-600/15 to-iara-600/5',          border: 'border-amber-700/20' },
   { label: 'Perfil',      href: '/dashboard/perfil',     icon: User,        color: 'from-accent-purple/15 to-iara-600/5',      border: 'border-accent-purple/20' },
 ]
 
@@ -41,6 +42,7 @@ const modules = [
   { icon: Images,     label: 'Banco de Fotos',         desc: 'Salve suas fotos para usar nos geradores. Acesso rápido de qualquer módulo.', href: '/dashboard/fotos',   gradient: 'from-iara-600/15 to-teal-900/10',        border: 'border-iara-700/20' },
   { icon: Target,     label: 'Metas de Postagem',      desc: 'Organize sua agenda, crie metas e ganhe pontos que sobem seu nível.',      href: '/dashboard/metas',      gradient: 'from-green-900/20 to-iara-600/10',       border: 'border-green-800/20' },
   { icon: Calendar,   label: 'Calendário Editorial',   desc: 'Grade semanal integrada às suas metas. Marque postagens e acumule pontos.',href: '/dashboard/calendario', gradient: 'from-teal-900/20 to-iara-600/10',        border: 'border-teal-800/20' },
+  { icon: Briefcase,  label: 'Oportunidades',            desc: 'Campanhas abertas por marcas — candidate-se e feche parcerias direto na plataforma.', href: '/dashboard/vagas', gradient: 'from-amber-900/20 to-iara-600/10', border: 'border-amber-800/20' },
   { icon: User,       label: 'Meu Perfil',             desc: 'Configure seu nicho e tom de voz. A IA usa seu perfil em todos os módulos.', href: '/dashboard/perfil',  gradient: 'from-accent-purple/15 to-iara-600/10',   border: 'border-accent-purple/20' },
 ]
 

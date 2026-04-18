@@ -90,13 +90,13 @@ export default function VagasCreatorPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-xs text-[#5a5a7a] mb-2">
           <span>Dashboard</span><span>/</span>
-          <span className="text-[#9b9bb5]">Vagas de Marcas</span>
+          <span className="text-[#9b9bb5]">Oportunidades</span>
         </div>
         <h1 className="text-3xl font-bold text-[#f1f1f8]">
-          Vagas de <span className="iara-gradient-text">Marcas</span>
+          <span className="iara-gradient-text">Oportunidades</span>
         </h1>
         <p className="text-sm text-[#5a5a7a] mt-1">
-          Candidature-se a campanhas de marcas que buscam criadores como você
+          Campanhas abertas por marcas — candidate-se e feche parcerias direto na plataforma
         </p>
       </div>
 

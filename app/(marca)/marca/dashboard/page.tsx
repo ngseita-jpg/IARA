@@ -26,8 +26,21 @@ export default async function MarcaDashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('onboarding_completo', true)
 
+  const brandProfile = await supabase
+    .from('brand_profiles')
+    .select('id')
+    .eq('user_id', user?.id ?? '')
+    .single()
+
+  const { count: totalVagas } = brandProfile.data
+    ? await supabase
+        .from('vagas')
+        .select('*', { count: 'exact', head: true })
+        .eq('brand_id', brandProfile.data.id)
+        .eq('status', 'aberta')
+    : { count: 0 }
+
   const upcoming = [
-    { label: 'Vagas de Campanha', desc: 'Publique vagas e receba candidaturas de criadores alinhados', icon: Briefcase },
     { label: 'Chat Estratégico', desc: 'Consultoria de marketing em tempo real com a IA Iara', icon: TrendingUp },
     { label: 'Relatório de ROI', desc: 'Coleta métricas reais dos criadores e gera PDF exportável', icon: Sparkles },
   ]
@@ -88,14 +101,14 @@ export default async function MarcaDashboardPage() {
           <p className="text-2xl font-bold text-[#f1f1f8]">{totalCriadores ?? 0}</p>
           <p className="text-xs text-[#5a5a7a] mt-0.5">disponíveis na plataforma</p>
         </div>
-        <div className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-4">
+        <Link href="/marca/dashboard/vagas" className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-4 hover:border-[#C9A84C]/20 transition-all">
           <div className="flex items-center gap-2 mb-2">
             <Briefcase className="w-4 h-4 text-accent-purple" />
-            <span className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider">Vagas</span>
+            <span className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider">Vagas abertas</span>
           </div>
-          <p className="text-2xl font-bold text-[#f1f1f8]">—</p>
-          <p className="text-xs text-[#5a5a7a] mt-0.5">em breve disponível</p>
-        </div>
+          <p className="text-2xl font-bold text-[#f1f1f8]">{totalVagas ?? 0}</p>
+          <p className="text-xs text-[#5a5a7a] mt-0.5">suas vagas ativas</p>
+        </Link>
         <div className="col-span-2 md:col-span-1 rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-4">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-4 h-4 text-[#E2C068]" />
@@ -114,8 +127,16 @@ export default async function MarcaDashboardPage() {
           <Zap className="w-3.5 h-3.5 text-[#E2C068]" />
           <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Acesso rápido</h2>
         </div>
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid md:grid-cols-3 gap-3">
           {[
+            {
+              label: 'Vagas de Campanha',
+              desc: 'Publique vagas e gerencie candidaturas de criadores alinhados',
+              href: '/marca/dashboard/vagas',
+              icon: Briefcase,
+              gradient: 'from-[#C9A84C]/12 to-accent-purple/8',
+              border: 'border-[#C9A84C]/25',
+            },
             {
               label: 'Buscar Criadores',
               desc: 'Encontre criadores por nicho, plataforma e nível de engajamento',
