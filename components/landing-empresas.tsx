@@ -144,7 +144,7 @@ function AnimatedCounter({ value, suffix, label }: { value: number; suffix: stri
   }, [inView, value, suffix])
   return (
     <motion.div ref={wrapRef} className="text-center" variants={fadeUp}>
-      <p ref={numRef} className="text-4xl sm:text-5xl font-black shimmer-text mb-2 tabular-nums">0{suffix}</p>
+      <p ref={numRef} className="text-4xl sm:text-5xl font-black gold-shimmer-text mb-2 tabular-nums">0{suffix}</p>
       <p className="text-sm text-[#5a5a7a]">{label}</p>
     </motion.div>
   )
@@ -220,8 +220,8 @@ export function LandingEmpresas() {
             <Link href="/login" className="hidden sm:block text-sm text-[#6b6b8a] hover:text-[#f1f1f8] transition-colors">Entrar</Link>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/register?tipo=marca"
-                className="btn-shimmer flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-lg shadow-accent-purple/30"
-                style={{ background: 'linear-gradient(135deg,#a855f7,#6366f1,#ec4899)' }}>
+                className="btn-shimmer flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold shadow-lg"
+                style={{ background: 'linear-gradient(135deg,#E2C068 0%,#C9A84C 55%,#a855f7 100%)', color: '#0a0a14', boxShadow: '0 4px 20px rgba(201,168,76,0.35)' }}>
                 Cadastrar marca
               </Link>
             </motion.div>
@@ -265,7 +265,8 @@ export function LandingEmpresas() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-accent-purple/40 bg-accent-purple/10 text-accent-purple text-xs font-medium mb-10"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#C9A84C]/45 bg-[#C9A84C]/8 text-[#E2C068] text-xs font-medium mb-10"
+            style={{ boxShadow: '0 0 24px rgba(201,168,76,0.12)' }}
           >
             <Building2 className="w-3.5 h-3.5 animate-glow-pulse" />
             Iara para Empresas · Conecte sua marca aos criadores certos
@@ -307,8 +308,8 @@ export function LandingEmpresas() {
           >
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/register?tipo=marca"
-                className="btn-shimmer group flex items-center justify-center gap-2 w-full sm:w-auto px-10 py-4 rounded-2xl text-base font-bold text-white shadow-2xl shadow-accent-purple/40 hover:shadow-accent-purple/60 transition-shadow duration-300"
-                style={{ background: 'linear-gradient(135deg,#a855f7 0%,#6366f1 55%,#ec4899 100%)' }}>
+                className="btn-shimmer group flex items-center justify-center gap-2 w-full sm:w-auto px-10 py-4 rounded-2xl text-base font-bold transition-shadow duration-300"
+                style={{ background: 'linear-gradient(135deg,#E2C068 0%,#C9A84C 50%,#a855f7 100%)', color: '#0a0a14', boxShadow: '0 8px 32px rgba(201,168,76,0.40)', textShadow: 'none' }}>
                 Cadastrar minha marca grátis
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
@@ -410,12 +411,12 @@ export function LandingEmpresas() {
 
             <motion.div animate={shouldReduce ? {} : { y: [0,-12,0] }} transition={{ duration: 5.5, ease: 'easeInOut', repeat: Infinity, delay: 1 }}
               className="absolute -top-4 -right-4 md:-right-10 hidden md:flex">
-              <div className="rounded-2xl px-4 py-3 border border-green-700/30 shadow-xl shadow-black/60" style={{ background: 'rgba(8,8,18,0.95)', backdropFilter: 'blur(16px)' }}>
+              <div className="rounded-2xl px-4 py-3 border border-[#C9A84C]/35 shadow-xl shadow-black/60" style={{ background: 'rgba(10,8,4,0.97)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 0 20px rgba(201,168,76,0.12)' }}>
                 <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="w-3 h-3 text-green-400" />
-                  <p className="text-[11px] font-semibold text-green-400">Venda confirmada</p>
+                  <DollarSign className="w-3 h-3 text-[#E2C068]" />
+                  <p className="text-[11px] font-semibold text-[#E2C068]">Venda confirmada</p>
                 </div>
-                <p className="text-xl font-black text-green-400">R$<span className="shimmer-text">297</span></p>
+                <p className="text-xl font-black">R$<span className="gold-shimmer-text">297</span></p>
               </div>
             </motion.div>
 
@@ -447,9 +448,9 @@ export function LandingEmpresas() {
           className="flex gap-10 whitespace-nowrap"
         >
           {[...bandItems, ...bandItems, ...bandItems, ...bandItems].map((item, i) => (
-            <span key={i} className="text-xs font-bold tracking-[0.25em] text-[#3a3a5a] uppercase flex items-center gap-10">
+            <span key={i} className={`text-xs font-bold tracking-[0.25em] uppercase flex items-center gap-10 ${i % 5 === 0 ? 'text-[#C9A84C]/70' : 'text-[#3a3a5a]'}`}>
               {item}
-              <span className="inline-block w-1 h-1 rounded-full bg-accent-purple/50 flex-shrink-0" />
+              <span className="inline-block w-1 h-1 rounded-full flex-shrink-0" style={{ background: i % 5 === 0 ? 'rgba(201,168,76,0.7)' : 'rgba(168,85,247,0.45)' }} />
             </span>
           ))}
         </motion.div>
@@ -674,7 +675,7 @@ export function LandingEmpresas() {
               <div className="md:col-span-2">
                 <h3 className="text-2xl font-black text-[#f1f1f8] mb-3 leading-snug">
                   ROI claro. Risco zero.<br />
-                  <span className="shimmer-text">É performance pura.</span>
+                  <span className="gold-shimmer-text">É performance pura.</span>
                 </h3>
                 <p className="text-[#9b9bb5] text-sm leading-relaxed">
                   Diferente de contratos de post patrocinado onde você paga pelo alcance sem garantia de venda — na afiliação da Iara você define a comissão e paga apenas quando o criador converte. O rastreamento por webhook garante que nenhuma venda passe despercebida.
@@ -718,7 +719,7 @@ export function LandingEmpresas() {
             className="grid md:grid-cols-3 gap-5">
             {[
               { icon: Zap,       color: 'text-iara-400',    bg: 'rgba(99,102,241,0.08)',  border: 'border-iara-700/25',     title: 'Criadores ativos diariamente', sub: 'Cada criador usa a Iara para produzir conteúdo — não só para procurar marca. Sua campanha alcança quem produz de verdade.' },
-              { icon: Star,      color: 'text-amber-400',   bg: 'rgba(245,158,11,0.07)',  border: 'border-amber-800/20',    title: 'Perfis com dados reais',       sub: 'Nicho, tom de voz, score de oratória, métricas de todas as plataformas — tudo validado pelo uso real da ferramenta.' },
+              { icon: Star,      color: 'text-[#E2C068]',   bg: 'rgba(201,168,76,0.10)',  border: 'border-[#C9A84C]/30',    title: 'Perfis com dados reais',       sub: 'Nicho, tom de voz, score de oratória, métricas de todas as plataformas — tudo validado pelo uso real da ferramenta.' },
               { icon: Shield,    color: 'text-green-400',   bg: 'rgba(34,197,94,0.07)',   border: 'border-green-800/20',    title: 'Transparência total',         sub: 'Rastreamento por webhook, comissões automáticas e histórico completo. Sem jogo de planilha, sem sumiço de criador.' },
               { icon: FileText,  color: 'text-accent-purple',bg:'rgba(168,85,247,0.07)',  border: 'border-accent-purple/20',title: 'Mídia kit automático',        sub: 'Todo criador tem mídia kit gerado pela IA. Você analisa portfólio, métricas e tom de voz antes de fechar qualquer coisa.' },
               { icon: Target,    color: 'text-accent-pink', bg: 'rgba(236,72,153,0.07)',  border: 'border-accent-pink/20',  title: 'Segmentação precisa',         sub: 'Filtre por nicho, plataforma, tamanho de audiência e engajamento. Encontre quem faz sentido para a sua marca.' },
@@ -752,10 +753,13 @@ export function LandingEmpresas() {
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}
           className="max-w-3xl mx-auto relative z-10">
           <motion.div variants={scaleIn}
-            className="relative rounded-3xl overflow-hidden border border-white/8 shadow-[0_60px_200px_rgba(0,0,0,0.9)] p-12 sm:p-20 text-center"
-            style={{ background: 'linear-gradient(160deg, rgba(12,10,28,0.98), rgba(18,8,32,0.98))' }}>
+            className="relative rounded-3xl overflow-hidden border border-[#C9A84C]/20 shadow-[0_60px_200px_rgba(0,0,0,0.9)] p-12 sm:p-20 text-center"
+            style={{ background: 'linear-gradient(160deg, rgba(14,10,6,0.99), rgba(18,8,32,0.99))', boxShadow: '0 60px 200px rgba(0,0,0,0.9), 0 0 60px rgba(201,168,76,0.08), inset 0 1px 0 rgba(226,192,104,0.15)' }}>
+            {/* Gold top beam */}
+            <div className="absolute top-0 left-[10%] right-[10%] h-px pointer-events-none"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(226,192,104,0.5), transparent)' }} />
             <div className="absolute inset-0 pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(168,85,247,0.20) 0%, transparent 55%)' }} />
+              style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(201,168,76,0.12) 0%, rgba(168,85,247,0.10) 40%, transparent 70%)' }} />
             <div className="relative">
               <motion.div
                 animate={shouldReduce ? {} : { scale: [1, 1.06, 1] }}
@@ -766,7 +770,7 @@ export function LandingEmpresas() {
               </motion.div>
               <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl md:text-6xl font-black leading-[1.05] mb-6">
                 Sua marca no lugar<br />
-                <span className="shimmer-text">onde acontece a criação.</span>
+                <span className="gold-shimmer-text">onde acontece a criação.</span>
               </motion.h2>
               <motion.p variants={fadeUp} className="text-[#9b9bb5] text-xl mb-12 max-w-lg mx-auto leading-relaxed">
                 Cadastre sua empresa grátis e comece a explorar o catálogo de criadores, criar campanhas e estruturar seu programa de afiliação.
@@ -774,8 +778,8 @@ export function LandingEmpresas() {
               <motion.div variants={stagger} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
                 <motion.div variants={fadeUp} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                   <Link href="/register?tipo=marca"
-                    className="btn-shimmer group flex items-center justify-center gap-2 w-full sm:w-auto px-12 py-5 rounded-2xl text-lg font-black text-white shadow-2xl shadow-accent-purple/50 hover:shadow-accent-purple/70 transition-shadow duration-300"
-                    style={{ background: 'linear-gradient(135deg,#a855f7 0%,#6366f1 55%,#ec4899 100%)' }}>
+                    className="btn-shimmer group flex items-center justify-center gap-2 w-full sm:w-auto px-12 py-5 rounded-2xl text-lg font-black transition-shadow duration-300"
+                    style={{ background: 'linear-gradient(135deg,#E2C068 0%,#C9A84C 50%,#a855f7 100%)', color: '#0a0a14', boxShadow: '0 12px 48px rgba(201,168,76,0.45)' }}>
                     Cadastrar minha marca grátis
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -804,7 +808,7 @@ export function LandingEmpresas() {
               <Sparkles className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-bold shimmer-text">Iara</span>
-            <span className="text-xs text-[#3a3a5a] ml-1">para Empresas</span>
+            <span className="text-xs ml-1" style={{ color: '#C9A84C', opacity: 0.7 }}>para Empresas</span>
           </div>
           <p className="text-xs text-[#3a3a5a] text-center">
             © {new Date().getFullYear()} Iara Hub. A plataforma que une marcas e criadores brasileiros.

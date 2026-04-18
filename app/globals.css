@@ -214,6 +214,18 @@
   animation: shimmer-sweep 4s linear infinite;
 }
 
+.gold-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #C9A84C 0%, #E2C068 25%, #fcd34d 50%, #E2C068 75%, #C9A84C 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer-sweep 4s linear infinite;
+}
+
 .btn-shimmer {
   position: relative;
   overflow: hidden;
