@@ -75,11 +75,11 @@ export async function POST(req: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from('creator_profiles')
-      .select('nicho, tom_voz, nome_artistico, plataformas')
+      .select('nicho, tom_de_voz, nome_artistico, plataformas')
       .eq('user_id', user.id)
       .single()
     if (profile?.nicho) {
-      profileNote = `\n\nContexto do perfil: nicho="${profile.nicho}", tom="${profile.tom_voz ?? 'não definido'}", plataformas="${profile.plataformas ?? 'não definido'}". Use esse contexto para personalizar as perguntas e ideias.`
+      profileNote = `\n\nContexto do perfil: nicho="${profile.nicho}", tom="${profile.tom_de_voz ?? 'não definido'}", plataformas="${profile.plataformas ?? 'não definido'}". Use esse contexto para personalizar as perguntas e ideias.`
     }
   }
 

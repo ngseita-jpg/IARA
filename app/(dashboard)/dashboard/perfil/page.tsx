@@ -202,6 +202,16 @@ export default function PerfilPage() {
     }))
   }
 
+  function toggleNicho(value: string) {
+    const tags = profile.nicho ? profile.nicho.split(', ').filter(Boolean) : []
+    const updated = tags.includes(value) ? tags.filter((t) => t !== value) : [...tags, value]
+    set('nicho', updated.join(', '))
+  }
+
+  function nichoTags() {
+    return profile.nicho ? profile.nicho.split(', ').filter(Boolean) : []
+  }
+
   function toggleTom(tag: string) {
     const tags = profile.tom_de_voz ? profile.tom_de_voz.split(', ').filter(Boolean) : []
     const updated = tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag]
@@ -448,15 +458,15 @@ export default function PerfilPage() {
             </div>
 
             <div>
-              <label className="iara-label">Qual é o seu nicho? <span className="text-red-400">*</span></label>
+              <label className="iara-label">Quais são os seus nichos? <span className="text-red-400">*</span> <span className="text-[#3a3a5a] normal-case font-normal">(pode marcar vários)</span></label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {NICHOS.map((n) => (
                   <button
                     key={n.value}
                     type="button"
-                    onClick={() => set('nicho', n.value)}
+                    onClick={() => toggleNicho(n.value)}
                     className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-medium transition-all ${
-                      profile.nicho === n.value
+                      nichoTags().includes(n.value)
                         ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
                         : 'bg-[#0f0f1e] border-[#1a1a2e] text-[#5a5a7a] hover:border-iara-700/40 hover:text-[#9b9bb5]'
                     }`}
