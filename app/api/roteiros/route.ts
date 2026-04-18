@@ -85,17 +85,18 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Verificar limite de uso
-  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
-  const check = await verificarLimite(supabase, user.id, 'roteiro')
-  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
-
-  // Buscar perfil do criador para personalização (incluindo voz)
+  // Buscar perfil do criador para personalização (incluindo voz e plano)
   const { data: profile } = await supabase
     .from('creator_profiles')
-    .select('nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil, voz_score_medio')
+    .select('nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil, voz_score_medio, plano')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
+
+  // Verificar limite de uso
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const plano = ((profile?.plano as string) ?? 'free') as import('@/lib/limites').Plano
+  const check = await verificarLimite(supabase, user.id, 'roteiro', plano)
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
 
   const perfilContexto = profile
     ? `## Perfil do Criador (use como contexto de personalização)

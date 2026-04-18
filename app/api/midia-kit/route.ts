@@ -18,10 +18,6 @@ export async function POST(req: NextRequest) {
     site,
   } = await req.json()
 
-  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
-  const check = await verificarLimite(supabase, user.id, 'midia_kit')
-  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
-
   // Buscar tudo do sistema
   const [
     { data: profile },
@@ -30,9 +26,9 @@ export async function POST(req: NextRequest) {
   ] = await Promise.all([
     supabase
       .from('creator_profiles')
-      .select('nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre, pontos, nivel, voz_perfil, voz_score_medio, treinos_voz')
+      .select('nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre, pontos, nivel, voz_perfil, voz_score_medio, treinos_voz, plano')
       .eq('user_id', user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('metricas_redes')
       .select('plataforma, seguidores, alcance_mensal, visualizacoes_mensais, taxa_engajamento, posts_mensais')
@@ -45,6 +41,11 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .single(),
   ])
+
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const plano = ((profile?.plano as string) ?? 'free') as import('@/lib/limites').Plano
+  const check = await verificarLimite(supabase, user.id, 'midia_kit', plano)
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
 
   const badge = profile ? getBadgeInfo(profile.pontos ?? 0, profile.nicho ?? undefined) : null
 

@@ -33,8 +33,11 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Transcrição muito curta para análise' }), { status: 400 })
   }
 
+  const { data: perfilPlano } = await supabase
+    .from('creator_profiles').select('plano').eq('user_id', user.id).maybeSingle()
   const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
-  const check = await verificarLimite(supabase, user.id, 'oratorio')
+  const plano = ((perfilPlano?.plano as string) ?? 'free') as import('@/lib/limites').Plano
+  const check = await verificarLimite(supabase, user.id, 'oratorio', plano)
   if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
 
   const ppm = duracao_segundos > 0

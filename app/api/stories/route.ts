@@ -36,16 +36,17 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Tema é obrigatório' }), { status: 400 })
   }
 
-  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
-  const check = await verificarLimite(supabase, user.id, 'stories')
-  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
-
-  // Buscar perfil do criador
+  // Buscar perfil do criador (inclui plano para checar limite correto)
   const { data: profile } = await supabase
     .from('creator_profiles')
-    .select('nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil')
+    .select('nome_artistico, nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil, plano')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
+
+  const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+  const plano = ((profile?.plano as string) ?? 'free') as import('@/lib/limites').Plano
+  const check = await verificarLimite(supabase, user.id, 'stories', plano)
+  if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
 
   const perfilContexto = profile ? `
 PERFIL DO CRIADOR:
