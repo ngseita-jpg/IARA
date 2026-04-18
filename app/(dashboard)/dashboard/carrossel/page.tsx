@@ -32,6 +32,24 @@ import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 
+function resizeImage(dataUrl: string, maxDim = 1080, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
+
 type Step = 'conteudo' | 'imagens' | 'config' | 'preview'
 
 type MensagemChat = {
@@ -114,16 +132,18 @@ export default function CarrosselPage() {
   // ───────────────────────────────────────────
   const handleFiles = useCallback((files: FileList | null) => {
     if (!files) return
-    const novos: string[] = []
-    const novosPreview: string[] = []
-    let pendentes = files.length
+    const selected = Array.from(files).slice(0, 8 - imagens.length)
+    let pendentes = selected.length
+    const novos: string[] = new Array(selected.length)
+    const novosPreview: string[] = new Array(selected.length)
 
-    Array.from(files).slice(0, 8 - imagens.length).forEach((file) => {
+    selected.forEach((file, idx) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        novos.push(result.replace(/^data:image\/\w+;base64,/, ''))
-        novosPreview.push(result)
+      reader.onload = async (e) => {
+        const raw = e.target?.result as string
+        const resized = await resizeImage(raw)
+        novos[idx] = resized.replace(/^data:image\/\w+;base64,/, '')
+        novosPreview[idx] = resized
         pendentes--
         if (pendentes === 0) {
           setImagens((prev) => [...prev, ...novos])
