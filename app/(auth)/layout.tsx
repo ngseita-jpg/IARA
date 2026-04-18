@@ -1,5 +1,11 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+
+export const metadata: Metadata = {
+  title: 'Entrar na Iara Hub',
+  description: 'Acesse sua conta na Iara Hub e continue criando conteúdo com IA.',
+}
 
 export default async function AuthLayout({
   children,

@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
-export const alt = 'Iara — Assessoria com IA para Criadores'
+export const alt = 'Iara Hub — Assessoria com IA para Criadores'
 
 export default function OGImage() {
   return new ImageResponse(
@@ -49,27 +49,44 @@ export default function OGImage() {
             style={{
               width: 56,
               height: 56,
-              borderRadius: 14,
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+              borderRadius: '50%',
+              background: '#0d0d20',
+              border: '2px solid rgba(99,102,241,0.45)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <span style={{ color: 'white', fontSize: 28, fontWeight: 900 }}>I</span>
+            {/* 4-pointed star inline */}
+            <div style={{ display: 'flex', color: '#818cf8', fontSize: 28, fontWeight: 900 }}>✦</div>
           </div>
-          <span
-            style={{
-              fontSize: 52,
-              fontWeight: 900,
-              background: 'linear-gradient(90deg, #818cf8, #c084fc, #f472b6)',
-              backgroundClip: 'text',
-              color: 'transparent',
-              letterSpacing: '-2px',
-            }}
-          >
-            Iara
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <span
+              style={{
+                fontSize: 52,
+                fontWeight: 900,
+                background: 'linear-gradient(90deg, #818cf8, #c084fc, #f472b6)',
+                backgroundClip: 'text',
+                color: 'transparent',
+                letterSpacing: '-2px',
+                lineHeight: 1,
+                display: 'flex',
+              }}
+            >
+              IARA
+            </span>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: '#4a4a6a',
+                letterSpacing: '6px',
+                display: 'flex',
+              }}
+            >
+              HUB
+            </span>
+          </div>
         </div>
 
         {/* Headline */}
@@ -121,12 +138,12 @@ export default function OGImage() {
             display: 'flex',
           }}
         >
-          10 módulos integrados para criadores brasileiros crescerem mais rápido.
+          11 módulos integrados para criadores brasileiros crescerem mais rápido.
         </div>
 
         {/* Module pills */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 900 }}>
-          {['Roteiros', 'Carrossel', 'Thumbnail', 'Stories', 'Oratória', 'Mídia Kit', 'Métricas'].map((m) => (
+          {['Faísca Criativa', 'Roteiros', 'Carrossel', 'Thumbnail', 'Stories', 'Oratória', 'Mídia Kit'].map((m) => (
             <div
               key={m}
               style={{

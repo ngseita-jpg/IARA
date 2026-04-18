@@ -17,15 +17,18 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   const tipo = req.nextUrl.searchParams.get('tipo')
-  if (!tipo) return NextResponse.json({ error: 'Tipo não informado' }, { status: 400 })
+  const limit = parseInt(req.nextUrl.searchParams.get('limit') ?? '30')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('content_history')
-    .select('id, titulo, parametros, conteudo, created_at')
+    .select('id, tipo, titulo, parametros, conteudo, created_at')
     .eq('user_id', user.id)
-    .eq('tipo', tipo)
     .order('created_at', { ascending: false })
-    .limit(30)
+    .limit(limit)
+
+  if (tipo) query = query.eq('tipo', tipo)
+
+  const { data, error } = await query
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

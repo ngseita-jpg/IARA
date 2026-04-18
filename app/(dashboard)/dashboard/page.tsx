@@ -1,14 +1,21 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import {
   FileText, Sparkles, TrendingUp, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
-  ChevronRight, Smartphone,
+  ChevronRight, Smartphone, Lightbulb,
 } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Dashboard',
+  description: 'Seu painel Iara — acesse todos os módulos de IA para criadores.',
+}
 import { getBadgeInfo } from '@/lib/badges'
 import { LIMITES, inicioMesAtual } from '@/lib/limites'
 
 const quickAccess = [
+  { label: 'Temas IA',    href: '/dashboard/temas',      icon: Lightbulb,   color: 'from-iara-600/35 to-accent-purple/20',     border: 'border-iara-600/50' },
   { label: 'Roteiro',     href: '/dashboard/roteiros',   icon: FileText,    color: 'from-iara-600/30 to-iara-600/10',          border: 'border-iara-700/40' },
   { label: 'Carrossel',   href: '/dashboard/carrossel',  icon: Layers,      color: 'from-accent-pink/25 to-accent-pink/5',     border: 'border-accent-pink/30' },
   { label: 'Stories',     href: '/dashboard/stories',    icon: Smartphone,  color: 'from-accent-purple/25 to-accent-purple/5', border: 'border-accent-purple/30' },
@@ -23,11 +30,12 @@ const quickAccess = [
 ]
 
 const modules = [
+  { icon: Lightbulb,  label: 'Faísca Criativa',        desc: 'Chat com IA que extrai o melhor de você e gera ideias de temas incríveis com hook e ângulo prontos.',  href: '/dashboard/temas',      gradient: 'from-iara-600/25 to-accent-purple/15',   border: 'border-iara-600/40', highlight: true },
   { icon: FileText,   label: 'Gerador de Roteiros',    desc: 'Roteiros completos com hook, desenvolvimento e CTA no seu estilo.',        href: '/dashboard/roteiros',   gradient: 'from-iara-600/20 to-accent-purple/10',   border: 'border-iara-700/30' },
   { icon: Layers,     label: 'Gerador de Carrossel',   desc: 'Cole um link ou texto — a Iara monta o carrossel completo com imagens.',   href: '/dashboard/carrossel',  gradient: 'from-accent-pink/15 to-accent-purple/10', border: 'border-accent-pink/20' },
   { icon: Smartphone, label: 'Gerador de Stories',     desc: 'Sequência de 7 slides com hook, virada e CTA no seu tom de voz.',          href: '/dashboard/stories',    gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
   { icon: Image,      label: 'Gerador de Thumbnail',   desc: 'Thumbnails de alto CTR para YouTube e Reels em segundos.',                 href: '/dashboard/thumbnail',  gradient: 'from-teal-900/20 to-accent-purple/10',   border: 'border-teal-800/20' },
-  { icon: BookOpen,   label: 'Mídia Kit com IA',        desc: 'Kit profissional com perfil, métricas e voz. Exporta em PDF.',             href: '/dashboard/midia-kit',  gradient: 'from-amber-900/20 to-iara-600/10',       border: 'border-amber-800/20' },
+  { icon: BookOpen,   label: 'Mídia Kit com IA',       desc: 'Kit profissional com perfil, métricas e voz. Exporta em PDF.',             href: '/dashboard/midia-kit',  gradient: 'from-amber-900/20 to-iara-600/10',       border: 'border-amber-800/20' },
   { icon: Mic,        label: 'Análise de Oratória',    desc: 'Grave sua voz, receba score em 5 dimensões e exercícios personalizados.',  href: '/dashboard/oratorio',   gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
   { icon: TrendingUp, label: 'Métricas das Redes',     desc: 'Métricas consolidadas de todas as plataformas + análise com IA.',          href: '/dashboard/metricas',   gradient: 'from-iara-600/15 to-accent-pink/10',     border: 'border-iara-700/20' },
   { icon: Images,     label: 'Banco de Fotos',         desc: 'Salve suas fotos para usar nos geradores. Acesso rápido de qualquer módulo.', href: '/dashboard/fotos',   gradient: 'from-iara-600/15 to-teal-900/10',        border: 'border-iara-700/20' },
@@ -67,6 +75,7 @@ export default async function DashboardPage() {
     { count: usoThumbnail },
     { count: usoOratorio },
     { count: usoMidiaKit },
+    { count: usoTemas },
   ] = await Promise.all([
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'roteiro').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'carrossel').gte('created_at', mesAtual),
@@ -74,10 +83,12 @@ export default async function DashboardPage() {
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'thumbnail').gte('created_at', mesAtual),
     supabase.from('voice_analyses').select('*', { count: 'exact', head: true }).eq('user_id', uid).gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'midia_kit').gte('created_at', mesAtual),
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'temas').gte('created_at', mesAtual),
   ])
 
   const limites = LIMITES['free']
   const usoMes = [
+    { label: 'Temas IA',   usado: usoTemas ?? 0,     limite: limites.temas!,     cor: 'bg-iara-400' },
     { label: 'Roteiros',   usado: usoRoteiros ?? 0,  limite: limites.roteiro!,   cor: 'bg-iara-500' },
     { label: 'Carrosseis', usado: usoCarrossel ?? 0, limite: limites.carrossel!, cor: 'bg-accent-pink' },
     { label: 'Stories',    usado: usoStories ?? 0,   limite: limites.stories!,   cor: 'bg-accent-purple' },
@@ -202,6 +213,23 @@ export default async function DashboardPage() {
           })}
         </div>
 
+        {/* Banner de aviso a 80% */}
+        {!usoMes.some((item) => item.usado >= item.limite) &&
+          usoMes.some((item) => item.usado / item.limite >= 0.8) && (
+          <Link href="/#planos" className="group mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950/30 to-iara-900/20 border border-amber-800/25 hover:border-amber-700/40 transition-all duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-900/30 border border-amber-800/25 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#f1f1f8]">Você está quase no limite do mês</p>
+                <p className="text-xs text-[#6b6b8a]">Faça upgrade antes de acabar para não perder ritmo</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+          </Link>
+        )}
+
         {/* Banner de upgrade quando qualquer limite está atingido */}
         {usoMes.some((item) => item.usado >= item.limite) && (
           <Link href="/#planos" className="group mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-iara-900/40 to-accent-purple/10 border border-iara-700/30 hover:border-iara-600/50 transition-all duration-200">
@@ -228,16 +256,22 @@ export default async function DashboardPage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {modules.map((mod) => {
             const Icon = mod.icon
+            const isHighlight = (mod as { highlight?: boolean }).highlight
             return (
-              <Link key={mod.label} href={mod.href} className="block group">
-                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150`}>
+              <Link key={mod.label} href={mod.href} className={`block group ${isHighlight ? 'md:col-span-2 lg:col-span-1' : ''}`}>
+                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150 ${isHighlight ? 'relative overflow-hidden' : ''}`}>
+                  {isHighlight && (
+                    <div className="absolute top-0 right-0 px-2.5 py-1 rounded-bl-xl text-[10px] font-bold text-iara-300 bg-iara-900/60 border-b border-l border-iara-700/40">
+                      NOVO
+                    </div>
+                  )}
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center">
-                      <Icon className="w-4 h-4 text-iara-400" />
+                    <div className={`w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center ${isHighlight ? 'shadow-lg shadow-iara-900/40' : ''}`}>
+                      <Icon className={`w-4 h-4 ${isHighlight ? 'text-iara-300' : 'text-iara-400'}`} />
                     </div>
                     <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-iara-400 group-hover:translate-x-0.5 transition-all" />
                   </div>
-                  <h3 className="font-semibold text-[#f1f1f8] text-sm mb-1">{mod.label}</h3>
+                  <h3 className={`font-semibold text-sm mb-1 ${isHighlight ? 'text-[#f1f1f8] font-bold' : 'text-[#f1f1f8]'}`}>{mod.label}</h3>
                   <p className="text-xs text-[#5a5a7a] leading-relaxed">{mod.desc}</p>
                 </div>
               </Link>

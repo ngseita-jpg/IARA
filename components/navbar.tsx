@@ -21,22 +21,27 @@ import {
   Image,
   Images,
   Smartphone,
+  Lightbulb,
+  History,
 } from 'lucide-react'
 import { useState } from 'react'
+import { UsoSidebar } from '@/components/uso-sidebar'
 
 const navItems = [
-  { label: 'Dashboard',   href: '/dashboard',             icon: LayoutDashboard },
-  { label: 'Roteiros',    href: '/dashboard/roteiros',    icon: FileText },
-  { label: 'Carrossel',   href: '/dashboard/carrossel',   icon: Layers },
-  { label: 'Thumbnail',   href: '/dashboard/thumbnail',   icon: Image },
-  { label: 'Banco de Fotos', href: '/dashboard/fotos',   icon: Images },
-  { label: 'Stories',     href: '/dashboard/stories',     icon: Smartphone },
-  { label: 'Mídia Kit',   href: '/dashboard/midia-kit',   icon: BookOpen },
-  { label: 'Métricas',    href: '/dashboard/metricas',    icon: TrendingUp },
-  { label: 'Calendário',  href: '/dashboard/calendario',  icon: Calendar },
-  { label: 'Metas',       href: '/dashboard/metas',       icon: Target },
-  { label: 'Oratória',    href: '/dashboard/oratorio',    icon: Mic },
-  { label: 'Meu Perfil',  href: '/dashboard/perfil',      icon: User },
+  { label: 'Dashboard',      href: '/dashboard',             icon: LayoutDashboard },
+  { label: 'Faísca Criativa', href: '/dashboard/temas',     icon: Lightbulb },
+  { label: 'Roteiros',       href: '/dashboard/roteiros',   icon: FileText },
+  { label: 'Carrossel',      href: '/dashboard/carrossel',  icon: Layers },
+  { label: 'Thumbnail',      href: '/dashboard/thumbnail',  icon: Image },
+  { label: 'Banco de Fotos', href: '/dashboard/fotos',      icon: Images },
+  { label: 'Stories',        href: '/dashboard/stories',    icon: Smartphone },
+  { label: 'Mídia Kit',      href: '/dashboard/midia-kit',  icon: BookOpen },
+  { label: 'Métricas',       href: '/dashboard/metricas',   icon: TrendingUp },
+  { label: 'Calendário',     href: '/dashboard/calendario', icon: Calendar },
+  { label: 'Metas',          href: '/dashboard/metas',      icon: Target },
+  { label: 'Oratória',       href: '/dashboard/oratorio',   icon: Mic },
+  { label: 'Meu Perfil',     href: '/dashboard/perfil',     icon: User },
+  { label: 'Histórico',     href: '/dashboard/historico',  icon: History },
 ]
 
 export function Navbar({ userEmail }: { userEmail?: string }) {
@@ -57,10 +62,21 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
       <aside className="hidden md:flex flex-col w-64 min-h-screen bg-[#0d0d1a] border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5 px-2 mb-8 group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center shadow-lg shadow-iara-900/50">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full bg-[#0d0d20] border border-iara-700/50 flex items-center justify-center shadow-lg shadow-iara-900/50 flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="star-g" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#818cf8" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#star-g)" />
+            </svg>
           </div>
-          <span className="text-xl font-bold iara-gradient-text">Iara</span>
+          <div className="flex flex-col leading-none">
+            <span className="text-base font-black iara-gradient-text tracking-tight">IARA</span>
+            <span className="text-[9px] font-bold text-[#4a4a6a] tracking-[0.2em] uppercase">HUB</span>
+          </div>
         </Link>
 
         {/* Nav items */}
@@ -86,6 +102,9 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
           })}
         </nav>
 
+        {/* Usage tracker */}
+        <UsoSidebar />
+
         {/* User + logout */}
         <div className="border-t border-iara-900/30 pt-4 mt-4">
           {userEmail && (
@@ -104,10 +123,21 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
       {/* Mobile topbar */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d1a]/95 backdrop-blur-sm border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+          <div className="w-7 h-7 rounded-full bg-[#0d0d20] border border-iara-700/50 flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="star-gm" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#818cf8" />
+                  <stop offset="100%" stopColor="#a855f7" />
+                </linearGradient>
+              </defs>
+              <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#star-gm)" />
+            </svg>
           </div>
-          <span className="text-lg font-bold iara-gradient-text">Iara</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-base font-black iara-gradient-text tracking-tight">IARA</span>
+            <span className="text-[9px] font-bold text-[#4a4a6a] tracking-[0.2em] uppercase">HUB</span>
+          </div>
         </Link>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}

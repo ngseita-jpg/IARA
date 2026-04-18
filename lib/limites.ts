@@ -12,6 +12,7 @@ export type TipoUso =
   | 'oratorio'
   | 'midia_kit'
   | 'fotos'
+  | 'temas'
 
 // null = ilimitado
 export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
@@ -23,6 +24,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     oratorio:   1,
     midia_kit:  1,
     fotos:      5,
+    temas:      2,
   },
   plus: {
     roteiro:    10,
@@ -32,6 +34,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     oratorio:   3,
     midia_kit:  5,
     fotos:      25,
+    temas:      7,
   },
   premium: {
     roteiro:    20,
@@ -41,6 +44,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     oratorio:   8,
     midia_kit:  null,
     fotos:      80,
+    temas:      15,
   },
   profissional: {
     roteiro:    null,
@@ -50,6 +54,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     oratorio:   null,
     midia_kit:  null,
     fotos:      null,
+    temas:      null,
   },
 }
 
