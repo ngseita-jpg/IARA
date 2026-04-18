@@ -2,230 +2,217 @@
 
 import { useEffect, useState } from 'react'
 
+// Dimensões reais do iPhone 15 Pro (chassis externo)
+const PW = 393
+const PH = 852
+
 export default function PreviewPage() {
-  const [time, setTime] = useState('')
+  const [time, setTime]   = useState('09:41')
   const [ready, setReady] = useState(false)
+  const [scale, setScale] = useState(0.85)
 
   useEffect(() => {
-    // ativa modo demo automaticamente
     fetch('/api/preview-mode?ativar=true').then(() => setReady(true))
 
     function tick() {
-      const now = new Date()
-      setTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`)
+      const n = new Date()
+      setTime(`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`)
     }
     tick()
-    const id = setInterval(tick, 30000)
-    return () => clearInterval(id)
+    const clock = setInterval(tick, 30000)
+
+    function resize() {
+      const sh = (window.innerHeight - 40) / PH
+      const sw = (window.innerWidth  - 40) / PW
+      setScale(Math.min(sh, sw, 0.95))
+    }
+    resize()
+    window.addEventListener('resize', resize)
+    return () => { clearInterval(clock); window.removeEventListener('resize', resize) }
   }, [])
 
   return (
     <div style={{
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#060610',
+      width: '100vw', height: '100vh',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: '#06060f', overflow: 'hidden',
     }}>
-      {/* sombra ambiente */}
+
+      {/* glow ambiente */}
       <div style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'radial-gradient(ellipse at center, rgba(124,92,252,0.12) 0%, transparent 65%)',
-        pointerEvents: 'none',
+        position: 'fixed', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse at 50% 60%, rgba(99,102,241,0.13) 0%, transparent 60%)',
       }} />
 
-      {/* corpo iPhone */}
+      {/* wrapper de escala */}
       <div style={{
-        position: 'relative',
-        width: 295,
-        height: 638,
-        borderRadius: 50,
-        background: 'linear-gradient(155deg, #2e2e3e 0%, #1a1a26 45%, #222230 100%)',
-        boxShadow: `
-          0 0 0 1px rgba(255,255,255,0.13),
-          0 0 0 2px #0a0a12,
-          inset 0 1px 0 rgba(255,255,255,0.14),
-          inset 0 -1px 0 rgba(0,0,0,0.6),
-          0 40px 100px rgba(0,0,0,0.75),
-          0 10px 30px rgba(0,0,0,0.5)
-        `,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        willChange: 'transform',
       }}>
 
-        {/* botão silencioso */}
+        {/* ── chassis iPhone ─────────────────────────────────── */}
         <div style={{
-          position: 'absolute', left: -3, top: 105,
-          width: 3.5, height: 26, borderRadius: '3px 0 0 3px',
-          background: 'linear-gradient(to right, #111120, #252535)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-        }} />
-        {/* volume + */}
-        <div style={{
-          position: 'absolute', left: -3, top: 148,
-          width: 3.5, height: 50, borderRadius: '3px 0 0 3px',
-          background: 'linear-gradient(to right, #111120, #252535)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-        }} />
-        {/* volume - */}
-        <div style={{
-          position: 'absolute', left: -3, top: 208,
-          width: 3.5, height: 50, borderRadius: '3px 0 0 3px',
-          background: 'linear-gradient(to right, #111120, #252535)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-        }} />
-        {/* power */}
-        <div style={{
-          position: 'absolute', right: -3, top: 162,
-          width: 3.5, height: 70, borderRadius: '0 3px 3px 0',
-          background: 'linear-gradient(to left, #111120, #252535)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-        }} />
-
-        {/* tela */}
-        <div style={{
-          position: 'absolute',
-          top: 5, left: 5, right: 5, bottom: 5,
-          borderRadius: 45,
-          overflow: 'hidden',
-          background: '#000',
+          position: 'relative',
+          width: PW, height: PH,
+          borderRadius: 55,
+          background: 'linear-gradient(160deg, #3a3a4a 0%, #1c1c2a 40%, #252535 100%)',
+          boxShadow: `
+            0 0 0 1px rgba(255,255,255,0.12),
+            0 0 0 2.5px #09090f,
+            inset 0 1px 0 rgba(255,255,255,0.15),
+            inset 0 -1px 0 rgba(0,0,0,0.55),
+            0 60px 120px rgba(0,0,0,0.8),
+            0 20px 50px rgba(0,0,0,0.55),
+            0  4px 12px rgba(99,102,241,0.08)
+          `,
         }}>
 
-          {/* reflexo no vidro */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 30,
-            borderRadius: 45,
-            background: 'linear-gradient(130deg, rgba(255,255,255,0.05) 0%, transparent 45%)',
-            pointerEvents: 'none',
-          }} />
+          {/* botão silencioso */}
+          <Btn side="left"  top={115} h={28}  />
+          {/* volume + */}
+          <Btn side="left"  top={168} h={56}  />
+          {/* volume - */}
+          <Btn side="left"  top={234} h={56}  />
+          {/* power */}
+          <Btn side="right" top={178} h={76}  />
 
-          {/* status bar */}
+          {/* ── tela ─────────────────────────────────────────── */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            height: 48, zIndex: 20,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            padding: '0 20px 7px',
+            position: 'absolute',
+            top: 6, left: 6, right: 6, bottom: 6,
+            borderRadius: 50,
+            overflow: 'hidden',
+            background: '#000',
           }}>
-            <span style={{ color: '#fff', fontSize: 12.5, fontWeight: 700, letterSpacing: '-0.3px' }}>
-              {time}
-            </span>
 
-            {/* Dynamic Island */}
+            {/* reflexo vidro */}
             <div style={{
-              position: 'absolute',
-              left: '50%', top: 9,
-              transform: 'translateX(-50%)',
-              width: 98, height: 28,
-              borderRadius: 20,
-              background: '#000',
-              boxShadow: '0 0 0 1.5px rgba(255,255,255,0.07)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 9,
-              zIndex: 25,
-            }}>
-              <div style={{
-                width: 9, height: 9, borderRadius: '50%',
-                background: '#111',
-                border: '1px solid #1e1e1e',
-                boxShadow: 'inset 0 0 3px rgba(80,160,255,0.25)',
-              }} />
-              <div style={{
-                width: 5, height: 5, borderRadius: '50%',
-                background: '#111',
-                border: '1px solid #1a1a1a',
-              }} />
-            </div>
+              position: 'absolute', inset: 0, zIndex: 40, borderRadius: 50,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%)',
+              pointerEvents: 'none',
+            }} />
 
-            {/* ícones */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5.5 }}>
-              <svg width="13" height="11" viewBox="0 0 13 11" fill="none">
-                <rect x="0" y="8" width="2.5" height="3" rx="0.6" fill="white" opacity="0.28"/>
-                <rect x="3.5" y="5.5" width="2.5" height="5.5" rx="0.6" fill="white" opacity="0.5"/>
-                <rect x="7" y="3" width="2.5" height="8" rx="0.6" fill="white" opacity="0.75"/>
-                <rect x="10.5" y="0" width="2.5" height="11" rx="0.6" fill="white"/>
-              </svg>
-              <svg width="13" height="10" viewBox="0 0 20 14" fill="none">
-                <circle cx="10" cy="13" r="1.8" fill="white"/>
-                <path d="M5.5 8.5C6.9 7.1 8.4 6.3 10 6.3s3.1.8 4.5 2.2l1.5-1.5C14.2 5.1 12.2 4 10 4S5.8 5.1 4 7l1.5 1.5z" fill="white" opacity="0.6"/>
-                <path d="M1.5 5C3.6 2.9 6.6 1.5 10 1.5S16.4 2.9 18.5 5L20 3.5C17.5 1.3 13.9 0 10 0S2.5 1.3 0 3.5L1.5 5z" fill="white" opacity="0.28"/>
-              </svg>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{
-                  position: 'relative',
-                  width: 21, height: 11,
-                  borderRadius: 3.5,
-                  border: '1.5px solid rgba(255,255,255,0.42)',
-                }}>
-                  <div style={{
-                    position: 'absolute',
-                    left: 2, top: 2, bottom: 2, right: '25%',
-                    background: 'white',
-                    borderRadius: 1.5,
-                  }} />
+            {/* status bar */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              height: 54, zIndex: 30,
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+              padding: '0 22px 8px',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)',
+              pointerEvents: 'none',
+            }}>
+              <span style={{ color:'#fff', fontSize:14, fontWeight:700, letterSpacing:'-0.4px', fontFamily:'system-ui' }}>
+                {time}
+              </span>
+
+              {/* Dynamic Island */}
+              <div style={{
+                position: 'absolute', left: '50%', top: 10,
+                transform: 'translateX(-50%)',
+                width: 120, height: 34, borderRadius: 24,
+                background: '#000',
+                boxShadow: '0 0 0 1.5px rgba(255,255,255,0.06)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 11,
+                zIndex: 35,
+              }}>
+                <div style={{ width:11, height:11, borderRadius:'50%', background:'#0a0a0a', border:'1px solid #1c1c1c', boxShadow:'inset 0 0 4px rgba(80,160,255,0.2)' }} />
+                <div style={{ width: 6,  height: 6,  borderRadius:'50%', background:'#0a0a0a', border:'1px solid #181818' }} />
+              </div>
+
+              {/* icons */}
+              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                {/* signal */}
+                <svg width="14" height="12" viewBox="0 0 14 12" fill="none">
+                  <rect x="0"   y="9"   width="2.8" height="3"   rx="0.6" fill="white" opacity="0.3"/>
+                  <rect x="3.8" y="6"   width="2.8" height="6"   rx="0.6" fill="white" opacity="0.55"/>
+                  <rect x="7.6" y="3"   width="2.8" height="9"   rx="0.6" fill="white" opacity="0.8"/>
+                  <rect x="11.2" y="0"  width="2.8" height="12"  rx="0.6" fill="white"/>
+                </svg>
+                {/* wifi */}
+                <svg width="14" height="11" viewBox="0 0 20 14" fill="none">
+                  <circle cx="10" cy="13.5" r="1.8" fill="white"/>
+                  <path d="M5.5 8.8C6.9 7.3 8.4 6.5 10 6.5s3.1.8 4.5 2.3l1.5-1.5C14.2 5.3 12.2 4.1 10 4.1S5.8 5.3 4 7.3l1.5 1.5z" fill="white" opacity="0.55"/>
+                  <path d="M1.5 5.2C3.6 3 6.6 1.5 10 1.5S16.4 3 18.5 5.2L20 3.7C17.5 1.4 13.9 0 10 0S2.5 1.4 0 3.7L1.5 5.2z" fill="white" opacity="0.28"/>
+                </svg>
+                {/* battery */}
+                <div style={{ display:'flex', alignItems:'center' }}>
+                  <div style={{ position:'relative', width:24, height:12, borderRadius:3.5, border:'1.5px solid rgba(255,255,255,0.4)' }}>
+                    <div style={{ position:'absolute', left:2, top:2, bottom:2, right:'18%', background:'white', borderRadius:1.5 }} />
+                  </div>
+                  <div style={{ width:2, height:6, marginLeft:1, borderRadius:'0 1px 1px 0', background:'rgba(255,255,255,0.3)' }} />
                 </div>
-                <div style={{
-                  width: 2, height: 5, marginLeft: 1,
-                  borderRadius: '0 1px 1px 0',
-                  background: 'rgba(255,255,255,0.32)',
-                }} />
               </div>
             </div>
+
+            {/* ── iframe ─────────────────────────────────────── */}
+            {ready ? (
+              <iframe
+                src="/"
+                style={{
+                  position: 'absolute', inset: 0,
+                  width: '100%', height: '100%',
+                  border: 'none',
+                  background: '#08080f',
+                  borderRadius: 50,
+                }}
+                title="Iara Preview"
+              />
+            ) : (
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                background: '#08080f', gap: 14,
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  border: '2.5px solid rgba(99,102,241,0.25)',
+                  borderTopColor: '#6366f1',
+                  animation: 'spin 0.75s linear infinite',
+                }} />
+                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, fontFamily:'system-ui' }}>
+                  carregando...
+                </span>
+                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+              </div>
+            )}
+
+            {/* home indicator */}
+            <div style={{
+              position: 'absolute', bottom: 8,
+              left: '50%', transform: 'translateX(-50%)',
+              width: 110, height: 4.5, borderRadius: 3,
+              background: 'rgba(255,255,255,0.2)',
+              zIndex: 30, pointerEvents: 'none',
+            }} />
           </div>
 
-          {/* iframe */}
-          {ready && (
-            <iframe
-              src="/"
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                background: '#0a0a14',
-              }}
-              title="Iara"
-            />
-          )}
-
-          {!ready && (
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#0a0a14',
-            }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%',
-                border: '2px solid rgba(124,92,252,0.3)',
-                borderTop: '2px solid #7c5cfc',
-                animation: 'spin 0.8s linear infinite',
-              }} />
-              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-            </div>
-          )}
-
-          {/* home indicator */}
+          {/* reflexo chassis superior */}
           <div style={{
-            position: 'absolute', bottom: 7,
-            left: '50%', transform: 'translateX(-50%)',
-            width: 95, height: 4, borderRadius: 3,
-            background: 'rgba(255,255,255,0.22)',
-            zIndex: 20,
+            position: 'absolute', top: 0, left: 0, right: 0, height: '38%',
+            borderRadius: '54px 54px 0 0',
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.045), transparent)',
+            pointerEvents: 'none',
           }} />
         </div>
-
-        {/* reflexo no corpo */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          height: '42%', borderRadius: '50px 50px 0 0',
-          background: 'linear-gradient(to bottom, rgba(255,255,255,0.04), transparent)',
-          pointerEvents: 'none',
-        }} />
       </div>
     </div>
+  )
+}
+
+/* botão lateral */
+function Btn({ side, top, h }: { side: 'left'|'right'; top: number; h: number }) {
+  const isLeft = side === 'left'
+  return (
+    <div style={{
+      position: 'absolute',
+      [isLeft ? 'left' : 'right']: -4,
+      top,
+      width: 4, height: h,
+      borderRadius: isLeft ? '3px 0 0 3px' : '0 3px 3px 0',
+      background: 'linear-gradient(to ' + (isLeft ? 'right' : 'left') + ', #0e0e1c, #2a2a3a)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.09)',
+    }} />
   )
 }
