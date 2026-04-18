@@ -88,7 +88,11 @@ export async function POST(req: NextRequest) {
     console.error('[carrossel/gerar] req.json falhou:', jsonErr)
     return NextResponse.json({ error: `body parse error: ${jsonErr}` }, { status: 400 })
   }
-  const { conteudo, instrucoes, num_slides, num_imagens, historico } = body
+  const conteudo = body.conteudo as string | undefined
+  const instrucoes = body.instrucoes as string | undefined
+  const num_slides = body.num_slides as number | undefined
+  const num_imagens = body.num_imagens as number | undefined
+  const historico = body.historico as Anthropic.MessageParam[] | undefined
 
   console.log('[carrossel/gerar] step 4: perfil query')
   const { data: perfil, error: perfilErr } = await supabase
