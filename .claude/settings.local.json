@@ -31,7 +31,8 @@
       "Bash(ls app/\\\\\\(auth\\\\\\)/esqueci-senha/)",
       "Bash(ls app/esqueci-senha/)",
       "Bash(cat app/\\\\\\(auth\\\\\\)/register/page.tsx)",
-      "Bash(cat app/register/page.tsx)"
+      "Bash(cat app/register/page.tsx)",
+      "Bash(start \"\" \"http://localhost:3000/preview\")"
     ]
   }
 }

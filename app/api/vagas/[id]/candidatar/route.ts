@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { emailNovaCandidatura } from '@/lib/email'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -45,6 +46,34 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (error) {
     if (error.code === '23505') return NextResponse.json({ error: 'Você já se candidatou a esta vaga.' }, { status: 409 })
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Fire email notification to brand (best-effort)
+  const { data: vaga } = await supabase
+    .from('vagas')
+    .select('titulo, brand_profiles!brand_id(nome_empresa, user_id)')
+    .eq('id', id)
+    .single()
+
+  const { data: creatorProfile } = await supabase
+    .from('creator_profiles')
+    .select('nome_artistico')
+    .eq('id', profile.id)
+    .single()
+
+  if (vaga && creatorProfile) {
+    const brandProfile = vaga.brand_profiles as unknown as { nome_empresa: string; user_id: string } | null
+    if (brandProfile?.user_id) {
+      const { data: brandUser } = await supabase.auth.admin.getUserById(brandProfile.user_id)
+      if (brandUser?.user?.email) {
+        emailNovaCandidatura({
+          brandEmail: brandUser.user.email,
+          creatorNome: creatorProfile.nome_artistico,
+          vagaTitulo: vaga.titulo,
+          mensagem: mensagem?.trim() || null,
+        })
+      }
+    }
   }
 
   return NextResponse.json({ ok: true })

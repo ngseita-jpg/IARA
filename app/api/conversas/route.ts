@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { emailConversaIniciada } from '@/lib/email'
 
 export async function GET() {
   const supabase = await createClient()
@@ -49,5 +50,35 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Notify creator that brand started a conversation (best-effort)
+  const { data: cand2 } = await supabase
+    .from('candidaturas')
+    .select('vaga_id, creator_profiles!creator_id(nome_artistico, user_id), vagas!vaga_id(titulo)')
+    .eq('id', candidatura_id)
+    .single()
+
+  const { data: brandProfile } = await supabase
+    .from('brand_profiles')
+    .select('nome_empresa')
+    .eq('user_id', user.id)
+    .single()
+
+  if (cand2 && brandProfile) {
+    const cp = cand2.creator_profiles as unknown as { nome_artistico: string; user_id: string } | null
+    const vg = cand2.vagas as unknown as { titulo: string } | null
+    if (cp?.user_id && vg) {
+      const { data: creatorUser } = await supabase.auth.admin.getUserById(cp.user_id)
+      if (creatorUser?.user?.email) {
+        emailConversaIniciada({
+          creatorEmail: creatorUser.user.email,
+          creatorNome: cp.nome_artistico,
+          brandNome: brandProfile.nome_empresa,
+          vagaTitulo: vg.titulo,
+        })
+      }
+    }
+  }
+
   return NextResponse.json({ conversa }, { status: 201 })
 }
