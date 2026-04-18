@@ -29,6 +29,7 @@ type Produto = {
   desconto_pct: number
   ativo: boolean
   webhook_secret: string | null
+  webhook_confirmado: boolean
   created_at: string
   afiliados: Afiliado[]
 }
@@ -48,7 +49,8 @@ export default function MarcaAfiliadosPage() {
   const [sucesso, setSucesso] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  // Confirmar venda
+  // Webhook confirmation
+  const [confirmandoWebhook, setConfirmandoWebhook] = useState<string | null>(null)
   const [webhookVisivel, setWebhookVisivel] = useState<string | null>(null)
   const [copiado, setCopiado] = useState<string | null>(null)
   const [vendaModal, setVendaModal] = useState<{ afiliado: Afiliado; produto: Produto } | null>(null)
@@ -126,6 +128,19 @@ export default function MarcaAfiliadosPage() {
       setErro(d.error)
     }
     setConfirmando(false)
+  }
+
+  async function confirmarWebhook(produtoId: string) {
+    setConfirmandoWebhook(produtoId)
+    const r = await fetch(`/api/afiliados/testar-webhook/${produtoId}`, { method: 'POST' })
+    if (r.ok) {
+      setProdutos(prev => prev.map(p => p.id === produtoId ? { ...p, webhook_confirmado: true } : p))
+      flash('Webhook confirmado! Produto agora aparece no catálogo de criadores.')
+    } else {
+      const d = await r.json()
+      setErro(d.error ?? 'Erro ao confirmar webhook')
+    }
+    setConfirmandoWebhook(null)
   }
 
   async function copiar(text: string, key: string) {
@@ -292,6 +307,15 @@ export default function MarcaAfiliadosPage() {
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${produto.ativo ? 'bg-green-950/40 text-green-400 border border-green-800/30' : 'bg-[#1a1a2e] text-[#5a5a7a] border border-[#2a2a3e]'}`}>
                         {produto.ativo ? 'Ativo' : 'Pausado'}
                       </span>
+                      {produto.webhook_confirmado ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/40 text-blue-400 border border-blue-800/30 flex items-center gap-1">
+                          <Webhook className="w-2.5 h-2.5" />No catálogo
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950/40 text-amber-400 border border-amber-800/30">
+                          Aguardando webhook
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       {produto.preco && <span className="text-sm text-[#9b9bb5]">R$ {produto.preco.toFixed(2)}</span>}
@@ -325,14 +349,30 @@ export default function MarcaAfiliadosPage() {
                   <div className="border-t border-[#1a1a2e] p-5 space-y-5">
                     {/* Webhook integration block */}
                     {produto.webhook_secret && (
-                      <div className="rounded-xl border border-[#C9A84C]/20 bg-[#C9A84C]/5 p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Webhook className="w-4 h-4 text-[#C9A84C]" />
-                          <p className="text-xs font-bold text-[#C9A84C] uppercase tracking-wider">Integração automática (recomendado)</p>
+                      <div className={`rounded-xl border p-4 ${produto.webhook_confirmado ? 'border-blue-800/30 bg-blue-950/10' : 'border-amber-700/30 bg-amber-950/10'}`}>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <Webhook className={`w-4 h-4 ${produto.webhook_confirmado ? 'text-blue-400' : 'text-amber-400'}`} />
+                            <p className={`text-xs font-bold uppercase tracking-wider ${produto.webhook_confirmado ? 'text-blue-400' : 'text-amber-400'}`}>
+                              {produto.webhook_confirmado ? 'Webhook confirmado ✓' : 'Ativar no catálogo — configure o webhook'}
+                            </p>
+                          </div>
+                          {produto.webhook_confirmado && (
+                            <span className="text-[10px] text-blue-400 bg-blue-950/40 border border-blue-800/30 px-2 py-0.5 rounded-full font-bold">Visível para criadores</span>
+                          )}
                         </div>
-                        <p className="text-xs text-[#9b9bb5] mb-3">
-                          Configure esse webhook no checkout da sua loja para que as vendas sejam confirmadas automaticamente — sem depender de reporte manual.
-                        </p>
+
+                        {!produto.webhook_confirmado && (
+                          <div className="mb-4 p-3 rounded-lg bg-amber-950/20 border border-amber-800/20">
+                            <p className="text-xs text-amber-200/80 font-semibold mb-1">3 passos simples para ativar:</p>
+                            <ol className="text-xs text-[#9b9bb5] space-y-1 list-decimal list-inside">
+                              <li>Copie a URL e o Secret abaixo</li>
+                              <li>Cole no campo de webhook do checkout da sua loja (Shopify, WooCommerce, Hotmart…)</li>
+                              <li>Clique em <strong className="text-amber-400">&quot;Confirmar integração&quot;</strong> aqui em baixo</li>
+                            </ol>
+                          </div>
+                        )}
+
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 bg-[#0a0a14] border border-[#1a1a2e] rounded-lg px-3 py-2">
                             <span className="text-[10px] text-[#6b6b8a] font-semibold uppercase w-14 flex-shrink-0">URL</span>
@@ -360,6 +400,19 @@ export default function MarcaAfiliadosPage() {
                             Envie POST com: <span className="font-mono text-[#6b6b8a]">{'{ "cupom": "CODIGO", "valor_venda": 299.90, "secret": "SEU_SECRET" }'}</span>
                           </p>
                         </div>
+
+                        {!produto.webhook_confirmado && (
+                          <button
+                            onClick={() => confirmarWebhook(produto.id)}
+                            disabled={confirmandoWebhook === produto.id}
+                            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                          >
+                            {confirmandoWebhook === produto.id
+                              ? <><Loader2 className="w-4 h-4 animate-spin" />Confirmando…</>
+                              : <><CheckCircle className="w-4 h-4" />Confirmar integração e publicar no catálogo</>
+                            }
+                          </button>
+                        )}
                       </div>
                     )}
 

@@ -87,6 +87,13 @@ export async function POST(req: NextRequest) {
     })
     .eq('id', afiliado.id)
 
+  // Marca o produto como confirmado (caso ainda não esteja) — primeira venda real via webhook é prova suficiente
+  await supabase
+    .from('produtos_afiliados')
+    .update({ webhook_confirmado: true })
+    .eq('id', afiliado.produto_id)
+    .eq('webhook_confirmado', false)
+
   return NextResponse.json({
     ok: true,
     comissao_criador,

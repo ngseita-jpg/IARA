@@ -15,3 +15,7 @@ alter table public.afiliados
 -- Adiciona origem da venda (manual vs webhook)
 alter table public.vendas_afiliado
   add column if not exists origem text default 'manual' check (origem in ('manual', 'webhook'));
+
+-- Produto só aparece no catálogo de criadores após a marca confirmar a integração do webhook
+alter table public.produtos_afiliados
+  add column if not exists webhook_confirmado boolean default false;

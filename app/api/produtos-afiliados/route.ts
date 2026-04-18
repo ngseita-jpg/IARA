@@ -33,6 +33,7 @@ export async function GET() {
     .from('produtos_afiliados')
     .select('*, brand_profiles!brand_id(nome_empresa)')
     .eq('ativo', true)
+    .eq('webhook_confirmado', true)
     .order('created_at', { ascending: false })
 
   if (!creator) return NextResponse.json({ produtos: produtos ?? [], minhasAfiliations: [] })
