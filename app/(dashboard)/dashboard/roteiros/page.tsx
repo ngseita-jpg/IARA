@@ -15,6 +15,7 @@ import {
   Layers,
   Radio,
   History,
+  Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
@@ -78,13 +79,20 @@ export default function RoteirosPage() {
   const [inspiracaoVideo, setInspiracaoVideo] = useState<{ titulo: string; thumbnail?: string; transcricao?: string | null; aviso?: string } | null>(null)
   const [analisandoInspiracao, setAnalisandoInspiracao] = useState(false)
   const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
   // Salva no histórico quando o streaming termina
   const roteiroRef = useRef('')
   useEffect(() => { roteiroRef.current = roteiro }, [roteiro])
   useEffect(() => {
     if (!loading && roteiroRef.current.length > 100 && tema) {
-      salvarHistorico('roteiro', tema, { texto: roteiroRef.current }, { formato, duracao, objetivo, modo })
+      ;(async () => {
+        const pts = await salvarHistorico('roteiro', tema, { texto: roteiroRef.current }, { formato, duracao, objetivo, modo })
+        if (pts > 0) {
+          setPontosNotif(pts)
+          setTimeout(() => setPontosNotif(null), 3500)
+        }
+      })()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading])
@@ -162,6 +170,14 @@ export default function RoteirosPage() {
 
   return (
     <div className="animate-fade-in">
+      {/* Notificação de pontos */}
+      {pontosNotif && (
+        <div className="fixed top-6 right-6 z-50 animate-slide-up iara-card px-5 py-3 border-iara-700/50 shadow-2xl flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <p className="text-sm font-bold text-yellow-400">+{pontosNotif} pontos!</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-iara-400 text-sm font-medium mb-2">

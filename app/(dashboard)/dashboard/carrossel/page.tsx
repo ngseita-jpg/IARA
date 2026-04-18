@@ -23,6 +23,7 @@ import {
   Newspaper,
   History,
   User,
+  Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
@@ -78,6 +79,7 @@ export default function CarrosselPage() {
   const [enviandoChat, setEnviandoChat] = useState(false)
   const [historicoClaude, setHistoricoClaude] = useState<{ role: string; content: string }[]>([])
   const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -173,7 +175,9 @@ export default function CarrosselPage() {
         { role: 'assistant', content: data.assistant_message },
       ])
       const tituloHistorico = leitura?.titulo || textoManual.slice(0, 80) || url
-      salvarHistorico('carrossel', tituloHistorico, carrosselGerado, { numSlides, instrucoes: instrucoes.slice(0, 60) })
+      salvarHistorico('carrossel', tituloHistorico, carrosselGerado, { numSlides, instrucoes: instrucoes.slice(0, 60) }).then(pts => {
+        if (pts > 0) { setPontosNotif(pts); setTimeout(() => setPontosNotif(null), 3500) }
+      })
 
       // Renderizar slides em paralelo
       await renderizarTodos(carrosselGerado)
@@ -308,6 +312,14 @@ export default function CarrosselPage() {
 
   return (
     <div className="min-h-screen bg-[#080810] text-[#f1f1f8]">
+      {/* Notificação de pontos */}
+      {pontosNotif && (
+        <div className="fixed top-6 right-6 z-50 animate-slide-up iara-card px-5 py-3 border-iara-700/50 shadow-2xl flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <p className="text-sm font-bold text-yellow-400">+{pontosNotif} pontos!</p>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 py-8">
 
         <HistoricoPanel

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   Layers, Sparkles, ChevronLeft, ChevronRight,
-  Copy, Check, RefreshCw, Lightbulb, Clock, History, User,
+  Copy, Check, RefreshCw, Lightbulb, Clock, History, User, Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
@@ -148,6 +148,7 @@ export default function StoriesPage() {
   const [erro, setErro] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState<'configurar' | 'preview'>('configurar')
+  const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
   useEffect(() => {
     if (slides.length > 0) setAbaAtiva('preview')
@@ -176,7 +177,9 @@ export default function StoriesPage() {
       setSlides(data.slides ?? [])
       setDicaGeral(data.dica_geral ?? '')
       setSlideAtual(0)
-      salvarHistorico('stories', tema, { slides: data.slides, dica_geral: data.dica_geral }, { tipo, contexto: contexto.slice(0, 60) })
+      salvarHistorico('stories', tema, { slides: data.slides, dica_geral: data.dica_geral }, { tipo, contexto: contexto.slice(0, 60) }).then(pts => {
+        if (pts > 0) { setPontosNotif(pts); setTimeout(() => setPontosNotif(null), 3500) }
+      })
     } catch {
       setErro('Erro de conexão. Tente novamente.')
     } finally {
@@ -196,6 +199,14 @@ export default function StoriesPage() {
 
   return (
     <div className="animate-fade-in">
+      {/* Notificação de pontos */}
+      {pontosNotif && (
+        <div className="fixed top-6 right-6 z-50 animate-slide-up iara-card px-5 py-3 border-iara-700/50 shadow-2xl flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <p className="text-sm font-bold text-yellow-400">+{pontosNotif} pontos!</p>
+        </div>
+      )}
+
       <HistoricoPanel
         tipo="stories"
         aberto={historicoAberto}

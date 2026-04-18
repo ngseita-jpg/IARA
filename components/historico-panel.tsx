@@ -168,20 +168,25 @@ export function HistoricoPanel({ tipo, aberto, onFechar, onCarregar }: Props) {
   )
 }
 
-// Hook helper para salvar no histórico
+// Hook helper para salvar no histórico — retorna pontos_ganhos ou 0
 export async function salvarHistorico(
   tipo: string,
   titulo: string,
   conteudo: unknown,
   parametros?: Record<string, unknown>
-) {
+): Promise<number> {
   try {
-    await fetch('/api/historico', {
+    const res = await fetch('/api/historico', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tipo, titulo, conteudo, parametros }),
     })
+    if (res.ok) {
+      const data = await res.json()
+      return data.pontos_ganhos ?? 0
+    }
   } catch {
     // silencioso — histórico não pode quebrar o fluxo principal
   }
+  return 0
 }

@@ -21,6 +21,7 @@ import {
   Images,
   History,
   User,
+  Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
@@ -54,6 +55,7 @@ export default function ThumbnailPage() {
   const [enviandoChat, setEnviandoChat] = useState(false)
   const [historicoClaude, setHistoricoClaude] = useState<{ role: string; content: string }[]>([])
   const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
   // ───────────────────────────────────────────
   // Upload de foto
@@ -103,7 +105,9 @@ export default function ThumbnailPage() {
         { role: 'user', content: `Thumbnail para: ${tituloVideo}` },
         { role: 'assistant', content: data.assistant_message },
       ])
-      salvarHistorico('thumbnail', tituloVideo, layoutGerado, { descricao: descricao.slice(0, 80) })
+      salvarHistorico('thumbnail', tituloVideo, layoutGerado, { descricao: descricao.slice(0, 80) }).then(pts => {
+        if (pts > 0) { setPontosNotif(pts); setTimeout(() => setPontosNotif(null), 3500) }
+      })
 
       await renderizarThumbnail(layoutGerado)
     } catch (e: unknown) {
@@ -201,6 +205,14 @@ export default function ThumbnailPage() {
 
   return (
     <div className="min-h-screen bg-[#080810] text-[#f1f1f8]">
+      {/* Notificação de pontos */}
+      {pontosNotif && (
+        <div className="fixed top-6 right-6 z-50 animate-slide-up iara-card px-5 py-3 border-iara-700/50 shadow-2xl flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <p className="text-sm font-bold text-yellow-400">+{pontosNotif} pontos!</p>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-4 py-8">
 
         <HistoricoPanel
