@@ -69,26 +69,36 @@ Persona: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use
 }
 
 export async function POST(req: NextRequest) {
+  console.log('[carrossel/gerar] START')
+  console.log('[carrossel/gerar] ANTHROPIC_KEY length:', process.env.ANTHROPIC_API_KEY?.length ?? 'MISSING')
+  console.log('[carrossel/gerar] SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 40) ?? 'MISSING')
   try {
+  console.log('[carrossel/gerar] step 1: createClient')
   const supabase = await createClient()
+  console.log('[carrossel/gerar] step 2: getUser')
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-
+  console.log('[carrossel/gerar] step 3: req.json')
   const { conteudo, instrucoes, num_slides, imagens_base64, historico } = await req.json()
 
-  const { data: perfil } = await supabase
+  console.log('[carrossel/gerar] step 4: perfil query')
+  const { data: perfil, error: perfilErr } = await supabase
     .from('creator_profiles')
     .select('nome_artistico, nicho, tom_de_voz, sobre, plano')
     .eq('user_id', user.id)
     .maybeSingle()
+  if (perfilErr) console.error('[carrossel/gerar] perfil error:', perfilErr.message)
+  console.log('[carrossel/gerar] plano:', perfil?.plano ?? 'null')
 
   // Só conta como nova geração (não como ajuste via chat)
   if (!historico?.length) {
+    console.log('[carrossel/gerar] step 5: verificarLimite')
     const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
     const plano = ((perfil?.plano as string) ?? 'free') as import('@/lib/limites').Plano
     const check = await verificarLimite(supabase, user.id, 'carrossel', plano)
     if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
   }
+  console.log('[carrossel/gerar] step 6: calling Anthropic')
 
   // Montar contexto das imagens se houver
   const imagensContext = imagens_base64?.length
