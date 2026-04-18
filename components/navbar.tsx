@@ -127,7 +127,7 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
             { label: 'Início',     href: '/dashboard',           icon: LayoutDashboard },
             { label: 'Roteiros',   href: '/dashboard/roteiros',  icon: FileText },
             { label: 'Carrossel',  href: '/dashboard/carrossel', icon: Layers },
-            { label: 'Stories',    href: '/dashboard/stories',   icon: Sparkles },
+            { label: 'Stories',    href: '/dashboard/stories',   icon: Smartphone },
             { label: 'Mais',       href: '#mais',                icon: Menu },
           ].map((item) => {
             const isActive = item.href !== '#mais' && (pathname === item.href || pathname.startsWith(item.href + '/'))
