@@ -22,6 +22,7 @@ import {
   Smartphone,
   Lightbulb,
   History,
+  Briefcase,
 } from 'lucide-react'
 import { useState } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
@@ -40,8 +41,9 @@ const navItems = [
   { label: 'Calendário',     href: '/dashboard/calendario', icon: Calendar },
   { label: 'Metas',          href: '/dashboard/metas',      icon: Target },
   { label: 'Oratória',       href: '/dashboard/oratorio',   icon: Mic },
-  { label: 'Meu Perfil',     href: '/dashboard/perfil',     icon: User },
-  { label: 'Histórico',     href: '/dashboard/historico',  icon: History },
+  { label: 'Vagas de Marcas', href: '/dashboard/vagas',     icon: Briefcase },
+  { label: 'Meu Perfil',     href: '/dashboard/perfil',    icon: User },
+  { label: 'Histórico',      href: '/dashboard/historico', icon: History },
 ]
 
 export function Navbar({ userEmail }: { userEmail?: string }) {

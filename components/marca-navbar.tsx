@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -10,12 +11,12 @@ import {
 import { useState } from 'react'
 import { IaraLogo } from '@/components/iara-logo'
 
-const navItems = [
+const navItems: { label: string; href: string; icon: React.ElementType; soon?: boolean }[] = [
   { label: 'Painel',           href: '/marca/dashboard',           icon: LayoutDashboard },
   { label: 'Campanha IA',      href: '/marca/dashboard/campanha',  icon: Zap },
   { label: 'Buscar Criadores', href: '/marca/dashboard/criadores', icon: Users },
   { label: 'Minha Empresa',    href: '/marca/dashboard/perfil',    icon: Building2 },
-  { label: 'Vagas',            href: '/marca/dashboard/vagas',     icon: Briefcase, soon: true },
+  { label: 'Vagas',            href: '/marca/dashboard/vagas',     icon: Briefcase },
 ]
 
 export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {

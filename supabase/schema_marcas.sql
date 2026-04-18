@@ -39,6 +39,7 @@ end $$;
 create table if not exists public.vagas (
   id              uuid primary key default gen_random_uuid(),
   brand_id        uuid references public.brand_profiles(id) on delete cascade not null,
+  nome_empresa    text,                  -- denormalizado para evitar join com RLS
   titulo          text not null,
   descricao       text,
   segmento        text,
@@ -53,6 +54,9 @@ create table if not exists public.vagas (
   status          text default 'aberta', -- 'aberta', 'encerrada', 'pausada'
   created_at      timestamptz default now()
 );
+
+-- Migration: adicionar nome_empresa se a tabela já existir
+alter table public.vagas add column if not exists nome_empresa text;
 
 alter table public.vagas enable row level security;
 
