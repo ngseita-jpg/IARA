@@ -32,7 +32,7 @@ import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 
-function resizeImage(dataUrl: string, maxDim = 1080, quality = 0.82): Promise<string> {
+function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
@@ -1034,10 +1034,11 @@ export default function CarrosselPage() {
           multiple
           maxSelect={8 - imagens.length}
           onClose={() => setBancoAberto(false)}
-          onConfirm={(dataUrls) => {
-            const novasBase64 = dataUrls.map(d => d.replace(/^data:image\/\w+;base64,/, ''))
+          onConfirm={async (dataUrls) => {
+            const resized = await Promise.all(dataUrls.map(d => resizeImage(d)))
+            const novasBase64 = resized.map(d => d.replace(/^data:image\/\w+;base64,/, ''))
             setImagens(prev => [...prev, ...novasBase64].slice(0, 8))
-            setImagensPreview(prev => [...prev, ...dataUrls].slice(0, 8))
+            setImagensPreview(prev => [...prev, ...resized].slice(0, 8))
             setBancoAberto(false)
           }}
         />
