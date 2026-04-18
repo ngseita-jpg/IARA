@@ -80,8 +80,15 @@ export async function POST(req: NextRequest) {
   console.log('[carrossel/gerar] step 2: getUser')
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  console.log('[carrossel/gerar] step 3: req.json')
-  const { conteudo, instrucoes, num_slides, num_imagens, historico } = await req.json()
+  console.log('[carrossel/gerar] step 3: req.json, content-length:', req.headers.get('content-length'))
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch (jsonErr) {
+    console.error('[carrossel/gerar] req.json falhou:', jsonErr)
+    return NextResponse.json({ error: `body parse error: ${jsonErr}` }, { status: 400 })
+  }
+  const { conteudo, instrucoes, num_slides, num_imagens, historico } = body
 
   console.log('[carrossel/gerar] step 4: perfil query')
   const { data: perfil, error: perfilErr } = await supabase
