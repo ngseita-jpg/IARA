@@ -32,8 +32,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/register', '/preview', '/api/preview-mode']
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route))
+  const publicRoutes = ['/login', '/register', '/preview', '/api/preview-mode', '/auth', '/esqueci-senha']
+  const isPublicRoute = pathname === '/' || publicRoutes.some((route) => pathname.startsWith(route))
 
   // Modo preview de desenvolvimento — bypassa auth
   const isPreviewMode = request.cookies.get('iara_preview')?.value === '1'
