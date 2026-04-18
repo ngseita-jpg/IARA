@@ -129,12 +129,22 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
         <Link href="/dashboard">
           <IaraLogo size="sm" layout="horizontal" />
         </Link>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg text-[#9b9bb5] hover:bg-iara-900/30"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Logout rápido */}
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[#6b6b8a] border border-[#1a1a2e] hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/40 transition-all duration-200"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sair
+          </button>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-2 rounded-lg text-[#9b9bb5] hover:bg-iara-900/30"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile bottom tab bar */}
