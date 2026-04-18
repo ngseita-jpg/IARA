@@ -15,7 +15,24 @@ export async function GET(_req: NextRequest, { params }: Params) {
     .eq('vaga_id', id)
     .order('created_at', { ascending: false })
 
-  return NextResponse.json({ candidaturas: data ?? [] })
+  const cands = data ?? []
+  const candIds = cands.map(c => c.id)
+
+  const { data: conversas } = candIds.length
+    ? await supabase
+        .from('conversas')
+        .select('id, candidatura_id, status, valor_acordado')
+        .in('candidatura_id', candIds)
+    : { data: [] }
+
+  const conversaMap: Record<string, { id: string; status: string; valor_acordado: number | null }> = {}
+  for (const c of conversas ?? []) {
+    conversaMap[c.candidatura_id] = { id: c.id, status: c.status, valor_acordado: c.valor_acordado }
+  }
+
+  return NextResponse.json({
+    candidaturas: cands.map(c => ({ ...c, conversa: conversaMap[c.id] ?? null })),
+  })
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {

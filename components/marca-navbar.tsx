@@ -8,7 +8,7 @@ import {
   LayoutDashboard, LogOut, ChevronRight,
   Menu, X, Users, Building2, Briefcase, Zap,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { IaraLogo } from '@/components/iara-logo'
 
 const navItems: { label: string; href: string; icon: React.ElementType; soon?: boolean }[] = [
@@ -23,6 +23,15 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
+
+  useEffect(() => {
+    const check = () =>
+      fetch('/api/conversas/nao-lidas').then(r => r.ok ? r.json() : { count: 0 }).then(d => setUnread(d.count ?? 0))
+    check()
+    const iv = setInterval(check, 30000)
+    return () => clearInterval(iv)
+  }, [])
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -71,7 +80,12 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
                   >
                     <Icon className={`w-4 h-4 ${isActive ? 'text-marca-400' : 'text-[#5a5a7a] group-hover:text-[#9b9bb5]'}`} />
                     {item.label}
-                    {isActive && <ChevronRight className="w-3 h-3 ml-auto text-marca-500" />}
+                    {item.href === '/marca/dashboard/vagas' && unread > 0 && (
+                      <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#0a0a14]">
+                        {unread > 9 ? '9+' : unread}
+                      </span>
+                    )}
+                    {isActive && unread === 0 && <ChevronRight className="w-3 h-3 ml-auto text-marca-500" />}
                   </Link>
                 )}
               </div>

@@ -45,9 +45,12 @@ export async function POST(req: NextRequest) {
       descricao: body.descricao || null,
       tipo: body.tipo || 'pago',
       valor: body.valor ? Number(body.valor) : null,
+      segmento: body.segmento || null,
       nichos: body.nichos || [],
       plataformas: body.plataformas || [],
       prazo_inscricao: body.prazo_inscricao || null,
+      prazo_entrega: body.prazo_entrega || null,
+      min_seguidores: body.min_seguidores ? Number(body.min_seguidores) : 0,
       entregaveis: body.entregaveis?.filter(Boolean) || null,
       status: 'aberta',
     })

@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Briefcase, Plus, X, ChevronDown, ChevronUp, Check,
   Loader2, Users, Calendar, Zap, DollarSign, AlertCircle,
+  MessageCircle, Star,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { ChatModal } from '@/components/chat-modal'
 
 const NICHOS = [
   'Lifestyle', 'Fitness e saúde', 'Gastronomia', 'Moda e beleza',
@@ -12,33 +15,7 @@ const NICHOS = [
   'Viagem', 'Esportes', 'Games', 'Maternidade e família', 'Outro',
 ]
 const PLATAFORMAS = ['Instagram', 'TikTok', 'YouTube', 'Twitter/X', 'LinkedIn', 'Pinterest', 'Twitch']
-
-type Vaga = {
-  id: string
-  titulo: string
-  descricao: string | null
-  tipo: string
-  valor: number | null
-  nichos: string[]
-  plataformas: string[]
-  prazo_inscricao: string | null
-  status: string
-  candidaturas_count: number
-  created_at: string
-}
-
-type Candidatura = {
-  id: string
-  mensagem: string | null
-  status: string
-  created_at: string
-  creator_profiles: {
-    nome_artistico: string | null
-    nicho: string | null
-    nivel: number | null
-    pontos: number | null
-  } | null
-}
+const NIVEL_LABELS = ['', 'Iniciante', 'Crescente', 'Estabelecido', 'Influente', 'Elite']
 
 const STATUS_BADGE: Record<string, string> = {
   aberta:    'text-green-400 bg-green-950/40 border-green-800/40',
@@ -52,11 +29,44 @@ const CAND_BADGE: Record<string, string> = {
   recusada:  'text-red-400 bg-red-950/40 border-red-800/40',
 }
 
-const NIVEL_LABELS = ['', 'Iniciante', 'Crescente', 'Estabelecido', 'Influente', 'Elite']
+type Conversa = { id: string; status: string; valor_acordado: number | null }
+
+type Candidatura = {
+  id: string
+  mensagem: string | null
+  status: string
+  created_at: string
+  conversa: Conversa | null
+  creator_profiles: {
+    nome_artistico: string | null
+    nicho: string | null
+    nivel: number | null
+    pontos: number | null
+    sobre: string | null
+  } | null
+}
+
+type Vaga = {
+  id: string
+  titulo: string
+  descricao: string | null
+  tipo: string
+  valor: number | null
+  segmento: string | null
+  nichos: string[]
+  plataformas: string[]
+  prazo_inscricao: string | null
+  prazo_entrega: string | null
+  min_seguidores: number | null
+  entregaveis: string[] | null
+  status: string
+  candidaturas_count: number
+  created_at: string
+}
 
 function formatDate(d: string | null) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 export default function VagasPage() {
@@ -66,18 +76,32 @@ export default function VagasPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [candidaturas, setCandidaturas] = useState<Record<string, Candidatura[]>>({})
   const [loadingCand, setLoadingCand] = useState<string | null>(null)
+  const [myUserId, setMyUserId] = useState<string | null>(null)
+
+  // Chat state
+  const [chat, setChat] = useState<{
+    conversaId: string; conversaStatus: string; valorAcordado: number | null; otherName: string
+  } | null>(null)
+  const [openingChat, setOpeningChat] = useState<string | null>(null)
 
   // Form state
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [segmento, setSegmento] = useState('')
   const [tipo, setTipo] = useState<'pago' | 'recebido'>('pago')
   const [valor, setValor] = useState('')
   const [nichosSel, setNichosSel] = useState<string[]>([])
   const [plataformasSel, setPlataformasSel] = useState<string[]>([])
   const [prazoInscricao, setPrazoInscricao] = useState('')
+  const [prazoEntrega, setPrazoEntrega] = useState('')
+  const [minSeguidores, setMinSeguidores] = useState('')
   const [entregaveis, setEntregaveis] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => setMyUserId(data.user?.id ?? null))
+  }, [])
 
   const fetchVagas = useCallback(async () => {
     setLoading(true)
@@ -94,7 +118,10 @@ export default function VagasPage() {
     if (candidaturas[id]) return
     setLoadingCand(id)
     const r = await fetch(`/api/marca/vagas/${id}/candidaturas`)
-    if (r.ok) { const d = await r.json(); setCandidaturas(prev => ({ ...prev, [id]: d.candidaturas })) }
+    if (r.ok) {
+      const d = await r.json()
+      setCandidaturas(prev => ({ ...prev, [id]: d.candidaturas }))
+    }
     setLoadingCand(null)
   }
 
@@ -119,10 +146,38 @@ export default function VagasPage() {
     }))
   }
 
+  async function openChat(candId: string, otherName: string, existingConversa: Conversa | null, vagaId: string) {
+    setOpeningChat(candId)
+    let conversaId = existingConversa?.id ?? null
+    let conversaStatus = existingConversa?.status ?? 'aberta'
+    let valorAcordado = existingConversa?.valor_acordado ?? null
+
+    if (!conversaId) {
+      const r = await fetch('/api/conversas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidatura_id: candId }),
+      })
+      if (r.ok) {
+        const d = await r.json()
+        conversaId = d.conversa.id
+        conversaStatus = d.conversa.status
+        setCandidaturas(prev => ({
+          ...prev,
+          [vagaId]: prev[vagaId].map(c =>
+            c.id === candId ? { ...c, conversa: { id: conversaId!, status: conversaStatus, valor_acordado: null } } : c
+          ),
+        }))
+      }
+    }
+    setOpeningChat(null)
+    if (conversaId) setChat({ conversaId, conversaStatus, valorAcordado, otherName })
+  }
+
   function resetForm() {
-    setTitulo(''); setDescricao(''); setTipo('pago'); setValor('')
-    setNichosSel([]); setPlataformasSel([]); setPrazoInscricao('')
-    setEntregaveis(''); setCreateError(null)
+    setTitulo(''); setDescricao(''); setSegmento(''); setTipo('pago'); setValor('')
+    setNichosSel([]); setPlataformasSel([]); setPrazoInscricao(''); setPrazoEntrega('')
+    setMinSeguidores(''); setEntregaveis(''); setCreateError(null)
   }
 
   function toggleChip<T extends string>(arr: T[], val: T, set: (v: T[]) => void) {
@@ -139,11 +194,14 @@ export default function VagasPage() {
         body: JSON.stringify({
           titulo: titulo.trim(),
           descricao: descricao.trim() || null,
+          segmento: segmento.trim() || null,
           tipo,
           valor: tipo === 'pago' && valor ? Number(valor) : null,
           nichos: nichosSel,
           plataformas: plataformasSel,
           prazo_inscricao: prazoInscricao || null,
+          prazo_entrega: prazoEntrega || null,
+          min_seguidores: minSeguidores ? Number(minSeguidores) : 0,
           entregaveis: entregaveis.split('\n').map(s => s.trim()).filter(Boolean),
         }),
       })
@@ -214,7 +272,6 @@ export default function VagasPage() {
 
             return (
               <div key={vaga.id} className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] overflow-hidden">
-                {/* Vaga header */}
                 <div className="p-5">
                   <div className="flex items-start gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
@@ -229,6 +286,9 @@ export default function VagasPage() {
                         ) : (
                           <span className="text-xs text-[#6b6b8a]">Permuta</span>
                         )}
+                        {vaga.segmento && (
+                          <span className="text-xs text-[#5a5a7a]">· {vaga.segmento}</span>
+                        )}
                       </div>
                       <h3 className="font-bold text-[#f1f1f8] text-base leading-snug">{vaga.titulo}</h3>
                       {vaga.descricao && (
@@ -242,21 +302,31 @@ export default function VagasPage() {
                           <span key={p} className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-[#0a0a14] border border-[#1a1a2e] text-[#6b6b8a]">{p}</span>
                         ))}
                       </div>
+                      {/* Details row */}
+                      <div className="flex flex-wrap gap-3 mt-3 text-xs text-[#5a5a7a]">
+                        {vaga.prazo_inscricao && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> Inscrições até {formatDate(vaga.prazo_inscricao)}
+                          </span>
+                        )}
+                        {vaga.prazo_entrega && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> Entrega até {formatDate(vaga.prazo_entrega)}
+                          </span>
+                        )}
+                        {(vaga.min_seguidores ?? 0) > 0 && (
+                          <span>{vaga.min_seguidores?.toLocaleString('pt-BR')}+ seguidores</span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                      {vaga.prazo_inscricao && (
-                        <div className="flex items-center gap-1 text-xs text-[#5a5a7a]">
-                          <Calendar className="w-3.5 h-3.5" />
-                          até {formatDate(vaga.prazo_inscricao)}
-                        </div>
-                      )}
                       <button
                         onClick={() => toggleExpand(vaga.id)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[#C9A84C]/25 text-[#E2C068] hover:bg-[#C9A84C]/10 transition-all"
                       >
                         <Users className="w-3.5 h-3.5" />
-                        {vaga.candidaturas_count} candidatura{vaga.candidaturas_count !== 1 ? 's' : ''}
+                        {vaga.candidaturas_count} {vaga.candidaturas_count === 1 ? 'candidatura' : 'candidaturas'}
                         {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
                       {vaga.status === 'aberta' && (
@@ -282,33 +352,70 @@ export default function VagasPage() {
                       <p className="text-sm text-[#3a3a5a] text-center py-6">Nenhuma candidatura ainda.</p>
                     ) : (
                       <div className="space-y-3">
-                        <p className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest mb-3">Candidaturas</p>
+                        <p className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest mb-3">
+                          {cands.length} candidatura{cands.length !== 1 ? 's' : ''}
+                        </p>
                         {cands.map(c => {
                           const creator = c.creator_profiles
                           const nivel = creator?.nivel ?? 1
+                          const initials = (creator?.nome_artistico ?? 'C')
+                            .split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+                          const conv = c.conversa
+
                           return (
-                            <div key={c.id} className="flex items-start gap-3 p-4 rounded-xl border border-[#1a1a2e] bg-[#0a0a14]">
-                              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#C9A84C]/20 to-accent-purple/20 flex items-center justify-center flex-shrink-0 text-sm font-bold text-marca-300">
-                                {(creator?.nome_artistico ?? 'C').charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <span className="text-sm font-semibold text-[#f1f1f8]">
-                                    {creator?.nome_artistico ?? 'Criador'}
-                                  </span>
-                                  <span className="text-[10px] text-[#6b6b8a]">{NIVEL_LABELS[nivel] ?? 'Iniciante'}</span>
-                                  {creator?.nicho && (
-                                    <span className="text-[10px] text-[#5a5a7a]">· {creator.nicho}</span>
-                                  )}
-                                  <span className={`ml-auto text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${CAND_BADGE[c.status] ?? CAND_BADGE.pendente}`}>
-                                    {c.status}
-                                  </span>
+                            <div key={c.id} className="rounded-xl border border-[#1a1a2e] bg-[#0a0a14] p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C9A84C]/20 to-accent-purple/20 flex items-center justify-center flex-shrink-0 text-sm font-bold text-marca-300">
+                                  {initials}
                                 </div>
-                                {c.mensagem && (
-                                  <p className="text-xs text-[#9b9bb5] leading-relaxed mb-3">{c.mensagem}</p>
-                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className="text-sm font-semibold text-[#f1f1f8]">
+                                      {creator?.nome_artistico ?? 'Criador'}
+                                    </span>
+                                    <span className="text-[10px] text-[#6b6b8a]">{NIVEL_LABELS[nivel] ?? 'Iniciante'}</span>
+                                    {creator?.nicho && (
+                                      <span className="text-[10px] text-[#5a5a7a] truncate max-w-[120px]">· {creator.nicho}</span>
+                                    )}
+                                    {creator?.pontos != null && (
+                                      <span className="flex items-center gap-0.5 text-[10px] text-amber-400 ml-auto">
+                                        <Star className="w-2.5 h-2.5" /> {creator.pontos}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {creator?.sobre && (
+                                    <p className="text-xs text-[#5a5a7a] leading-relaxed mb-2 line-clamp-2">{creator.sobre}</p>
+                                  )}
+                                  {c.mensagem && (
+                                    <div className="mb-3 px-3 py-2 rounded-lg bg-[#0d0d1a] border border-[#1a1a2e]">
+                                      <p className="text-xs text-[#9b9bb5] leading-relaxed italic">&ldquo;{c.mensagem}&rdquo;</p>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${CAND_BADGE[c.status] ?? CAND_BADGE.pendente}`}>
+                                      {c.status}
+                                    </span>
+                                    {/* Conversa status badge */}
+                                    {conv && (
+                                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+                                        conv.status === 'fechado'
+                                          ? 'text-iara-400 bg-iara-900/30 border-iara-700/30'
+                                          : 'text-[#6b6b8a] bg-[#1a1a2e] border-[#2a2a3e]'
+                                      }`}>
+                                        {conv.status === 'fechado'
+                                          ? `✅ Fechado${conv.valor_acordado ? ` R$${conv.valor_acordado.toLocaleString('pt-BR')}` : ''}`
+                                          : conv.status === 'proposta_enviada' ? '💰 Proposta enviada'
+                                          : '💬 Em conversa'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex gap-2 mt-3 pt-3 border-t border-[#1a1a2e]">
                                 {c.status === 'pendente' && (
-                                  <div className="flex gap-2">
+                                  <>
                                     <button
                                       onClick={() => updateCandidatura(vaga.id, c.id, 'aprovada')}
                                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-green-400 border border-green-800/40 hover:bg-green-950/30 transition-all"
@@ -321,7 +428,23 @@ export default function VagasPage() {
                                     >
                                       <X className="w-3 h-3" /> Recusar
                                     </button>
-                                  </div>
+                                  </>
+                                )}
+                                {conv?.status !== 'fechado' && c.status !== 'recusada' && (
+                                  <button
+                                    onClick={() => openChat(c.id, creator?.nome_artistico ?? 'Criador', conv, vaga.id)}
+                                    disabled={openingChat === c.id}
+                                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all"
+                                    style={conv
+                                      ? { background: 'rgba(99,102,241,0.12)', borderColor: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }
+                                      : { borderColor: '#2a2a3e', color: '#9b9bb5' }
+                                    }
+                                  >
+                                    {openingChat === c.id
+                                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                                      : <MessageCircle className="w-3 h-3" />}
+                                    {conv ? 'Ver conversa' : 'Iniciar conversa'}
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -337,14 +460,30 @@ export default function VagasPage() {
         </div>
       )}
 
+      {/* Chat modal */}
+      {chat && myUserId && (
+        <ChatModal
+          conversaId={chat.conversaId}
+          conversaStatus={chat.conversaStatus}
+          valorAcordado={chat.valorAcordado}
+          myUserId={myUserId}
+          isBrand={true}
+          otherName={chat.otherName}
+          onClose={() => setChat(null)}
+          onDealClosed={(valor) => {
+            setChat(prev => prev ? { ...prev, conversaStatus: 'fechado', valorAcordado: valor } : null)
+          }}
+        />
+      )}
+
       {/* Create Modal */}
       {showCreate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={e => { if (e.target === e.currentTarget) { setShowCreate(false); resetForm() } }}
         >
-          <div className="w-full max-w-lg rounded-3xl border border-[#1a1a2e] bg-[#0d0d1a] shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#1a1a2e]">
+          <div className="w-full max-w-xl rounded-3xl border border-[#1a1a2e] bg-[#0d0d1a] shadow-2xl shadow-black/60 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#1a1a2e] sticky top-0 bg-[#0d0d1a] z-10">
               <h2 className="text-lg font-bold text-[#f1f1f8]">Nova Vaga de Campanha</h2>
               <button onClick={() => { setShowCreate(false); resetForm() }} className="p-1.5 rounded-lg text-[#5a5a7a] hover:text-[#f1f1f8] transition-colors">
                 <X className="w-5 h-5" />
@@ -358,6 +497,7 @@ export default function VagasPage() {
                 </div>
               )}
 
+              {/* Título */}
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Título da vaga *</label>
                 <input
@@ -368,17 +508,30 @@ export default function VagasPage() {
                 />
               </div>
 
+              {/* Descrição */}
               <div>
-                <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Descrição</label>
+                <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Descrição da campanha</label>
                 <textarea
                   value={descricao}
                   onChange={e => setDescricao(e.target.value)}
-                  placeholder="Descreva o que você espera do criador, o contexto da campanha..."
-                  rows={3}
+                  placeholder="Contexto da campanha, o que você espera, detalhes do produto/serviço..."
+                  rows={4}
                   className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none transition-all resize-none"
                 />
               </div>
 
+              {/* Segmento */}
+              <div>
+                <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Segmento</label>
+                <input
+                  value={segmento}
+                  onChange={e => setSegmento(e.target.value)}
+                  placeholder="Ex: Alimentação saudável, Moda fitness, SaaS B2B..."
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none transition-all"
+                />
+              </div>
+
+              {/* Tipo de parceria */}
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Tipo de parceria</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -405,9 +558,11 @@ export default function VagasPage() {
                     placeholder="Ex: 2500"
                     className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none transition-all"
                   />
+                  <p className="text-xs text-[#3a3a5a] mt-1">Você pode deixar em aberto e negociar no chat com o criador</p>
                 </div>
               )}
 
+              {/* Nichos */}
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Nichos desejados</label>
                 <div className="flex flex-wrap gap-2">
@@ -424,6 +579,7 @@ export default function VagasPage() {
                 </div>
               </div>
 
+              {/* Plataformas */}
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Plataformas</label>
                 <div className="flex flex-wrap gap-2">
@@ -440,16 +596,43 @@ export default function VagasPage() {
                 </div>
               </div>
 
+              {/* Min seguidores */}
               <div>
-                <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Prazo de inscrição</label>
+                <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">
+                  Mínimo de seguidores <span className="text-[#3a3a5a] normal-case font-normal">(opcional)</span>
+                </label>
                 <input
-                  type="date"
-                  value={prazoInscricao}
-                  onChange={e => setPrazoInscricao(e.target.value)}
-                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] focus:border-[#C9A84C]/40 focus:outline-none transition-all"
+                  type="number"
+                  value={minSeguidores}
+                  onChange={e => setMinSeguidores(e.target.value)}
+                  placeholder="Ex: 10000"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none transition-all"
                 />
               </div>
 
+              {/* Prazos */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Prazo de inscrição</label>
+                  <input
+                    type="date"
+                    value={prazoInscricao}
+                    onChange={e => setPrazoInscricao(e.target.value)}
+                    className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] focus:border-[#C9A84C]/40 focus:outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">Entrega do conteúdo</label>
+                  <input
+                    type="date"
+                    value={prazoEntrega}
+                    onChange={e => setPrazoEntrega(e.target.value)}
+                    className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] focus:border-[#C9A84C]/40 focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Entregáveis */}
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">
                   Entregáveis <span className="text-[#3a3a5a] normal-case font-normal">(um por linha)</span>
@@ -457,8 +640,8 @@ export default function VagasPage() {
                 <textarea
                   value={entregaveis}
                   onChange={e => setEntregaveis(e.target.value)}
-                  placeholder="Ex: 3 Reels de 30s&#10;2 Stories com link&#10;1 post no feed"
-                  rows={3}
+                  placeholder={'3 Reels de 30s\n2 Stories com link no swipe\n1 post no feed com legenda'}
+                  rows={4}
                   className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none transition-all resize-none"
                 />
               </div>

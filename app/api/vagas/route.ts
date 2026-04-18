@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data: vagas } = await supabase
     .from('vagas')
-    .select('id, titulo, descricao, tipo, valor, nichos, plataformas, prazo_inscricao, nome_empresa, created_at')
+    .select('id, titulo, descricao, tipo, valor, nichos, plataformas, prazo_inscricao, prazo_entrega, nome_empresa, entregaveis, min_seguidores, segmento, created_at')
     .eq('status', 'aberta')
     .order('created_at', { ascending: false })
 
