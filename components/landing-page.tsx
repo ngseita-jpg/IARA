@@ -11,9 +11,10 @@ import { IaraLogo } from '@/components/iara-logo'
 import {
   Sparkles, FileText, Mic, Target, Calendar,
   TrendingUp, ArrowRight, Check, Zap, Shield,
-  Star, Layers, Image, Images, BookOpen, Smartphone,
+  Layers, Image, Images, BookOpen, Smartphone,
   Clock, Brain, DollarSign, Users, ChevronDown,
   Flame, X, BarChart3, Gift, Lightbulb,
+  Building2, ShoppingBag, Tag, Link2,
 } from 'lucide-react'
 import { PricingSection } from '@/components/pricing-section'
 
@@ -52,15 +53,6 @@ const modules = [
   { icon: Target,      title: 'Metas',             desc: 'Gamificação com pontos e níveis. Do Iniciante ao Lenda.',                             tag: 'text-green-400',    color: 'from-green-900/20 to-iara-600/10',       border: 'border-green-800/20',    glow: 'rgba(34,197,94,0.20)'  },
   { icon: Calendar,    title: 'Calendário',        desc: 'Grade semanal integrada às metas. Planeje, execute, marque.',                         tag: 'text-teal-400',     color: 'from-teal-900/20 to-iara-600/10',        border: 'border-teal-800/20',     glow: 'rgba(20,184,166,0.20)' },
   { icon: Images,      title: 'Banco de Fotos',    desc: 'Armazenamento privado para usar nos geradores.',                                      tag: 'text-iara-400',     color: 'from-iara-600/15 to-teal-900/10',        border: 'border-iara-700/20',     glow: 'rgba(99,102,241,0.20)' },
-]
-
-const testimonials = [
-  { quote: 'Gastava 3h por semana pensando em pauta. Agora em 10 min tenho roteiro, carrossel e calendário prontos.', name: 'Ana Luíza M.', role: 'Lifestyle · 85K',       color: '#818cf8' },
-  { quote: 'A análise de oratória me mostrou que eu falava rápido demais. Meus vídeos subiram 40% em retenção.',      name: 'Rafael T.',    role: 'Fitness · 200K',         color: '#a855f7' },
-  { quote: 'O nível de personalização é absurdo. Cada roteiro parece que eu escrevi — não parece IA.',                name: 'Juliana P.',   role: 'Empreendedora · 45K',    color: '#ec4899' },
-  { quote: 'Finalmente consegui fechar parceria com uma marca grande. O mídia kit da Iara foi decisivo.',             name: 'Carlos E.',    role: 'Tech · 120K',            color: '#818cf8' },
-  { quote: 'A IA entende meu nicho melhor do que eu expliquei. É como ter um sócio criativo que nunca cansa.',        name: 'Mariana S.',   role: 'Gastronomia · 92K',      color: '#a855f7' },
-  { quote: 'Usei 3 plataformas antes da Iara. Nunca mais. Tudo que preciso em um lugar, na minha língua.',            name: 'Thiago R.',    role: 'Games · 310K',           color: '#ec4899' },
 ]
 
 const painPoints = [
@@ -196,12 +188,24 @@ export function LandingPage() {
         >
           <Link href="/"><IaraLogo size="sm" layout="horizontal" /></Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-[#6b6b8a]">
-            {[['#modulos','Módulos'],['#como-funciona','Como funciona'],['#planos','Planos'],['#afiliados','Indique e Ganhe']].map(([href,label]) => (
+            {[
+              ['#modulos','Módulos'],
+              ['#afiliacao','Afiliação'],
+              ['#planos','Planos'],
+              ['#indique','Indique e Ganhe'],
+            ].map(([href,label]) => (
               <a key={href} href={href} className="hover:text-[#f1f1f8] transition-colors duration-200 relative group cursor-pointer">
                 {label}
                 <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-iara-500 to-accent-purple scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </a>
             ))}
+            <Link
+              href="/empresas"
+              className="flex items-center gap-1.5 text-sm font-medium text-[#9b9bb5] hover:text-[#f1f1f8] border border-white/10 hover:border-iara-700/50 hover:bg-iara-900/20 px-3 py-1.5 rounded-xl transition-all duration-200"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              Para Empresas
+            </Link>
           </nav>
           <div className="flex items-center gap-3">
             <Link href="/login" className="hidden sm:block text-sm text-[#6b6b8a] hover:text-[#f1f1f8] transition-colors">Entrar</Link>
@@ -256,7 +260,7 @@ export function LandingPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-iara-700/40 bg-iara-950/60 text-iara-300 text-xs font-medium mb-10"
           >
             <Flame className="w-3.5 h-3.5 text-iara-400 animate-glow-pulse" />
-            Assessoria com IA · Feito para criadores brasileiros
+            A plataforma que une criadores e marcas · Feito no Brasil
           </motion.div>
 
           {/* Headline — staggered lines */}
@@ -439,34 +443,6 @@ export function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ── TESTIMONIALS MARQUEE ── */}
-      <section className="py-14 overflow-hidden border-b border-white/5">
-        <div className="relative">
-          <div className="absolute left-0 top-0 bottom-0 w-28 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, #08080f, transparent)' }} />
-          <div className="absolute right-0 top-0 bottom-0 w-28 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, #08080f, transparent)' }} />
-          <div className="flex gap-5 animate-marquee whitespace-nowrap">
-            {[...testimonials, ...testimonials].map((t, i) => (
-              <div key={i} className="inline-flex flex-col gap-3 p-5 rounded-2xl border border-white/6 flex-shrink-0 w-[330px] whitespace-normal" style={{ background: 'rgba(12,12,24,0.9)' }}>
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_,j) => <Star key={j} className="w-3 h-3 text-yellow-400 fill-yellow-400" />)}
-                </div>
-                <p className="text-sm text-[#c4c4d8] leading-relaxed">"{t.quote}"</p>
-                <div className="flex items-center gap-2.5 pt-1 border-t border-white/5">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border border-iara-700/20"
-                    style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.3), rgba(168,85,247,0.2))', color: t.color }}>
-                    {t.name.split(' ').map(n => n[0]).slice(0,2).join('')}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-[#f1f1f8]">{t.name}</p>
-                    <p className="text-[10px] text-[#4a4a6a]">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── DOR ── */}
       <section className="py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(220,38,38,0.04) 0%, transparent 60%)' }} />
@@ -622,6 +598,62 @@ export function LandingPage() {
         </motion.div>
       </section>
 
+      {/* ── B2B TEASER — para empresas ── */}
+      <section className="py-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative rounded-3xl overflow-hidden border border-accent-purple/20 p-8 sm:p-10"
+            style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.08) 0%, rgba(99,102,241,0.05) 50%, rgba(8,8,15,0.95) 100%)' }}
+          >
+            <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(168,85,247,0.12) 0%, transparent 55%)' }} />
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent-purple/30 bg-accent-purple/10 text-accent-purple text-xs font-bold mb-5">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Para Marcas &amp; Empresas
+                </div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#f1f1f8] leading-tight mb-3">
+                  Sua marca na frente de<br />
+                  <span className="shimmer-text">milhares de criadores ativos.</span>
+                </h2>
+                <p className="text-[#9b9bb5] text-base max-w-lg leading-relaxed">
+                  Anuncie campanhas para criadores que já usam a Iara diariamente. Gerencie afiliações de produtos, encontre influenciadores alinhados ao seu nicho e feche parcerias diretamente na plataforma.
+                </p>
+                <div className="flex flex-wrap gap-4 mt-6 text-sm text-[#6b6b8a]">
+                  {[
+                    { icon: Sparkles, label: 'Campanhas anunciadas na plataforma' },
+                    { icon: Tag,      label: 'Programa de afiliação de produtos' },
+                    { icon: Users,    label: 'Catálogo de criadores segmentados' },
+                  ].map(f => (
+                    <span key={f.label} className="flex items-center gap-1.5">
+                      <f.icon className="w-3.5 h-3.5 text-accent-purple/70" />
+                      {f.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 flex-shrink-0">
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Link href="/empresas"
+                    className="btn-shimmer group flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold text-white shadow-xl shadow-accent-purple/20 whitespace-nowrap"
+                    style={{ background: 'linear-gradient(135deg,#a855f7,#6366f1)' }}>
+                    Conhecer a área de empresas
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </motion.div>
+                <Link href="/register?tipo=marca" className="text-center text-xs text-[#5a5a7a] hover:text-[#9b9bb5] transition-colors">
+                  Já tenho conta como marca →
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── MÓDULOS ── */}
       <section id="modulos" className="py-28 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
@@ -644,6 +676,141 @@ export function LandingPage() {
             style={{ perspective: '1200px' }}
           >
             {modules.map((m, i) => <ModuleCard key={m.title} mod={m} index={i} />)}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── AFILIAÇÃO DE PRODUTOS ── */}
+      <section id="afiliacao" className="py-28 px-4 sm:px-6 relative overflow-hidden"
+        style={{ background: 'linear-gradient(180deg, #08080f 0%, #0d0b1a 50%, #08080f 100%)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 30% 50%, rgba(236,72,153,0.07) 0%, transparent 55%)' }} />
+        <div className="max-w-5xl mx-auto relative z-10">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-16">
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-accent-pink/30 bg-accent-pink/10 text-accent-pink text-xs font-bold mb-8">
+              <Tag className="w-3.5 h-3.5" />
+              Afiliação de Produtos · Nova fonte de renda
+            </motion.div>
+            <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-5">
+              Divulgue produtos de marcas.<br />
+              <span className="shimmer-text">Ganhe a cada venda gerada.</span>
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-[#6b6b8a] text-lg max-w-2xl mx-auto leading-relaxed">
+              Marcas cadastram seus produtos direto na Iara. Você escolhe o que faz sentido para o seu nicho, gera seu link exclusivo ou cupom personalizado — e recebe por cada venda que vier do seu público. Simples, rastreável, automático.
+            </motion.p>
+          </motion.div>
+
+          {/* Como funciona — 3 passos visuais */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-40px' }} variants={stagger}
+            className="grid md:grid-cols-3 gap-5 mb-14">
+            {[
+              {
+                icon: ShoppingBag,
+                num: '01',
+                title: 'Marcas cadastram produtos',
+                desc: 'Empresas de todos os nichos disponibilizam produtos no catálogo da Iara com comissão definida por venda.',
+                color: 'from-accent-pink/20 to-accent-purple/10',
+                border: 'border-accent-pink/25',
+                tag: 'text-accent-pink',
+              },
+              {
+                icon: Link2,
+                num: '02',
+                title: 'Você gera seu link ou cupom',
+                desc: 'Com um clique, você cria seu link de afiliado ou cupom exclusivo. Compartilhe onde seu público está.',
+                color: 'from-accent-purple/20 to-iara-600/10',
+                border: 'border-accent-purple/25',
+                tag: 'text-accent-purple',
+              },
+              {
+                icon: DollarSign,
+                num: '03',
+                title: 'Venda acontece, comissão cai',
+                desc: 'Cada compra rastreada pelo seu link gera comissão automática na sua conta. Sem intermediários, sem espera.',
+                color: 'from-green-900/25 to-teal-900/10',
+                border: 'border-green-800/25',
+                tag: 'text-green-400',
+              },
+            ].map((step, i) => {
+              const Icon = step.icon
+              return (
+                <motion.div key={i} variants={fadeUp} custom={i}
+                  whileHover={{ y: -8 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                  className={`relative rounded-2xl p-7 border ${step.border} bg-gradient-to-br ${step.color} cursor-default overflow-hidden`}>
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-[#08080f]/60 flex items-center justify-center shadow-inner">
+                      <Icon className={`w-6 h-6 ${step.tag}`} />
+                    </div>
+                    <span className="text-4xl font-black text-[#1a1a2e]">{step.num}</span>
+                  </div>
+                  <h3 className="font-bold text-[#f1f1f8] text-base mb-2 leading-snug">{step.title}</h3>
+                  <p className="text-sm text-[#9b9bb5] leading-relaxed">{step.desc}</p>
+                </motion.div>
+              )
+            })}
+          </motion.div>
+
+          {/* Destaque: catálogo + rastreamento */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-30px' }} variants={stagger}
+            className="grid md:grid-cols-2 gap-5">
+            <motion.div variants={fadeUp}
+              className="rounded-2xl p-7 border border-iara-700/25 relative overflow-hidden"
+              style={{ background: 'rgba(12,10,22,0.8)' }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 0% 50%, rgba(99,102,241,0.08) 0%, transparent 60%)' }} />
+              <div className="relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-iara-600/15 border border-iara-700/30 flex items-center justify-center mb-4">
+                  <ShoppingBag className="w-5 h-5 text-iara-400" />
+                </div>
+                <h3 className="font-bold text-[#f1f1f8] text-lg mb-2">Catálogo exclusivo de produtos</h3>
+                <p className="text-[#9b9bb5] text-sm leading-relaxed">
+                  Só marcas que passaram pela verificação da Iara aparecem no catálogo. Você escolhe apenas produtos que fazem sentido para sua audiência — sem spamear, sem perder credibilidade.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {['Beleza','Tech','Fitness','Moda','Casa','Alimentação'].map(tag => (
+                    <span key={tag} className="text-xs px-2.5 py-1 rounded-full bg-iara-900/40 text-iara-400 border border-iara-800/30">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+            <motion.div variants={fadeUp} custom={1}
+              className="rounded-2xl p-7 border border-accent-pink/20 relative overflow-hidden"
+              style={{ background: 'rgba(12,8,16,0.8)' }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 100% 50%, rgba(236,72,153,0.08) 0%, transparent 60%)' }} />
+              <div className="relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-accent-pink/10 border border-accent-pink/20 flex items-center justify-center mb-4">
+                  <TrendingUp className="w-5 h-5 text-accent-pink" />
+                </div>
+                <h3 className="font-bold text-[#f1f1f8] text-lg mb-2">Rastreamento em tempo real</h3>
+                <p className="text-[#9b9bb5] text-sm leading-relaxed">
+                  Veja quantas visitas seu link gerou, quantas converteram em venda e quanto você vai receber este mês — tudo no seu painel da Iara, junto com todos os outros módulos.
+                </p>
+                <div className="mt-5 grid grid-cols-3 gap-3">
+                  {[{v:'R$ 0',l:'Ganho este mês'},{v:'0',l:'Vendas'},{v:'0%',l:'Taxa de conv.'}].map(s => (
+                    <div key={s.l} className="text-center">
+                      <p className="text-lg font-black shimmer-text">{s.v}</p>
+                      <p className="text-[10px] text-[#4a4a6a] mt-0.5">{s.l}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-center mt-10"
+          >
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="inline-block">
+              <Link href="/register"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-bold text-white shadow-lg shadow-accent-pink/20"
+                style={{ background: 'linear-gradient(135deg,#ec4899,#a855f7)' }}>
+                Quero ser afiliado de marcas
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -695,8 +862,8 @@ export function LandingPage() {
       {/* ── PLANOS ── */}
       <PricingSection />
 
-      {/* ── AFILIADOS ── */}
-      <section id="afiliados" className="py-28 px-4 sm:px-6 relative overflow-hidden">
+      {/* ── AFILIADOS (Indique e Ganhe) ── */}
+      <section id="indique" className="py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(168,85,247,0.08) 0%, transparent 65%)' }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-14">
@@ -825,11 +992,11 @@ export function LandingPage() {
             © {new Date().getFullYear()} Iara Hub. Feito no Brasil para criadores brasileiros.
           </p>
           <div className="flex items-center gap-5 text-xs text-[#3a3a5a]">
+            <Link href="/empresas" className="hover:text-[#9b9bb5] transition-colors">Para Empresas</Link>
             <Link href="/privacidade" className="hover:text-[#9b9bb5] transition-colors">Privacidade</Link>
             <Link href="/termos" className="hover:text-[#9b9bb5] transition-colors">Termos</Link>
-            <a href="#afiliados" className="hover:text-[#9b9bb5] transition-colors cursor-pointer">Afiliados</a>
+            <a href="#indique" className="hover:text-[#9b9bb5] transition-colors cursor-pointer">Afiliados</a>
             <Link href="/login" className="hover:text-[#9b9bb5] transition-colors">Entrar</Link>
-            <Link href="/register" className="hover:text-[#9b9bb5] transition-colors">Cadastrar</Link>
           </div>
         </div>
       </motion.footer>

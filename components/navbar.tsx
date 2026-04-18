@@ -72,14 +72,17 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
   return (
     <>
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex flex-col w-64 min-h-screen bg-[#0d0d1a] border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40">
+      <aside className="hidden md:flex flex-col w-64 min-h-screen border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40 overflow-hidden"
+        style={{ background: 'linear-gradient(180deg, #0e0e1e 0%, #0a0a14 100%)' }}>
+        {/* Top glow */}
+        <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none sidebar-top-glow" />
         {/* Logo */}
-        <Link href="/dashboard" className="px-2 mb-8">
+        <Link href="/dashboard" className="px-2 mb-8 relative z-10">
           <IaraLogo size="sm" layout="horizontal" />
         </Link>
 
         {/* Nav items */}
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-0.5 relative z-10">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -87,20 +90,22 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
                   isActive
-                    ? 'bg-iara-600/20 text-iara-300 border border-iara-600/30'
-                    : 'text-[#9b9bb5] hover:bg-iara-900/30 hover:text-[#f1f1f8]'
+                    ? 'active-nav-item bg-iara-600/15 text-iara-300 border border-iara-600/25 shadow-sm shadow-iara-900/40'
+                    : 'text-[#9b9bb5] hover:bg-iara-900/25 hover:text-[#f1f1f8] hover:border hover:border-iara-900/20 border border-transparent'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-iara-400' : 'text-[#5a5a7a] group-hover:text-[#9b9bb5]'}`} />
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-iara-400' : 'text-[#5a5a7a] group-hover:text-[#9b9bb5]'}`} />
                 {item.label}
                 {item.href === '/dashboard/vagas' && unread > 0 && (
                   <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-iara-500 text-white">
                     {unread > 9 ? '9+' : unread}
                   </span>
                 )}
-                {isActive && unread === 0 && <ChevronRight className="w-3 h-3 ml-auto text-iara-500" />}
+                {isActive && (item.href !== '/dashboard/vagas' || unread === 0) && (
+                  <ChevronRight className="w-3 h-3 ml-auto text-iara-500/70" />
+                )}
               </Link>
             )
           })}
@@ -125,7 +130,8 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
       </aside>
 
       {/* Mobile topbar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d1a]/95 backdrop-blur-sm border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40">
+      <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40"
+        style={{ background: 'rgba(10,10,20,0.96)', backdropFilter: 'blur(20px)', boxShadow: '0 1px 0 rgba(99,102,241,0.08)' }}>
         <Link href="/dashboard">
           <IaraLogo size="sm" layout="horizontal" />
         </Link>

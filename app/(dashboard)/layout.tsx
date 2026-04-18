@@ -15,10 +15,11 @@ export default async function DashboardLayout({
 
   if (isPreview) {
     return (
-      <div className="min-h-screen bg-[#0a0a14]">
+      <div className="min-h-screen app-bg relative">
+        <div className="fixed inset-0 app-bg-grid opacity-[0.35] pointer-events-none z-0" />
         <Navbar userEmail="demo@iara.app" />
-        <main className="md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
-          <div className="p-6 md:p-8 max-w-6xl">
+        <main className="relative z-10 md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
+          <div className="p-6 md:p-8 max-w-6xl content-enter">
             {children}
           </div>
           <footer className="px-6 md:px-8 pb-6 flex gap-4 text-xs text-[#3a3a5a]">
@@ -55,10 +56,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a14]">
+    <div className="min-h-screen app-bg relative">
+      <div className="fixed inset-0 app-bg-grid opacity-[0.35] pointer-events-none z-0" />
       <Navbar userEmail={user.email} />
-      <main className="md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
-        <div className="p-6 md:p-8 max-w-6xl">
+      <main className="relative z-10 md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
+        <div className="p-6 md:p-8 max-w-6xl content-enter">
           {children}
         </div>
         <footer className="px-6 md:px-8 pb-6 flex gap-4 text-xs text-[#3a3a5a]">
