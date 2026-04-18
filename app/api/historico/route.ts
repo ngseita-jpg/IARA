@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Concede pontos de gamificação (fire-and-forget, não bloqueia resposta)
+  // Concede pontos de gamificação
   const pontos = PONTOS_GERACAO[body.tipo] ?? 0
   if (pontos > 0) {
     const { data: profile } = await supabase
@@ -66,12 +66,11 @@ export async function POST(req: NextRequest) {
 
     const novoTotal = (profile?.pontos ?? 0) + pontos
 
-    supabase.from('creator_profiles').upsert({
-      user_id: user.id,
+    await supabase.from('creator_profiles').update({
       pontos: novoTotal,
       nivel: getLevel(novoTotal),
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' }).then(() => {})
+    }).eq('user_id', user.id)
   }
 
   return NextResponse.json({ ok: true, pontos_ganhos: pontos })
