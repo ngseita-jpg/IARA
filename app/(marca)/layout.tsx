@@ -32,8 +32,8 @@ export default async function MarcaLayout({
           {children}
         </div>
         <footer className="px-6 md:px-8 pb-6 flex gap-4 text-xs text-[#3a3a5a]">
-          <Link href="/privacidade" className="hover:text-iara-400 transition-colors">Privacidade</Link>
-          <Link href="/termos" className="hover:text-iara-400 transition-colors">Termos de Uso</Link>
+          <Link href="/privacidade" className="hover:text-[#E2C068] transition-colors">Privacidade</Link>
+          <Link href="/termos" className="hover:text-[#E2C068] transition-colors">Termos de Uso</Link>
           <span>© {new Date().getFullYear()} Iara</span>
         </footer>
       </main>

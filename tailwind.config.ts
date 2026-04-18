@@ -27,6 +27,16 @@ const config: Config = {
           violet: '#7c3aed',
           pink:   '#ec4899',
         },
+        marca: {
+          300: '#EDD28A',
+          400: '#E2C068',
+          500: '#D4A843',
+          600: '#C9A84C',
+          700: '#B8922A',
+          800: '#8A6A1A',
+          900: '#3D2E0A',
+          950: '#221A04',
+        },
       },
       backgroundImage: {
         'gradient-iara': 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',

@@ -121,7 +121,7 @@ export default function MarcaPerfilPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-6 h-6 text-iara-400 animate-spin" />
+        <Loader2 className="w-6 h-6 text-[#E2C068] animate-spin" />
       </div>
     )
   }
@@ -136,7 +136,7 @@ export default function MarcaPerfilPage() {
           <span className="text-[#9b9bb5]">Minha Empresa</span>
         </div>
         <h1 className="text-3xl font-bold text-[#f1f1f8]">
-          Minha <span className="iara-gradient-text">Empresa</span>
+          Minha <span className="marca-gradient-text">Empresa</span>
         </h1>
         <p className="text-sm text-[#5a5a7a] mt-1">
           Mantenha as informações da sua empresa atualizadas
@@ -147,7 +147,7 @@ export default function MarcaPerfilPage() {
         {/* Dados da empresa */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <Building2 className="w-4 h-4 text-iara-400" />
+            <Building2 className="w-4 h-4 text-[#E2C068]" />
             <h2 className="text-sm font-bold text-[#9b9bb5] uppercase tracking-wider">Dados da empresa</h2>
           </div>
           <div className="space-y-4 rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-5">
@@ -159,7 +159,7 @@ export default function MarcaPerfilPage() {
                 value={nomeEmpresa}
                 onChange={e => setNomeEmpresa(e.target.value)}
                 placeholder="Ex: Marca Brasil Ltda"
-                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all"
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/10 transition-all"
               />
             </div>
             <div>
@@ -170,7 +170,7 @@ export default function MarcaPerfilPage() {
                 value={cnpj}
                 onChange={e => setCnpj(e.target.value)}
                 placeholder="00.000.000/0000-00"
-                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all"
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/10 transition-all"
               />
             </div>
             <div>
@@ -182,8 +182,8 @@ export default function MarcaPerfilPage() {
                     onClick={() => setSegmento(s.value)}
                     className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl text-xs font-medium transition-all border ${
                       segmento === s.value
-                        ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
-                        : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-iara-900/50 hover:text-[#9b9bb5]'
+                        ? 'bg-[#C9A84C]/15 border-[#C9A84C]/35 text-marca-300'
+                        : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-[#C9A84C]/20 hover:text-[#9b9bb5]'
                     }`}
                   >
                     <span className="text-base">{s.emoji}</span>
@@ -201,12 +201,12 @@ export default function MarcaPerfilPage() {
                     onClick={() => setPorte(p.value)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
                       porte === p.value
-                        ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
-                        : 'border-[#1a1a2e] text-[#9b9bb5] hover:border-iara-900/50'
+                        ? 'bg-[#C9A84C]/15 border-[#C9A84C]/35 text-marca-300'
+                        : 'border-[#1a1a2e] text-[#9b9bb5] hover:border-[#C9A84C]/20'
                     }`}
                   >
                     <span>{p.label}</span>
-                    <span className={`text-xs ${porte === p.value ? 'text-iara-500' : 'text-[#3a3a5a]'}`}>{p.desc}</span>
+                    <span className={`text-xs ${porte === p.value ? 'text-marca-500' : 'text-[#3a3a5a]'}`}>{p.desc}</span>
                   </button>
                 ))}
               </div>
@@ -217,7 +217,7 @@ export default function MarcaPerfilPage() {
         {/* Presença online */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-4 h-4 text-iara-400" />
+            <Globe className="w-4 h-4 text-[#E2C068]" />
             <h2 className="text-sm font-bold text-[#9b9bb5] uppercase tracking-wider">Presença online</h2>
           </div>
           <div className="space-y-4 rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-5">
@@ -229,7 +229,7 @@ export default function MarcaPerfilPage() {
                   value={site}
                   onChange={e => setSite(e.target.value)}
                   placeholder="https://suamarca.com.br"
-                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 pl-11 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 pl-11 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/10 transition-all"
                 />
               </div>
             </div>
@@ -241,7 +241,7 @@ export default function MarcaPerfilPage() {
                   value={instagram}
                   onChange={e => setInstagram(e.target.value)}
                   placeholder="@suamarca"
-                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 pl-11 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 pl-11 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/10 transition-all"
                 />
               </div>
             </div>
@@ -252,7 +252,7 @@ export default function MarcaPerfilPage() {
                 onChange={e => setSobre(e.target.value)}
                 placeholder="Descreva brevemente o que sua empresa faz e o público que atende..."
                 rows={4}
-                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all resize-none"
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-[#C9A84C]/40 focus:outline-none focus:ring-2 focus:ring-[#C9A84C]/10 transition-all resize-none"
               />
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function MarcaPerfilPage() {
         {/* Preferências */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <Building2 className="w-4 h-4 text-iara-400" />
+            <Building2 className="w-4 h-4 text-[#E2C068]" />
             <h2 className="text-sm font-bold text-[#9b9bb5] uppercase tracking-wider">Preferências de campanha</h2>
           </div>
           <div className="space-y-5 rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-5">
@@ -276,8 +276,8 @@ export default function MarcaPerfilPage() {
                     onClick={() => toggleNicho(n)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                       nichosInteresse.includes(n)
-                        ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
-                        : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-iara-900/50 hover:text-[#9b9bb5]'
+                        ? 'bg-[#C9A84C]/15 border-[#C9A84C]/35 text-marca-300'
+                        : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-[#C9A84C]/20 hover:text-[#9b9bb5]'
                     }`}
                   >
                     {n}
@@ -296,8 +296,8 @@ export default function MarcaPerfilPage() {
                     onClick={() => togglePlataforma(p)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
                       plataformasFoco.includes(p)
-                        ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
-                        : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-iara-900/50 hover:text-[#9b9bb5]'
+                        ? 'bg-[#C9A84C]/15 border-[#C9A84C]/35 text-marca-300'
+                        : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-[#C9A84C]/20 hover:text-[#9b9bb5]'
                     }`}
                   >
                     {p}
@@ -316,8 +316,8 @@ export default function MarcaPerfilPage() {
                     onClick={() => setOrcamentoMedio(o.value)}
                     className={`px-4 py-3 rounded-xl text-sm font-medium transition-all border text-left ${
                       orcamentoMedio === o.value
-                        ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
-                        : 'border-[#1a1a2e] text-[#9b9bb5] hover:border-iara-900/50'
+                        ? 'bg-[#C9A84C]/15 border-[#C9A84C]/35 text-marca-300'
+                        : 'border-[#1a1a2e] text-[#9b9bb5] hover:border-[#C9A84C]/20'
                     }`}
                   >
                     {o.label}

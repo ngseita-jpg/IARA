@@ -13,7 +13,7 @@ export default async function MarcaDashboardPage() {
 
   const { data: brand } = await supabase
     .from('brand_profiles')
-    .select('nome_empresa, segmento, porte, plano, nichos_interesse, plataformas_foco')
+    .select('nome_empresa, segmento, porte, plano')
     .eq('user_id', user?.id ?? '')
     .single()
 
@@ -21,35 +21,15 @@ export default async function MarcaDashboardPage() {
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
   const nomeExibir = brand?.nome_empresa?.split(' ')[0] ?? firstName
 
-  // Count total creators available
   const { count: totalCriadores } = await supabase
     .from('creator_profiles')
     .select('*', { count: 'exact', head: true })
     .eq('onboarding_completo', true)
 
-  const actions = [
-    {
-      label: 'Buscar Criadores',
-      desc: 'Encontre criadores por nicho, plataforma e engajamento',
-      href: '/marca/dashboard/criadores',
-      icon: Search,
-      gradient: 'from-iara-600/20 to-accent-purple/10',
-      border: 'border-iara-700/30',
-    },
-    {
-      label: 'Minha Empresa',
-      desc: 'Edite o perfil da sua empresa e preferências de campanha',
-      href: '/marca/dashboard/perfil',
-      icon: Building2,
-      gradient: 'from-accent-purple/15 to-iara-600/10',
-      border: 'border-accent-purple/20',
-    },
-  ]
-
   const upcoming = [
-    { label: 'Vagas de Campanha', desc: 'Publique vagas e receba candidaturas de criadores', icon: Briefcase },
-    { label: 'IA para Campanhas', desc: 'Gere briefings, calendários e relatórios de ROI', icon: Sparkles },
-    { label: 'Chat Estratégico', desc: 'Consultoria de marketing diretamente com a IA Iara', icon: TrendingUp },
+    { label: 'Vagas de Campanha', desc: 'Publique vagas e receba candidaturas de criadores alinhados', icon: Briefcase },
+    { label: 'Chat Estratégico', desc: 'Consultoria de marketing em tempo real com a IA Iara', icon: TrendingUp },
+    { label: 'Relatório de ROI', desc: 'Coleta métricas reais dos criadores e gera PDF exportável', icon: Sparkles },
   ]
 
   return (
@@ -58,7 +38,7 @@ export default async function MarcaDashboardPage() {
       <div className="mb-8">
         <p className="text-[#5a5a7a] text-sm mb-1">{saudacao} 👋</p>
         <h1 className="text-3xl md:text-4xl font-bold text-[#f1f1f8] leading-tight">
-          Olá, <span className="iara-gradient-text">{nomeExibir}</span>
+          Olá, <span className="marca-gradient-text">{nomeExibir}</span>
         </h1>
         {brand?.nome_empresa && nomeExibir !== brand.nome_empresa && (
           <p className="mt-1 text-[#5a5a7a] text-sm">{brand.nome_empresa}</p>
@@ -66,11 +46,43 @@ export default async function MarcaDashboardPage() {
         <p className="mt-2 text-[#6b6b8a] text-sm">Bem-vindo à sua área de marcas na Iara</p>
       </div>
 
+      {/* Destaque — Campanha IA */}
+      <Link href="/marca/dashboard/campanha" className="block group mb-8">
+        <div className="relative overflow-hidden rounded-2xl border border-[#C9A84C]/25 p-6 hover:border-[#C9A84C]/50 transition-all duration-300"
+          style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(168,85,247,0.08) 100%)' }}>
+          {/* Glow */}
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #C9A84C 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #C9A84C, #a855f7)' }}>
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-bold text-[#f1f1f8]">Gerador de Campanhas IA</h2>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border text-[#E2C068] border-[#C9A84C]/40"
+                    style={{ background: 'rgba(201,168,76,0.1)' }}>
+                    Exclusivo
+                  </span>
+                </div>
+                <p className="text-sm text-[#9b9bb5] max-w-lg leading-relaxed">
+                  Descreva seu produto e objetivo — a IA gera estratégia completa, briefing pronto para o criador, 3 conceitos de conteúdo com hooks e KPIs de ROI. O que agências cobram semanas e R$50k, em 2 minutos.
+                </p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-[#C9A84C] group-hover:translate-x-1 transition-transform flex-shrink-0 mt-1" />
+          </div>
+        </div>
+      </Link>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         <div className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-iara-400" />
+            <Users className="w-4 h-4 text-[#E2C068]" />
             <span className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider">Criadores</span>
           </div>
           <p className="text-2xl font-bold text-[#f1f1f8]">{totalCriadores ?? 0}</p>
@@ -86,11 +98,11 @@ export default async function MarcaDashboardPage() {
         </div>
         <div className="col-span-2 md:col-span-1 rounded-2xl border border-[#1a1a2e] bg-[#0f0f1e] p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
+            <Sparkles className="w-4 h-4 text-[#E2C068]" />
             <span className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider">Plano</span>
           </div>
           <p className="text-2xl font-bold text-[#f1f1f8] capitalize">{brand?.plano ?? 'Free'}</p>
-          <Link href="/#planos" className="text-xs text-iara-400 hover:text-iara-300 transition-colors mt-0.5 block">
+          <Link href="/#planos" className="text-xs text-[#C9A84C] hover:text-[#E2C068] transition-colors mt-0.5 block">
             Ver planos →
           </Link>
         </div>
@@ -99,20 +111,37 @@ export default async function MarcaDashboardPage() {
       {/* Quick actions */}
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-3.5 h-3.5 text-iara-400" />
-          <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">O que deseja fazer?</h2>
+          <Zap className="w-3.5 h-3.5 text-[#E2C068]" />
+          <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Acesso rápido</h2>
         </div>
         <div className="grid md:grid-cols-2 gap-3">
-          {actions.map(action => {
+          {[
+            {
+              label: 'Buscar Criadores',
+              desc: 'Encontre criadores por nicho, plataforma e nível de engajamento',
+              href: '/marca/dashboard/criadores',
+              icon: Search,
+              gradient: 'from-[#C9A84C]/10 to-accent-purple/5',
+              border: 'border-[#C9A84C]/20',
+            },
+            {
+              label: 'Minha Empresa',
+              desc: 'Edite o perfil da sua empresa e preferências de campanha',
+              href: '/marca/dashboard/perfil',
+              icon: Building2,
+              gradient: 'from-accent-purple/10 to-[#C9A84C]/5',
+              border: 'border-accent-purple/20',
+            },
+          ].map(action => {
             const Icon = action.icon
             return (
               <Link key={action.href} href={action.href} className="block group">
                 <div className={`h-full rounded-2xl p-5 border ${action.border} bg-gradient-to-br ${action.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center">
-                      <Icon className="w-4 h-4 text-iara-400" />
+                      <Icon className="w-4 h-4 text-[#E2C068]" />
                     </div>
-                    <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-iara-400 group-hover:translate-x-0.5 transition-all" />
+                    <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-[#E2C068] group-hover:translate-x-0.5 transition-all" />
                   </div>
                   <h3 className="font-semibold text-[#f1f1f8] text-sm mb-1">{action.label}</h3>
                   <p className="text-xs text-[#5a5a7a] leading-relaxed">{action.desc}</p>
@@ -126,23 +155,20 @@ export default async function MarcaDashboardPage() {
       {/* Coming soon */}
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-3.5 h-3.5 text-iara-400" />
+          <Sparkles className="w-3.5 h-3.5 text-[#E2C068]" />
           <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Em breve</h2>
         </div>
         <div className="grid md:grid-cols-3 gap-3">
           {upcoming.map(item => {
             const Icon = item.icon
             return (
-              <div
-                key={item.label}
-                className="rounded-2xl p-5 border border-[#1a1a2e] bg-[#0f0f1e] opacity-60"
-              >
+              <div key={item.label} className="rounded-2xl p-5 border border-[#1a1a2e] bg-[#0f0f1e] opacity-60">
                 <div className="w-9 h-9 rounded-xl bg-[#0a0a14] border border-[#1a1a2e] flex items-center justify-center mb-3">
                   <Icon className="w-4 h-4 text-[#3a3a5a]" />
                 </div>
                 <h3 className="font-semibold text-[#6b6b8a] text-sm mb-1">{item.label}</h3>
                 <p className="text-xs text-[#3a3a5a] leading-relaxed">{item.desc}</p>
-                <span className="inline-block mt-3 text-[9px] font-bold text-accent-purple/50 uppercase tracking-widest border border-accent-purple/20 rounded-full px-2 py-0.5">
+                <span className="inline-block mt-3 text-[9px] font-bold text-[#C9A84C]/40 uppercase tracking-widest border border-[#C9A84C]/15 rounded-full px-2 py-0.5">
                   Em breve
                 </span>
               </div>
@@ -154,17 +180,19 @@ export default async function MarcaDashboardPage() {
       {/* CTA upgrade if free */}
       {(!brand?.plano || brand.plano === 'free') && (
         <div className="mt-8">
-          <Link href="/#planos" className="group flex items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-gradient-to-r from-iara-900/40 to-accent-purple/10 border border-iara-700/30 hover:border-iara-600/50 transition-all duration-200">
+          <Link href="/#planos" className="group flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border border-[#C9A84C]/20 hover:border-[#C9A84C]/40 transition-all duration-200"
+            style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.06) 0%, rgba(168,85,247,0.06) 100%)' }}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-iara-600/30 to-accent-purple/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-iara-400" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.2), rgba(168,85,247,0.15))' }}>
+                <Sparkles className="w-5 h-5 text-[#E2C068]" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-[#f1f1f8]">Desbloqueie o potencial completo da Iara</p>
                 <p className="text-xs text-[#6b6b8a]">Acesse vagas, IA estratégica e relatórios de ROI a partir de R$397/mês</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-iara-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-[#C9A84C] group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
           </Link>
         </div>
       )}
