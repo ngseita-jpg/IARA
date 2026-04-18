@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, LogOut, ChevronRight,
-  Menu, X, Users, Building2, Briefcase, Zap,
+  Menu, X, Users, Building2, Briefcase, Zap, Tag,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { IaraLogo } from '@/components/iara-logo'
@@ -17,6 +17,7 @@ const navItems: { label: string; href: string; icon: React.ElementType; soon?: b
   { label: 'Buscar Criadores', href: '/marca/dashboard/criadores', icon: Users },
   { label: 'Minha Empresa',    href: '/marca/dashboard/perfil',    icon: Building2 },
   { label: 'Vagas',            href: '/marca/dashboard/vagas',     icon: Briefcase },
+  { label: 'Afiliados',        href: '/marca/dashboard/afiliados', icon: Tag },
 ]
 
 export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {

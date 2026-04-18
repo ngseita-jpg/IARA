@@ -23,6 +23,7 @@ import {
   Lightbulb,
   History,
   Briefcase,
+  Tag,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
@@ -42,6 +43,7 @@ const navItems = [
   { label: 'Metas',          href: '/dashboard/metas',      icon: Target },
   { label: 'Oratória',       href: '/dashboard/oratorio',   icon: Mic },
   { label: 'Oportunidades',   href: '/dashboard/vagas',     icon: Briefcase },
+  { label: 'Afiliados',       href: '/dashboard/afiliados', icon: Tag },
   { label: 'Meu Perfil',     href: '/dashboard/perfil',    icon: User },
   { label: 'Histórico',      href: '/dashboard/historico', icon: History },
 ]
