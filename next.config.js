@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['@anthropic-ai/sdk'],
-  experimental: {
-    serverActions: { bodySizeLimit: '10mb' },
+  outputFileTracingIncludes: {
+    '/api/carrossel/renderizar': ['./public/inter-bold.ttf'],
   },
 }
 

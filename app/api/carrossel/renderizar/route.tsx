@@ -6,15 +6,26 @@ import type { Slide } from '../gerar/route'
 
 let _fontCache: ArrayBuffer | null = null
 
-function loadFont(): ArrayBuffer | null {
+async function loadFont(): Promise<ArrayBuffer | null> {
   if (_fontCache) return _fontCache
+  // 1) filesystem — funciona local
   try {
     const buf = readFileSync(join(process.cwd(), 'public', 'inter-bold.ttf'))
     _fontCache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
     return _fontCache
-  } catch {
-    return null
-  }
+  } catch {}
+  // 2) fetch via URL — funciona na Vercel (public/ fica no CDN, não no filesystem da função)
+  try {
+    const base =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const res = await fetch(`${base}/inter-bold.ttf`)
+    if (res.ok) {
+      _fontCache = await res.arrayBuffer()
+      return _fontCache
+    }
+  } catch {}
+  return null
 }
 
 const FONT_SIZE = { pequeno: 28, medio: 38, grande: 54, gigante: 72 }
@@ -53,7 +64,7 @@ export async function POST(req: NextRequest) {
     const paleta: { primaria: string; secundaria: string; texto: string } = body.paleta ?? { primaria: '#6B5FD0', secundaria: '#C9A84C', texto: '#ffffff' }
     const total_slides: number = typeof body.total_slides === 'number' ? body.total_slides : 0
 
-    const fontData = loadFont()
+    const fontData = await loadFont()
     const fontOptions = fontData
       ? [{ name: 'Inter', data: fontData, weight: 700 as const, style: 'normal' as const }]
       : []
