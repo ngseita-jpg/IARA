@@ -108,6 +108,7 @@ export default function MetasPage() {
   }
 
   async function deletarMeta(id: string) {
+    if (!confirm('Remover esta meta? Esta ação não pode ser desfeita.')) return
     await fetch(`/api/metas?id=${id}`, { method: 'DELETE' })
     setMetas((prev) => prev.filter((m) => m.id !== id))
   }

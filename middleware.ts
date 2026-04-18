@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/register', '/preview', '/api/preview-mode', '/auth', '/esqueci-senha']
+  const publicRoutes = ['/login', '/register', '/preview', '/api/preview-mode', '/auth', '/esqueci-senha', '/privacidade', '/termos']
   const isPublicRoute = pathname === '/' || publicRoutes.some((route) => pathname.startsWith(route))
 
   // Modo preview de desenvolvimento — bypassa auth
