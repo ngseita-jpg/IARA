@@ -38,6 +38,11 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // Redireciona marcas para a área delas
+  if (user.user_metadata?.tipo_conta === 'marca') {
+    redirect('/marca/dashboard')
+  }
+
   // Redireciona para onboarding se não completou
   const { data: profile } = await supabase
     .from('creator_profiles')

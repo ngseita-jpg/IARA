@@ -4,10 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Sparkles, Mail, Lock, User, ArrowRight, Loader2, CheckCircle } from 'lucide-react'
+import { Sparkles, Mail, Lock, User, ArrowRight, Loader2, CheckCircle, Building2 } from 'lucide-react'
+
+type TipoConta = 'criador' | 'marca'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const [tipoConta, setTipoConta] = useState<TipoConta>('criador')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +32,10 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: { full_name: name },
+        data: {
+          full_name: name,
+          tipo_conta: tipoConta,
+        },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
@@ -84,13 +90,41 @@ export default function RegisterPage() {
           </div>
         </div>
         <h1 className="text-3xl font-bold iara-gradient-text tracking-tight">Iara</h1>
-        <p className="text-sm text-[#5a5a7a] mt-1.5">Assessoria com IA para criadores</p>
+        <p className="text-sm text-[#5a5a7a] mt-1.5">Assessoria com IA para criadores e marcas</p>
       </div>
 
       {/* Card */}
       <div className="rounded-3xl border border-[#1a1a2e] bg-[#0f0f1e]/80 backdrop-blur-xl p-8 shadow-2xl shadow-black/40">
         <h2 className="text-xl font-bold text-[#f1f1f8] mb-1">Criar conta grátis</h2>
-        <p className="text-sm text-[#5a5a7a] mb-7">Comece a criar conteúdo incrível com IA</p>
+        <p className="text-sm text-[#5a5a7a] mb-6">Comece agora — é de graça</p>
+
+        {/* Tipo de conta */}
+        <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-[#0a0a14] rounded-2xl border border-[#1a1a2e]">
+          <button
+            type="button"
+            onClick={() => setTipoConta('criador')}
+            className={`flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              tipoConta === 'criador'
+                ? 'bg-gradient-to-br from-iara-600 to-accent-purple text-white shadow-lg'
+                : 'text-[#5a5a7a] hover:text-[#9b9bb5]'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            Sou criador
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipoConta('marca')}
+            className={`flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              tipoConta === 'marca'
+                ? 'bg-gradient-to-br from-iara-600 to-accent-purple text-white shadow-lg'
+                : 'text-[#5a5a7a] hover:text-[#9b9bb5]'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            Sou uma marca
+          </button>
+        </div>
 
         {error && (
           <div className="mb-5 px-4 py-3 rounded-xl bg-red-900/20 border border-red-800/40 text-red-400 text-sm flex items-center gap-2">
@@ -100,7 +134,14 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-4">
           {[
-            { label: 'Nome', type: 'text', value: name, onChange: setName, placeholder: 'Seu nome', icon: User },
+            {
+              label: tipoConta === 'marca' ? 'Nome do responsável' : 'Nome',
+              type: 'text',
+              value: name,
+              onChange: setName,
+              placeholder: tipoConta === 'marca' ? 'Seu nome completo' : 'Seu nome',
+              icon: User,
+            },
             { label: 'E-mail', type: 'email', value: email, onChange: setEmail, placeholder: 'seu@email.com', icon: Mail },
             { label: 'Senha', type: 'password', value: password, onChange: setPassword, placeholder: 'Mínimo 6 caracteres', icon: Lock },
           ].map(({ label, type, value, onChange, placeholder, icon: Icon }) => (
@@ -132,7 +173,8 @@ export default function RegisterPage() {
               <Loader2 className="w-4 h-4 animate-spin mx-auto" />
             ) : (
               <span className="flex items-center justify-center gap-2">
-                Criar minha conta <ArrowRight className="w-4 h-4" />
+                {tipoConta === 'marca' ? 'Criar conta da minha empresa' : 'Criar minha conta'}
+                <ArrowRight className="w-4 h-4" />
               </span>
             )}
           </button>
