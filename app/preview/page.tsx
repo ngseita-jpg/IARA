@@ -179,7 +179,7 @@ export default function PreviewPage() {
           {/* iframe */}
           {ready && (
             <iframe
-              src="/dashboard/roteiros"
+              src="/"
               style={{
                 position: 'absolute',
                 inset: 0,
