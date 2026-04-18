@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const maxDuration = 60
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export type Slide = {
@@ -121,7 +123,7 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 3000,
       system: buildSystemPrompt(perfil as Record<string, unknown> | null),
       messages,
