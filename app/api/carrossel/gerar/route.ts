@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   console.log('[carrossel/gerar] step 3: req.json')
-  const { conteudo, instrucoes, num_slides, imagens_base64, historico } = await req.json()
+  const { conteudo, instrucoes, num_slides, num_imagens, historico } = await req.json()
 
   console.log('[carrossel/gerar] step 4: perfil query')
   const { data: perfil, error: perfilErr } = await supabase
@@ -100,10 +100,11 @@ export async function POST(req: NextRequest) {
   }
   console.log('[carrossel/gerar] step 6: calling Anthropic')
 
-  // Montar contexto das imagens se houver
-  const imagensContext = imagens_base64?.length
-    ? `\n\nO criador forneceu ${imagens_base64.length} imagem(ns) de fundo. Ao definir imagem_index em cada slide, distribua as imagens de forma inteligente. Analise cada imagem e escolha o layout ideal para não cobrir partes importantes.`
-    : '\n\nNenhuma imagem foi fornecida — use layouts com fundo de cor sólida (use cor_fundo_texto para o bloco inteiro).'
+  const qtdImagens: number = typeof num_imagens === 'number' ? num_imagens : 0
+
+  const imagensContext = qtdImagens > 0
+    ? `\n\nO criador forneceu ${qtdImagens} imagem(ns) de fundo (índices 0 a ${qtdImagens - 1}). Distribua imagem_index de forma inteligente entre os slides. Varie os layouts para não cobrir rostos ou focos centrais.`
+    : '\n\nNenhuma imagem foi fornecida — use layouts com fundo de cor sólida (use cor_fundo_texto para o bloco inteiro). Não defina imagem_index em nenhum slide.'
 
   const userMsg = `Crie um carrossel com ${num_slides ?? 6} slides sobre o seguinte conteúdo:
 
@@ -114,27 +115,9 @@ ${imagensContext}
 
 Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
 
-  // Montar mensagens (inclui histórico para chat de ajustes)
   const messages: Anthropic.MessageParam[] = historico?.length
     ? [...historico, { role: 'user' as const, content: userMsg }]
     : [{ role: 'user' as const, content: userMsg }]
-
-  // Se tiver imagens, adicionar como vision na última mensagem
-  let finalUserContent: Anthropic.MessageParam['content'] = userMsg
-  if (imagens_base64?.length && !historico?.length) {
-    finalUserContent = [
-      { type: 'text', text: userMsg },
-      ...imagens_base64.slice(0, 4).map((b64: string) => ({
-        type: 'image' as const,
-        source: {
-          type: 'base64' as const,
-          media_type: 'image/jpeg' as const,
-          data: b64.replace(/^data:image\/\w+;base64,/, ''),
-        },
-      })),
-    ]
-    messages[messages.length - 1] = { role: 'user', content: finalUserContent }
-  }
 
   try {
     const response = await anthropic.messages.create({

@@ -185,7 +185,7 @@ export default function CarrosselPage() {
           conteudo,
           instrucoes,
           num_slides: numSlides,
-          imagens_base64: imagens.length > 0 ? imagens : undefined,
+          num_imagens: imagens.length,
         }),
       })
       let data: Record<string, unknown> = {}
@@ -287,7 +287,7 @@ export default function CarrosselPage() {
           conteudo,
           instrucoes,
           num_slides: carrossel?.slides.length ?? numSlides,
-          imagens_base64: imagens.length > 0 ? imagens : undefined,
+          num_imagens: imagens.length,
           historico: novoHistorico,
         }),
       })
