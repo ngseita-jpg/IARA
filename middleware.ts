@@ -46,7 +46,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Se autenticado e tentando acessar rota de auth → redireciona para dashboard
-  if (user && isPublicRoute) {
+  // (exceto /preview e modo preview ativo, que devem ser acessíveis sempre)
+  const isPreviewRoute = pathname.startsWith('/preview') || pathname.startsWith('/api/preview-mode')
+  if (user && isPublicRoute && !isPreviewRoute && !isPreviewMode) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
