@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { IaraLogo } from '@/components/iara-logo'
 import {
   Sparkles, FileText, Mic, Target, Calendar,
   TrendingUp, ArrowRight, Check, Zap, Shield,
@@ -166,22 +167,8 @@ export function LandingPage() {
           borderBottom: scrollY > 40 ? '1px solid rgba(255,255,255,0.05)' : 'none',
         }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#0d0d20] border border-iara-700/50 flex items-center justify-center shadow-lg shadow-iara-900/50 flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <defs>
-                  <linearGradient id="star-lp" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#818cf8" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-                <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#star-lp)" />
-              </svg>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-base font-black shimmer-text tracking-tight">IARA</span>
-              <span className="text-[9px] font-bold text-[#4a4a6a] tracking-[0.2em] uppercase">HUB</span>
-            </div>
+          <Link href="/">
+            <IaraLogo size="sm" layout="horizontal" />
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-[#6b6b8a]">
             <a href="#modulos"       className="hover:text-[#f1f1f8] transition-colors">Módulos</a>

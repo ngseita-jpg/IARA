@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ArrowRight, ArrowLeft, Check, Loader2 } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Check, Loader2, Sparkles } from 'lucide-react'
+import { IaraLogo } from '@/components/iara-logo'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
 
 const NICHOS = [
@@ -98,14 +99,8 @@ export default function OnboardingPage() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-iara-600/8 blur-[100px] pointer-events-none" />
 
       {/* Logo */}
-      <div className="flex items-center gap-2.5 mb-10">
-        <div className="relative">
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-iara-500 to-accent-purple blur-lg opacity-60" />
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
-          </div>
-        </div>
-        <span className="text-2xl font-bold iara-gradient-text">Iara</span>
+      <div className="mb-10">
+        <IaraLogo size="sm" layout="horizontal" />
       </div>
 
       <div className="w-full max-w-md">

@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Sparkles, Mail, Lock, User, ArrowRight, Loader2, CheckCircle, Building2 } from 'lucide-react'
+import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle, Building2 } from 'lucide-react'
+import { IaraLogo } from '@/components/iara-logo'
 
 type TipoConta = 'criador' | 'marca'
 
@@ -83,14 +84,8 @@ export default function RegisterPage() {
     <div className="animate-fade-in">
       {/* Logo */}
       <div className="flex flex-col items-center mb-8">
-        <div className="relative mb-4">
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-iara-500 to-accent-purple blur-xl opacity-50" />
-          <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center shadow-2xl">
-            <Sparkles className="w-7 h-7 text-white" />
-          </div>
-        </div>
-        <h1 className="text-3xl font-bold iara-gradient-text tracking-tight">Iara</h1>
-        <p className="text-sm text-[#5a5a7a] mt-1.5">Assessoria com IA para criadores e marcas</p>
+        <IaraLogo size="md" layout="vertical" className="mb-2" />
+        <p className="text-sm text-[#5a5a7a] mt-1">Assessoria com IA para criadores e marcas</p>
       </div>
 
       {/* Card */}

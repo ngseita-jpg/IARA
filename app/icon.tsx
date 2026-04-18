@@ -12,7 +12,7 @@ export default function Icon() {
           height: 32,
           borderRadius: '50%',
           background: '#0d0d20',
-          border: '1px solid rgba(99,102,241,0.4)',
+          border: '1px solid rgba(139,92,246,0.35)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -26,9 +26,10 @@ export default function Icon() {
           style={{ display: 'flex' }}
         >
           <defs>
-            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#818cf8" />
-              <stop offset="100%" stopColor="#a855f7" />
+            <linearGradient id="g" x1="40%" y1="0%" x2="60%" y2="100%">
+              <stop offset="0%"   stopColor="#ddd6fe" />
+              <stop offset="45%"  stopColor="#a78bfa" />
+              <stop offset="100%" stopColor="#7c3aed" />
             </linearGradient>
           </defs>
           <path

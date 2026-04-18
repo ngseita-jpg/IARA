@@ -6,6 +6,7 @@ import {
   ArrowRight, ArrowLeft, Check, Loader2,
   Building2, Globe, Instagram, Target,
 } from 'lucide-react'
+import { IaraLogo } from '@/components/iara-logo'
 
 const SEGMENTOS = [
   { value: 'moda_beleza',     label: 'Moda e Beleza',         emoji: '👗' },
@@ -139,23 +140,7 @@ export default function MarcaOnboardingPage() {
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-10 h-10 rounded-full bg-[#0d0d20] border border-[#C9A84C]/35 flex items-center justify-center shadow-lg flex-shrink-0">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <defs>
-                  <linearGradient id="ob-g" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#E2C068" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-                <path d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" fill="url(#ob-g)" />
-              </svg>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-lg font-black tracking-tight marca-gradient-text">IARA</span>
-              <span className="text-[9px] font-bold text-[#5a4a2a] tracking-[0.2em] uppercase">HUB</span>
-            </div>
-          </div>
+          <IaraLogo size="md" layout="vertical" className="mb-2" />
           <p className="text-sm text-[#5a5a7a] mt-2">Configure sua empresa em 3 passos</p>
         </div>
 
