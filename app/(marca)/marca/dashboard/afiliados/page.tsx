@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   Tag, Plus, X, Loader2, AlertCircle, CheckCircle, ChevronDown,
   ChevronUp, ExternalLink, Users, TrendingUp, DollarSign, Package,
-  ToggleLeft, ToggleRight, Trash2,
+  ToggleLeft, ToggleRight, Trash2, Webhook, Copy, Eye, EyeOff,
 } from 'lucide-react'
 
 type Afiliado = {
@@ -28,6 +28,7 @@ type Produto = {
   comissao_pct: number
   desconto_pct: number
   ativo: boolean
+  webhook_secret: string | null
   created_at: string
   afiliados: Afiliado[]
 }
@@ -48,6 +49,8 @@ export default function MarcaAfiliadosPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
 
   // Confirmar venda
+  const [webhookVisivel, setWebhookVisivel] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState<string | null>(null)
   const [vendaModal, setVendaModal] = useState<{ afiliado: Afiliado; produto: Produto } | null>(null)
   const [valorVenda, setValorVenda] = useState('')
   const [obsVenda, setObsVenda] = useState('')
@@ -123,6 +126,12 @@ export default function MarcaAfiliadosPage() {
       setErro(d.error)
     }
     setConfirmando(false)
+  }
+
+  async function copiar(text: string, key: string) {
+    await navigator.clipboard.writeText(text)
+    setCopiado(key)
+    setTimeout(() => setCopiado(null), 2000)
   }
 
   function flash(msg: string) {
@@ -313,7 +322,47 @@ export default function MarcaAfiliadosPage() {
 
                 {/* Afiliados */}
                 {isExp && (
-                  <div className="border-t border-[#1a1a2e] p-5">
+                  <div className="border-t border-[#1a1a2e] p-5 space-y-5">
+                    {/* Webhook integration block */}
+                    {produto.webhook_secret && (
+                      <div className="rounded-xl border border-[#C9A84C]/20 bg-[#C9A84C]/5 p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Webhook className="w-4 h-4 text-[#C9A84C]" />
+                          <p className="text-xs font-bold text-[#C9A84C] uppercase tracking-wider">Integração automática (recomendado)</p>
+                        </div>
+                        <p className="text-xs text-[#9b9bb5] mb-3">
+                          Configure esse webhook no checkout da sua loja para que as vendas sejam confirmadas automaticamente — sem depender de reporte manual.
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 bg-[#0a0a14] border border-[#1a1a2e] rounded-lg px-3 py-2">
+                            <span className="text-[10px] text-[#6b6b8a] font-semibold uppercase w-14 flex-shrink-0">URL</span>
+                            <span className="text-xs text-[#9b9bb5] font-mono flex-1 truncate">https://iarahubapp.com.br/api/afiliados/webhook</span>
+                            <button onClick={() => copiar('https://iarahubapp.com.br/api/afiliados/webhook', `url-${produto.id}`)}
+                              className="text-[#6b6b8a] hover:text-[#C9A84C] transition-colors flex-shrink-0">
+                              {copiado === `url-${produto.id}` ? <CheckCircle className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 bg-[#0a0a14] border border-[#1a1a2e] rounded-lg px-3 py-2">
+                            <span className="text-[10px] text-[#6b6b8a] font-semibold uppercase w-14 flex-shrink-0">Secret</span>
+                            <span className="text-xs text-[#9b9bb5] font-mono flex-1 truncate">
+                              {webhookVisivel === produto.id ? produto.webhook_secret : '••••••••••••••••••••••'}
+                            </span>
+                            <button onClick={() => setWebhookVisivel(v => v === produto.id ? null : produto.id)}
+                              className="text-[#6b6b8a] hover:text-[#C9A84C] transition-colors flex-shrink-0">
+                              {webhookVisivel === produto.id ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button onClick={() => copiar(produto.webhook_secret ?? '', `secret-${produto.id}`)}
+                              className="text-[#6b6b8a] hover:text-[#C9A84C] transition-colors flex-shrink-0">
+                              {copiado === `secret-${produto.id}` ? <CheckCircle className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-[#4a4a6a]">
+                            Envie POST com: <span className="font-mono text-[#6b6b8a]">{'{ "cupom": "CODIGO", "valor_venda": 299.90, "secret": "SEU_SECRET" }'}</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {afs.length === 0 ? (
                       <p className="text-sm text-[#4a4a6a] text-center py-4">Nenhum criador afiliado ainda.</p>
                     ) : (

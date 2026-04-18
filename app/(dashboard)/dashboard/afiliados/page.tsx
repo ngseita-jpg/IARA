@@ -25,6 +25,7 @@ type Afiliacao = {
   cliques: number
   vendas_confirmadas: number
   comissao_total: number
+  suspeito: boolean
   produto_id: string
   produtos_afiliados: {
     titulo: string
@@ -290,6 +291,19 @@ export default function CriadorAfiliadosPage() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Alerta de suspeita */}
+                  {af.suspeito && (
+                    <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-950/30 border border-amber-800/30 mb-3">
+                      <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-400">Atenção: conversão suspeita</p>
+                        <p className="text-xs text-[#9b9bb5] mt-0.5">
+                          Este produto tem {af.cliques} cliques e 0 vendas confirmadas. A marca pode não estar reportando suas vendas. Considere entrar em contato com ela.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Cupom + link */}
                   <div className="space-y-2">
