@@ -31,24 +31,26 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/register', '/preview', '/api/preview-mode', '/auth', '/esqueci-senha', '/privacidade', '/termos']
-  const isPublicRoute = pathname === '/' || publicRoutes.some((route) => pathname.startsWith(route))
-
   // Modo preview de desenvolvimento — bypassa auth
   const isPreviewMode = request.cookies.get('iara_preview')?.value === '1'
 
-  // Se não autenticado e tentando acessar rota protegida → redireciona para login
-  if (!user && !isPublicRoute && !isPreviewMode) {
+  // Rotas sempre acessíveis (logado ou não) — sem redirect para nenhum lado
+  const openRoutes = ['/', '/empresas', '/privacidade', '/termos', '/r/', '/preview', '/api/preview-mode', '/auth']
+  const isOpenRoute = openRoutes.some((route) => pathname === route || pathname.startsWith(route))
+
+  // Rotas de auth: redireciona usuário logado para dashboard
+  const authRoutes = ['/login', '/register', '/esqueci-senha']
+  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
+
+  // Usuário não autenticado em rota protegida → login
+  if (!user && !isOpenRoute && !isAuthRoute && !isPreviewMode) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Se autenticado e tentando acessar rota de auth → redireciona para dashboard
-  // (exceto /preview e modo preview ativo, que devem ser acessíveis sempre)
-  const isPreviewRoute = pathname.startsWith('/preview') || pathname.startsWith('/api/preview-mode')
-  if (user && isPublicRoute && !isPreviewRoute && !isPreviewMode) {
+  // Usuário autenticado em rota de auth → dashboard
+  if (user && isAuthRoute && !isPreviewMode) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

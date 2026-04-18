@@ -272,11 +272,13 @@ export default function TemasPage() {
         const lines = chunk.split('\n')
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6)
-          if (data === '[DONE]') continue
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          // SDK toReadableStream() emits raw JSON lines (no 'data: ' prefix)
+          const jsonStr = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed
+          if (jsonStr === '[DONE]') continue
           try {
-            const parsed = JSON.parse(data)
+            const parsed = JSON.parse(jsonStr)
             if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
               raw += parsed.delta.text
               const { text, ideas } = parseIdeas(raw)
@@ -286,7 +288,7 @@ export default function TemasPage() {
                 return updated
               })
             }
-          } catch { /* partial JSON */ }
+          } catch { /* partial JSON / non-JSON lines */ }
         }
       }
 

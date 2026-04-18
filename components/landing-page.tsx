@@ -322,12 +322,31 @@ export function LandingPage() {
             Sem cartão de crédito · Plano gratuito para sempre · Cancele quando quiser
           </motion.p>
 
+          {/* Mobile social proof strip — visible only on mobile, replaces floating badges */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.1, duration: 0.5 }}
+            className="flex sm:hidden items-center justify-center gap-5 mt-8 pt-6 border-t border-white/5"
+          >
+            {[
+              { value: '11+', label: 'Módulos IA' },
+              { value: '6h+', label: 'Economizadas/semana' },
+              { value: '100%', label: 'Feito pro Brasil' },
+            ].map(s => (
+              <div key={s.label} className="text-center">
+                <p className="text-lg font-black shimmer-text leading-none">{s.value}</p>
+                <p className="text-[10px] text-[#4a4a6a] mt-0.5 leading-tight">{s.label}</p>
+              </div>
+            ))}
+          </motion.div>
+
           {/* App mockup */}
           <motion.div
             initial={{ opacity: 0, y: 60, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 1.1, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-16"
+            className="relative mt-10 sm:mt-16 mx-2 sm:mx-0"
           >
             <motion.div
               animate={shouldReduce ? {} : { y: [0, -10, 0] }}
@@ -444,7 +463,7 @@ export function LandingPage() {
       </section>
 
       {/* ── DOR ── */}
-      <section className="py-28 px-4 sm:px-6 relative overflow-hidden">
+      <section className="py-16 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(220,38,38,0.04) 0%, transparent 60%)' }} />
         <div className="max-w-5xl mx-auto">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-16">
