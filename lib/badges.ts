@@ -64,7 +64,7 @@ export function getBadgeInfo(pontos: number, nicho?: string) {
   const nextThreshold = THRESHOLDS[nivel + 1] ?? null
   const prevThreshold = THRESHOLDS[nivel]
   const progress = nextThreshold
-    ? Math.round(((pontos - prevThreshold) / (nextThreshold - prevThreshold)) * 100)
+    ? Math.min(100, Math.max(0, Math.round(((pontos - prevThreshold) / (nextThreshold - prevThreshold)) * 100)))
     : 100
   const pontosParaProximo = nextThreshold ? nextThreshold - pontos : 0
 

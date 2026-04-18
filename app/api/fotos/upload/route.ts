@@ -24,14 +24,17 @@ export async function POST(req: NextRequest) {
     .eq('user_id', user.id)
 
   const { getLimite } = await import('@/lib/limites')
-  const limite = getLimite('free', 'fotos') // TODO: ler plano real do perfil quando Stripe for integrado
+  const { data: profile } = await supabase.from('creator_profiles').select('plano').eq('user_id', user.id).maybeSingle()
+  const planoAtual = (profile?.plano ?? 'free') as Parameters<typeof getLimite>[0]
+  const limite = getLimite(planoAtual, 'fotos')
   if (limite !== null && (count ?? 0) >= limite) {
+    const { NOME_PLANO } = await import('@/lib/limites')
     return NextResponse.json({
       error: 'limite_atingido',
-      mensagem: `Você atingiu o limite de ${limite} fotos no plano Gratuito. Faça upgrade para continuar.`,
+      mensagem: `Você atingiu o limite de ${limite} fotos no plano ${NOME_PLANO[planoAtual]}. Faça upgrade para continuar.`,
       limite,
       usado: count ?? 0,
-      plano: 'Gratuito',
+      plano: NOME_PLANO[planoAtual],
     }, { status: 429 })
   }
 

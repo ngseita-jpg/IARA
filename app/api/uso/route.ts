@@ -52,7 +52,8 @@ export async function GET(req: NextRequest) {
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'stories').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'midia_kit').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'temas').gte('created_at', mesAtual),
-    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'foto').gte('created_at', mesAtual),
+    // Fotos: limite total (não mensal) — contar de user_photos
+    supabase.from('user_photos').select('*', { count: 'exact', head: true }).eq('user_id', uid),
     supabase.from('voice_analyses').select('*', { count: 'exact', head: true }).eq('user_id', uid).gte('created_at', mesAtual),
   ])
 

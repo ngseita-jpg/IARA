@@ -88,13 +88,24 @@ export function ChatModal({
 
   async function handleProposal() {
     if (!proposalValue || sending) return
+    setSending(true)
     const val = Number(proposalValue)
     const nota = proposalNote.trim()
     const conteudo = `💰 Proposta de parceria: R$ ${val.toLocaleString('pt-BR')}${nota ? `\n\n${nota}` : ''}`
-    setShowProposalForm(false)
-    setProposalValue('')
-    setProposalNote('')
-    await sendMessage(conteudo, 'proposta', val)
+    const r = await fetch(`/api/conversas/${conversaId}/mensagens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conteudo, tipo: 'proposta', proposta_valor: val }),
+    })
+    if (r.ok) {
+      const d = await r.json()
+      setMsgs(prev => [...prev, d.mensagem])
+      setStatus('proposta_enviada')
+      setShowProposalForm(false)
+      setProposalValue('')
+      setProposalNote('')
+    }
+    setSending(false)
   }
 
   async function handleRespond(acao: 'aceitar' | 'recusar', valor?: number) {

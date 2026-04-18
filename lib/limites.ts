@@ -72,5 +72,5 @@ export function getLimite(plano: Plano, tipo: TipoUso): number | null {
 /** Início do mês atual em ISO string */
 export function inicioMesAtual(): string {
   const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString()
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString()
 }
