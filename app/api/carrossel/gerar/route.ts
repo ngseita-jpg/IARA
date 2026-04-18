@@ -69,6 +69,7 @@ Persona: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -155,8 +156,15 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
 
     return NextResponse.json({ carrossel, assistant_message: texto })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
-    console.error('Erro gerar carrossel:', msg)
+    const msg = err instanceof Error ? err.message : String(err)
+    const stack = err instanceof Error ? err.stack : undefined
+    console.error('Erro gerar carrossel:', msg, stack)
     return NextResponse.json({ error: `Erro ao gerar carrossel: ${msg}` }, { status: 500 })
+  }
+  } catch (outerErr) {
+    const msg = outerErr instanceof Error ? outerErr.message : String(outerErr)
+    const stack = outerErr instanceof Error ? outerErr.stack : undefined
+    console.error('Erro EXTERNO gerar carrossel:', msg, stack)
+    return NextResponse.json({ error: `Erro ao gerar carrossel (externo): ${msg}` }, { status: 500 })
   }
 }

@@ -211,6 +211,7 @@ export default function CarrosselPage() {
           slide,
           imagem_base64: imgBase64,
           paleta: c.paleta,
+          total_slides: c.slides.length,
         }),
       })
 
