@@ -121,14 +121,20 @@ Retorne SOMENTE JSON válido:
 
     const kit = JSON.parse(jsonMatch[0])
 
-    // Registra uso para controle de limite (fire-and-forget)
-    supabase.from('content_history').insert({
+    // Registra uso para controle de limite e concede pontos
+    const PONTOS_MIDIA_KIT = 5
+    let pontosGanhos = 0
+    await supabase.from('content_history').insert({
       user_id: user.id,
       tipo: 'midia_kit',
       titulo: profile?.nome_artistico ?? 'Mídia Kit',
       parametros: {},
       conteudo: { bio_comercial: kit.bio_comercial?.slice(0, 200) },
-    }).then(() => {})
+    })
+    const { data: prof } = await supabase.from('creator_profiles').select('pontos').eq('user_id', user.id).single()
+    const novoTotal = (prof?.pontos ?? 0) + PONTOS_MIDIA_KIT
+    await supabase.from('creator_profiles').update({ pontos: novoTotal }).eq('user_id', user.id)
+    pontosGanhos = PONTOS_MIDIA_KIT
 
     return new Response(
       JSON.stringify({
@@ -139,6 +145,7 @@ Retorne SOMENTE JSON válido:
         totalSeguidores,
         contato,
         site,
+        pontos_ganhos: pontosGanhos,
       }),
       { headers: { 'Content-Type': 'application/json' } }
     )

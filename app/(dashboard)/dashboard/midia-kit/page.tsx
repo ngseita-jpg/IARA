@@ -4,7 +4,7 @@ import { useState } from 'react'
 import {
   BookOpen, Sparkles, RefreshCw, Printer,
   Users, TrendingUp, Star, Package,
-  ChevronDown, ChevronUp, Check, User,
+  ChevronDown, ChevronUp, Check, User, Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -302,6 +302,7 @@ export default function MidiaKitPage() {
   const [gerando, setGerando] = useState(false)
   const [kitData, setKitData] = useState<KitData | null>(null)
   const [erro, setErro] = useState('')
+  const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
   const [form, setForm] = useState({
     parcerias_anteriores: '',
@@ -331,6 +332,10 @@ export default function MidiaKitPage() {
       const data = await res.json()
       setKitData(data)
       setFormAberto(false)
+      if (data.pontos_ganhos > 0) {
+        setPontosNotif(data.pontos_ganhos)
+        setTimeout(() => setPontosNotif(null), 3500)
+      }
     } catch {
       setErro('Erro de conexão. Tente novamente.')
     } finally {
@@ -344,6 +349,14 @@ export default function MidiaKitPage() {
 
   return (
     <>
+      {/* Notificação de pontos */}
+      {pontosNotif && (
+        <div className="fixed top-6 right-6 z-50 animate-slide-up iara-card px-5 py-3 border-iara-700/50 shadow-2xl flex items-center gap-3">
+          <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <p className="text-sm font-bold text-yellow-400">+{pontosNotif} pontos!</p>
+        </div>
+      )}
+
       {/* CSS de impressão */}
       <style jsx global>{`
         @media print {
