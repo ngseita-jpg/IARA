@@ -780,16 +780,26 @@ export default function PerfilPage() {
             Próximo <ChevronRight className="w-4 h-4" />
           </button>
         ) : (
-          <button
-            onClick={handleGerarPersona}
-            disabled={gerandoPersona}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-iara-600 to-accent-purple text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
-          >
-            {gerandoPersona
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando sua persona…</>
-              : <><Sparkles className="w-4 h-4" /> {personaGerada ? 'Regenerar persona com IA' : 'Gerar minha persona com IA'}</>
-            }
-          </button>
+          <div className="flex-1 flex flex-col gap-2">
+            <button
+              onClick={handleGerarPersona}
+              disabled={gerandoPersona || saving}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-iara-600 to-accent-purple text-white font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {gerandoPersona
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Gerando sua persona…</>
+                : <><Sparkles className="w-4 h-4" /> {personaGerada ? 'Regenerar persona com IA' : 'Gerar minha persona com IA'}</>
+              }
+            </button>
+            <button
+              onClick={async () => { await saveProfile(); showToast('Perfil salvo!') }}
+              disabled={saving || gerandoPersona}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#1a1a2e] text-[#9b9bb5] hover:bg-[#1a1a2e] transition-colors text-sm disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Salvar sem gerar persona
+            </button>
+          </div>
         )}
       </div>
 
