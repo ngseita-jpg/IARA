@@ -2,17 +2,23 @@
 // Cada nicho tem rótulos temáticos para Bronze → Prata → Ouro → Diamante → Elite
 
 export const BADGES_POR_NICHO: Record<string, string[]> = {
-  'Fitness e Saúde':                ['Iniciante Fit', 'Ativo', 'Atleta', 'Performance', 'Elite Fit'],
-  'Finanças e Investimentos':       ['Poupador', 'Aplicador', 'Investidor', 'Trader', 'Magnata'],
+  // Labels alinhados com os nichos do onboarding
   'Lifestyle':                      ['Explorador', 'Creator', 'Influente', 'Trendsetter', 'Ícone'],
-  'Beleza e Moda':                  ['Estudante', 'Produtor', 'Artista', 'Expert', 'Guru'],
+  'Fitness e saúde':                ['Iniciante Fit', 'Ativo', 'Atleta', 'Performance', 'Elite Fit'],
   'Gastronomia':                    ['Aprendiz', 'Cozinheiro', 'Chef', 'Gourmet', 'Mestre'],
+  'Moda e beleza':                  ['Estudante', 'Produtor', 'Artista', 'Expert', 'Guru'],
+  'Finanças e negócios':            ['Poupador', 'Aplicador', 'Investidor', 'Trader', 'Magnata'],
   'Tecnologia':                     ['Dev Jr', 'Dev Pleno', 'Dev Sr', 'Arquiteto', 'CTO'],
   'Educação':                       ['Estudante', 'Monitor', 'Professor', 'Mestre', 'PhD'],
   'Entretenimento':                 ['Figurante', 'Ator', 'Estrela', 'Celebridade', 'Lenda'],
+  'Viagem':                         ['Mochileiro', 'Viajante', 'Nômade', 'Globetrotter', 'Explorador'],
   'Esportes':                       ['Amador', 'Atleta', 'Profissional', 'Campeão', 'MVP'],
   'Games':                          ['Noob', 'Jogador', 'Pro', 'Streamer', 'Pro Player'],
-  'Viagem':                         ['Mochileiro', 'Viajante', 'Nômade', 'Globetrotter', 'Explorador'],
+  'Maternidade e família':          ['Aprendiz', 'Presente', 'Referência', 'Especialista', 'Ícone'],
+  // Aliases para nichos do perfil avançado
+  'Fitness e Saúde':                ['Iniciante Fit', 'Ativo', 'Atleta', 'Performance', 'Elite Fit'],
+  'Finanças e Investimentos':       ['Poupador', 'Aplicador', 'Investidor', 'Trader', 'Magnata'],
+  'Beleza e Moda':                  ['Estudante', 'Produtor', 'Artista', 'Expert', 'Guru'],
   'Negócios e Empreendedorismo':    ['Estagiário', 'Analista', 'Gerente', 'Diretor', 'CEO'],
   'Humor e Comédia':                ['Trainee', 'Comediante', 'Humorista', 'Stand-up', 'Mito'],
   'Música':                         ['Aprendiz', 'Músico', 'Artista', 'Astro', 'Ícone'],
