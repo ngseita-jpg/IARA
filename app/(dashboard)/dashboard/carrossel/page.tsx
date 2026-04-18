@@ -176,11 +176,11 @@ export default function CarrosselPage() {
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${data.mensagem || data.error || 'Erro ao gerar'}`)
 
-      const carrosselGerado: CarrosselData = data.carrossel
+      const carrosselGerado = data.carrossel as CarrosselData
       setCarrossel(carrosselGerado)
       setHistoricoClaude([
         { role: 'user', content: `Gerei um carrossel sobre: ${conteudo.slice(0, 200)}` },
-        { role: 'assistant', content: data.assistant_message },
+        { role: 'assistant', content: data.assistant_message as string },
       ])
       const tituloHistorico = leitura?.titulo || textoManual.slice(0, 80) || url
       salvarHistorico('carrossel', tituloHistorico, carrosselGerado, { numSlides, instrucoes: instrucoes.slice(0, 60) }).then(pts => {
@@ -221,12 +221,18 @@ export default function CarrosselPage() {
         }),
       })
 
-      if (!res.ok) return
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`)
+        console.error(`Renderizar slide ${slide.ordem} falhou:`, res.status, errText)
+        setSlidePngs((prev) => ({ ...prev, [slide.ordem]: `ERROR:${res.status}` }))
+        return
+      }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       setSlidePngs((prev) => ({ ...prev, [slide.ordem]: url }))
-    } catch {
-      // silencioso
+    } catch (e) {
+      console.error(`Renderizar slide ${slide.ordem} exception:`, e)
+      setSlidePngs((prev) => ({ ...prev, [slide.ordem]: `ERROR:fetch` }))
     } finally {
       setRenderizando((prev) => ({ ...prev, [slide.ordem]: false }))
     }
@@ -859,9 +865,15 @@ export default function CarrosselPage() {
                             <div className="w-full h-full flex items-center justify-center">
                               <Loader2 className="w-6 h-6 text-iara-400 animate-spin" />
                             </div>
-                          ) : png ? (
+                          ) : png && !png.startsWith('ERROR:') ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={png} alt={`Slide ${slide.ordem}`} className="w-full h-full object-cover" />
+                          ) : png?.startsWith('ERROR:') ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-4 text-center">
+                              <AlertCircle className="w-5 h-5 text-red-400" />
+                              <p className="text-xs text-red-400">Erro ao renderizar</p>
+                              <p className="text-[10px] text-[#4a4a6a]">{png}</p>
+                            </div>
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center">
                               <ImageIcon className="w-6 h-6 text-[#3a3a5a]" />
