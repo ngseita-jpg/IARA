@@ -52,7 +52,7 @@ PERFIL DO CRIADOR:
 - Nome/Marca: ${profile.nome_artistico ?? 'não informado'}
 - Nicho: ${profile.nicho ?? 'não informado'}
 - Tom de voz: ${profile.tom_de_voz ?? 'não informado'}
-- Objetivo: ${profile.objetivo ?? 'não informado'}
+- Objetivo: ${(() => { try { const r = JSON.parse(profile.objetivo||''); return Array.isArray(r) ? r.join(', ') : profile.objetivo } catch { return profile.objetivo } })()||'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Perfil vocal: ${profile.voz_perfil}` : ''}
 ` : ''

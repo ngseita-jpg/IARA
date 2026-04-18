@@ -37,8 +37,8 @@ type Profile = {
   tom_de_voz: string
   diferencial: string
   inspiracoes: string
-  objetivo: string
-  desafio_principal: string
+  objetivos: string[]
+  desafios: string[]
   meta_12_meses: string
   proposito: string
   video_referencias: VideoRef[]
@@ -55,7 +55,7 @@ const EMPTY: Profile = {
   historia: '', audiencia: '', faixa_etaria: '', problema_resolvido: '',
   publico_real: '', plataformas: [], formatos: [], frequencia: '',
   conteudo_marcante: '', tom_de_voz: '', diferencial: '', inspiracoes: '',
-  objetivo: '', desafio_principal: '', meta_12_meses: '',
+  objetivos: [], desafios: [], meta_12_meses: '',
   proposito: '', video_referencias: [], sobre: '',
 }
 
@@ -132,6 +132,16 @@ const DESAFIOS_OPTS = [
   'Ideias de conteúdo', 'Algoritmo', 'Falta de tempo', 'Edição e produção',
 ]
 
+function parseStrArr(val: unknown): string[] {
+  if (!val) return []
+  if (Array.isArray(val)) return val as string[]
+  if (typeof val === 'string') {
+    try { const p = JSON.parse(val); if (Array.isArray(p)) return p } catch {}
+    return [val]
+  }
+  return []
+}
+
 // ─── steps ────────────────────────────────────────────────────────────────────
 
 const STEPS = [
@@ -193,7 +203,7 @@ export default function PerfilPage() {
     setProfile((p) => ({ ...p, [field]: value }))
   }
 
-  function toggleArr(field: 'plataformas' | 'formatos', value: string) {
+  function toggleArr(field: 'plataformas' | 'formatos' | 'objetivos' | 'desafios', value: string) {
     setProfile((p) => ({
       ...p,
       [field]: (p[field] as string[]).includes(value)
@@ -249,8 +259,8 @@ export default function PerfilPage() {
             tom_de_voz:         data.tom_de_voz         ?? '',
             diferencial:        data.diferencial        ?? '',
             inspiracoes:        data.inspiracoes        ?? '',
-            objetivo:           data.objetivo           ?? '',
-            desafio_principal:  data.desafio_principal  ?? '',
+            objetivos:          parseStrArr(data.objetivo),
+            desafios:           parseStrArr(data.desafio_principal),
             meta_12_meses:      data.meta_12_meses      ?? '',
             proposito:          data.proposito          ?? '',
             video_referencias:  data.video_referencias  ?? [],
@@ -710,15 +720,15 @@ export default function PerfilPage() {
         {step === 4 && (
           <div className="space-y-6">
             <div>
-              <label className="iara-label">Qual é o seu objetivo principal agora?</label>
+              <label className="iara-label">Quais são seus objetivos? <span className="text-[#5a5a7a] font-normal">(pode marcar mais de um)</span></label>
               <div className="grid grid-cols-2 gap-2">
                 {OBJETIVOS_OPTS.map((o) => (
                   <button
                     key={o.value}
                     type="button"
-                    onClick={() => set('objetivo', o.value)}
+                    onClick={() => toggleArr('objetivos', o.value)}
                     className={`flex items-center gap-3 p-3 rounded-xl border text-sm text-left transition-all ${
-                      profile.objetivo === o.value
+                      profile.objetivos.includes(o.value)
                         ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
                         : 'bg-[#0f0f1e] border-[#1a1a2e] text-[#9b9bb5] hover:border-iara-700/40'
                     }`}
@@ -731,10 +741,10 @@ export default function PerfilPage() {
             </div>
 
             <div>
-              <label className="iara-label">Qual é o seu maior desafio hoje?</label>
+              <label className="iara-label">Quais são seus maiores desafios? <span className="text-[#5a5a7a] font-normal">(pode marcar mais de um)</span></label>
               <div className="flex flex-wrap gap-2">
                 {DESAFIOS_OPTS.map((d) => (
-                  <ChipToggle key={d} value={d} selected={profile.desafio_principal === d} onClick={() => set('desafio_principal', d)}>
+                  <ChipToggle key={d} value={d} selected={profile.desafios.includes(d)} onClick={() => toggleArr('desafios', d)}>
                     {d}
                   </ChipToggle>
                 ))}

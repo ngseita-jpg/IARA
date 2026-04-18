@@ -4,6 +4,16 @@ import { NextRequest } from 'next/server'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function parseArr(val: unknown): string {
+  if (!val) return ''
+  if (Array.isArray(val)) return val.join(', ')
+  if (typeof val === 'string') {
+    try { const r = JSON.parse(val); if (Array.isArray(r)) return r.join(', ') } catch {}
+    return val
+  }
+  return ''
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -39,8 +49,8 @@ ESTILO E VOZ:
 ${p.inspiracoes ? `- Inspirações: ${p.inspiracoes}` : ''}
 
 OBJETIVOS E PROPÓSITO:
-- Objetivo principal: ${p.objetivo ?? 'não informado'}
-- Principal desafio: ${p.desafio_principal ?? 'não informado'}
+- Objetivos: ${parseArr(p.objetivo) || 'não informado'}
+- Principais desafios: ${parseArr(p.desafio_principal) || 'não informado'}
 - Meta em 12 meses: ${p.meta_12_meses || 'não informou'}
 ${p.proposito ? `- Propósito real (nas palavras dele): "${p.proposito}"` : ''}
 

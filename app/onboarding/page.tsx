@@ -60,7 +60,7 @@ export default function OnboardingPage() {
   const [nichos, setNichos] = useState<string[]>([])
   const [plataformas, setPlataformas] = useState<string[]>([])
   const [tomDeVoz, setTomDeVoz] = useState('')
-  const [objetivo, setObjetivo] = useState('')
+  const [objetivos, setObjetivos] = useState<string[]>([])
 
   function toggleNicho(n: string) {
     setNichos(prev => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n])
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
   function podeProsseguir() {
     if (step === 1) return nomeArtistico.trim().length > 0
     if (step === 2) return nichos.length > 0 && plataformas.length > 0
-    if (step === 3) return !!tomDeVoz && !!objetivo
+    if (step === 3) return !!tomDeVoz && objetivos.length > 0
     return true
   }
 
@@ -84,7 +84,7 @@ export default function OnboardingPage() {
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome_artistico: nomeArtistico, nicho: nichos.join(', '), plataformas, tom_de_voz: tomDeVoz, objetivo }),
+        body: JSON.stringify({ nome_artistico: nomeArtistico, nicho: nichos.join(', '), plataformas, tom_de_voz: tomDeVoz, objetivo: JSON.stringify(objetivos) }),
       })
       if (!res.ok) throw new Error()
       router.push('/dashboard')
@@ -252,12 +252,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2.5">Objetivo principal *</p>
+                  <p className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2.5">Objetivos <span className="normal-case font-normal text-[#4a4a6a]">(pode marcar mais de um)</span></p>
                   <div className="grid grid-cols-2 gap-2">
                     {OBJETIVOS.map(o => (
-                      <button key={o.value} onClick={() => setObjetivo(o.value)}
+                      <button key={o.value} onClick={() => setObjetivos(prev => prev.includes(o.value) ? prev.filter(x => x !== o.value) : [...prev, o.value])}
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all ${
-                          objetivo === o.value
+                          objetivos.includes(o.value)
                             ? 'bg-iara-600/20 border-iara-500/50 text-iara-300'
                             : 'bg-[#0a0a14] border-[#1a1a2e] text-[#5a5a7a] hover:border-iara-700/40 hover:text-[#9b9bb5]'
                         }`}>
@@ -295,7 +295,7 @@ export default function OnboardingPage() {
                     { label: 'Nicho', value: nichos.join(', ') },
                     { label: 'Tom de voz', value: tomDeVoz.split(' e ')[0] },
                     { label: 'Plataformas', value: plataformas.slice(0, 3).join(', ') },
-                    { label: 'Objetivo', value: objetivo.split(' ').slice(0, 3).join(' ') + '…' },
+                    { label: 'Objetivos', value: objetivos[0]?.split(' ').slice(0, 3).join(' ') + (objetivos.length > 1 ? ` +${objetivos.length - 1}` : '…') },
                   ].map(item => (
                     <div key={item.label} className="p-3 rounded-xl bg-[#0a0a14] border border-[#1a1a2e]">
                       <p className="text-[10px] text-[#3a3a5a] mb-1 uppercase tracking-wider font-semibold">{item.label}</p>

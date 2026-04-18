@@ -75,7 +75,7 @@ DADOS DO CRIADOR:
 - Nicho: ${profile?.nicho ?? 'não informado'}
 - Tom de voz: ${profile?.tom_de_voz ?? 'não informado'}
 - Sobre: ${profile?.sobre ?? 'não informado'}
-- Objetivo: ${profile?.objetivo ?? 'não informado'}
+- Objetivo: ${(() => { try { const r = JSON.parse(profile?.objetivo||''); return Array.isArray(r) ? r.join(', ') : profile?.objetivo } catch { return profile?.objetivo } })()||'não informado'}
 ${profile?.voz_perfil ? `- Personalidade vocal/comunicação: ${profile.voz_perfil}` : ''}
 ${badge ? `- Nível na plataforma: ${badge.badge} (${profile?.pontos ?? 0} pontos)` : ''}
 
