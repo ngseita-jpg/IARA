@@ -244,15 +244,17 @@ export default function TemasPage() {
     setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }])
 
     try {
+      // Anthropic requires messages to start with 'user' — drop any leading assistant messages
+      const firstUserIdx = newMessages.findIndex(m => m.role === 'user')
+      const apiMessages = newMessages.slice(firstUserIdx).map(m => ({
+        role: m.role,
+        content: m.content + (m.ideas ? '\n\n```ideas\n' + JSON.stringify(m.ideas) + '\n```' : ''),
+      }))
+
       const res = await fetch('/api/temas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMessages.map(m => ({
-            role: m.role,
-            content: m.content + (m.ideas ? '\n\n```ideas\n' + JSON.stringify(m.ideas) + '\n```' : ''),
-          })),
-        }),
+        body: JSON.stringify({ messages: apiMessages }),
       })
 
       if (!res.ok) throw new Error('Erro na API')
