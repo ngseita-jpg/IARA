@@ -88,7 +88,8 @@ export async function POST(req: NextRequest) {
     console.error('[carrossel/gerar] req.json falhou:', jsonErr)
     return NextResponse.json({ error: `body parse error: ${jsonErr}` }, { status: 400 })
   }
-  const conteudo = body.conteudo as string | undefined
+  const conteudoRaw = body.conteudo as string | undefined
+  const conteudo = conteudoRaw && conteudoRaw.length > 50000 ? conteudoRaw.slice(0, 50000) : conteudoRaw
   const instrucoes = body.instrucoes as string | undefined
   const num_slides = body.num_slides as number | undefined
   const num_imagens = body.num_imagens as number | undefined

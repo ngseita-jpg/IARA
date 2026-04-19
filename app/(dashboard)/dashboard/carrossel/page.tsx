@@ -862,14 +862,25 @@ export default function CarrosselPage() {
                     <p className="text-xs font-medium text-iara-400 uppercase tracking-wider mb-1">Raciocínio da Iara</p>
                     <p className="text-sm text-[#9b9bb5]">{carrossel.raciocinio}</p>
                   </div>
-                  <button
-                    onClick={downloadTodos}
-                    disabled={Object.keys(slidePngs).length < carrossel.slides.length}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap flex-shrink-0"
-                  >
-                    <Download className="w-4 h-4" />
-                    Baixar todos
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {Object.values(slidePngs).some(p => p.startsWith('ERROR:')) && (
+                      <button
+                        onClick={() => carrossel && renderizarTodos(carrossel)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-700/20 border border-red-700/30 hover:bg-red-700/30 text-red-300 text-sm font-medium transition-all whitespace-nowrap"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Re-renderizar
+                      </button>
+                    )}
+                    <button
+                      onClick={downloadTodos}
+                      disabled={Object.values(slidePngs).filter(p => !p.startsWith('ERROR:')).length === 0}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar todos
+                    </button>
+                  </div>
                 </div>
 
                 {/* Slides grid */}
@@ -889,10 +900,16 @@ export default function CarrosselPage() {
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={png} alt={`Slide ${slide.ordem}`} className="w-full h-full object-cover" />
                           ) : png?.startsWith('ERROR:') ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-4 text-center">
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center">
                               <AlertCircle className="w-5 h-5 text-red-400" />
                               <p className="text-xs text-red-400">Erro ao renderizar</p>
-                              <p className="text-[10px] text-[#4a4a6a]">{png}</p>
+                              <button
+                                onClick={() => carrossel && renderizarSlide(slide, carrossel)}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-iara-600/20 text-iara-300 text-[10px] font-medium hover:bg-iara-600/40 transition-all"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                                Tentar de novo
+                              </button>
                             </div>
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center">
