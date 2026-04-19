@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   Users, Building2, Sparkles, ArrowRight, Zap,
-  TrendingUp, Search, Briefcase, ChevronRight,
+  TrendingUp, Search, Briefcase, ChevronRight, MessageSquare,
 } from 'lucide-react'
 
 export default async function MarcaDashboardPage() {
@@ -40,9 +40,23 @@ export default async function MarcaDashboardPage() {
         .eq('status', 'aberta')
     : { count: 0 }
 
-  const upcoming = [
-    { label: 'Chat Estratégico', desc: 'Consultoria de marketing em tempo real com a IA Iara', icon: TrendingUp },
-    { label: 'Relatório de ROI', desc: 'Coleta métricas reais dos criadores e gera PDF exportável', icon: Sparkles },
+  const novosModulos = [
+    {
+      label: 'Chat Estratégico',
+      desc: 'Consultoria de marketing em tempo real com a IA Iara',
+      href: '/marca/dashboard/chat',
+      icon: MessageSquare,
+      gradient: 'from-[#C9A84C]/12 to-[#a855f7]/8',
+      border: 'border-[#C9A84C]/25',
+    },
+    {
+      label: 'Relatório de ROI',
+      desc: 'Métricas reais das suas campanhas com análise de IA',
+      href: '/marca/dashboard/roi',
+      icon: Sparkles,
+      gradient: 'from-[#a855f7]/12 to-[#ec4899]/8',
+      border: 'border-[#a855f7]/25',
+    },
   ]
 
   return (
@@ -173,26 +187,29 @@ export default async function MarcaDashboardPage() {
         </div>
       </div>
 
-      {/* Coming soon */}
+      {/* Novos módulos */}
       <div>
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-3.5 h-3.5 text-[#E2C068]" />
-          <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Em breve</h2>
+          <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Ferramentas IA</h2>
         </div>
-        <div className="grid md:grid-cols-3 gap-3">
-          {upcoming.map(item => {
-            const Icon = item.icon
+        <div className="grid md:grid-cols-2 gap-3">
+          {novosModulos.map(mod => {
+            const Icon = mod.icon
             return (
-              <div key={item.label} className="rounded-2xl p-5 border border-[#1a1a2e] bg-[#0f0f1e] opacity-60">
-                <div className="w-9 h-9 rounded-xl bg-[#0a0a14] border border-[#1a1a2e] flex items-center justify-center mb-3">
-                  <Icon className="w-4 h-4 text-[#3a3a5a]" />
+              <Link key={mod.href} href={mod.href} className="block group">
+                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #C9A84C, #a855f7)' }}>
+                      <Icon className="w-4 h-4 text-white" />
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-[#E2C068] group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <h3 className="font-semibold text-[#f1f1f8] text-sm mb-1">{mod.label}</h3>
+                  <p className="text-xs text-[#5a5a7a] leading-relaxed">{mod.desc}</p>
                 </div>
-                <h3 className="font-semibold text-[#6b6b8a] text-sm mb-1">{item.label}</h3>
-                <p className="text-xs text-[#3a3a5a] leading-relaxed">{item.desc}</p>
-                <span className="inline-block mt-3 text-[9px] font-bold text-[#C9A84C]/40 uppercase tracking-widest border border-[#C9A84C]/15 rounded-full px-2 py-0.5">
-                  Em breve
-                </span>
-              </div>
+              </Link>
             )
           })}
         </div>
