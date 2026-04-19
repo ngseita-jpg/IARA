@@ -17,7 +17,10 @@ export type Slide = {
   cor_texto: string
   cor_fundo_texto?: string
   emoji?: string
-  imagem_index?: number  // índice da imagem do usuário a usar nesse slide (0, 1, 2...)
+  imagem_index?: number
+  arquetipo?: string
+  eyebrow?: string
+  handle?: string
 }
 
 export type CarrosselData = {
@@ -27,26 +30,41 @@ export type CarrosselData = {
   raciocinio: string
 }
 
-function buildSystemPrompt(perfil: Record<string, unknown> | null): string {
-  return `Você é a Iara, especialista em design de carrosséis para criadores de conteúdo brasileiros.
+function buildSystemPrompt(perfil: Record<string, unknown> | null, modo: string): string {
+  const isMarca = modo === 'marca'
+  return `Você é a Iara, especialista em design de carrosséis para ${isMarca ? 'marcas e empresas brasileiras' : 'criadores de conteúdo brasileiros'}.
 
-Você gera a estrutura completa de carrosséis no formato JSON, pensando como um designer estratégico que conhece profundamente o criador.
+Você gera a estrutura completa de carrosséis no formato JSON com arquétipos de layout profissionais.
 
-## Regras de design
-- Nunca coloque texto em cima de rostos ou elementos centrais importantes da imagem
-- Prefira posicionamentos nas bordas, bases ou topos quando a imagem tiver foco central
-- Use "moldura_branca" ou "moldura_preta" quando a imagem for muito carregada e dificultar a leitura
-- "overlay_escuro" funciona bem para imagens claras com texto claro
-- Texto curto → fonte grande. Texto longo → fonte pequena
-- Capa: impacto máximo, frase curta, chama para continuar
-- Slides de conteúdo: 1 ideia por slide, linguagem do criador
-- Encerramento: CTA claro e direto
+## Arquétipos disponíveis (campo "arquetipo")
+${isMarca ? `
+- brand_cover: capa da marca — logo/nome em destaque, mensagem de posicionamento, fundo de cor sólida ou gradiente
+- brand_story: story da marca — título grande à esquerda, texto explicativo à direita (layout bipartido)
+- brand_promo: promoção/produto — imagem de produto em destaque, preço/oferta, CTA de compra
+` : `
+- cover_full: capa com foto full-bleed — texto sobreposto em área inferior, scrim sutil
+- split_v: split vertical — foto à direita (60%), texto à esquerda (40%), fundo escuro
+- top_text: texto no topo — título e corpo na metade superior, foto na inferior
+- full_bleed: full bleed — foto preenche tudo, texto no centro com scrim pontual
+- quote: citação — bloco de quote tipográfico em destaque, sem foto obrigatória
+- closing: encerramento — CTA central, handle do criador, gradiente de fundo
+`}
 
-## Perfil do criador
+## Regras de arquétipo
+- Slide 1 (capa): sempre "${isMarca ? 'brand_cover' : 'cover_full'}" (ou "split_v" se criativo)
+- Slides de conteúdo: alterne entre os arquétipos, nunca repita o mesmo duas vezes seguidas
+- Último slide: sempre "${isMarca ? 'brand_promo' : 'closing'}"
+- Se não tiver imagem (imagem_index ausente): use "quote" ou "${isMarca ? 'brand_cover' : 'closing'}" nos slides sem foto
+
+## Campos extras
+- "eyebrow": texto pequeno acima do título (ex: "01 / 05 · nutrição", "novo produto · outono 26")
+- "handle": arroba do criador/marca para o slide de encerramento (ex: "@dra.ana.nutri")
+
+## Perfil ${isMarca ? 'da marca' : 'do criador'}
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
 Nicho: ${perfil.nicho ?? 'não informado'}
 Tom de voz: ${perfil.tom_de_voz ?? 'não informado'}
-Persona: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use linguagem direta e brasileira.'}
+Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use linguagem direta e brasileira.'}
 
 ## Formato de saída (JSON puro, sem markdown)
 {
@@ -54,17 +72,18 @@ Persona: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use
     {
       "ordem": 1,
       "tipo": "capa",
+      "arquetipo": "${isMarca ? 'brand_cover' : 'cover_full'}",
+      "eyebrow": "conteúdo · nicho",
       "titulo": "título impactante",
       "corpo": "subtítulo ou complemento",
+      "handle": "@handle",
       "layout": "base",
       "tamanho_fonte": "gigante",
       "cor_texto": "#ffffff",
-      "cor_fundo_texto": "rgba(0,0,0,0.6)",
-      "emoji": "🔥",
       "imagem_index": 0
     }
   ],
-  "paleta": { "primaria": "#6B5FD0", "secundaria": "#C9A84C", "texto": "#ffffff" },
+  "paleta": { "primaria": "#6366f1", "secundaria": "#a855f7", "texto": "#ffffff" },
   "fonte_sugerida": "Inter",
   "raciocinio": "explique brevemente suas escolhas de design"
 }`
@@ -94,6 +113,7 @@ export async function POST(req: NextRequest) {
   const num_slides = body.num_slides as number | undefined
   const num_imagens = body.num_imagens as number | undefined
   const historico = body.historico as Anthropic.MessageParam[] | undefined
+  const modo = (body.modo as string | undefined) ?? 'criador'
 
   console.log('[carrossel/gerar] step 4: perfil query')
   const { data: perfil, error: perfilErr } = await supabase
@@ -137,7 +157,7 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 3000,
-      system: buildSystemPrompt(perfil as Record<string, unknown> | null),
+      system: buildSystemPrompt(perfil as Record<string, unknown> | null, modo),
       messages,
     })
 
@@ -161,7 +181,9 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
       return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })
     }
 
-    return NextResponse.json({ carrossel, assistant_message: texto })
+    const planoAtual = ((perfil?.plano as string) ?? 'free')
+    const show_watermark = planoAtual === 'free' || planoAtual === 'starter'
+    return NextResponse.json({ carrossel, assistant_message: texto, show_watermark, modo })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     const stack = err instanceof Error ? err.stack : undefined

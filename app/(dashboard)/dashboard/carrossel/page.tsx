@@ -85,6 +85,7 @@ export default function CarrosselPage() {
   // Step 3: config
   const [numSlides, setNumSlides] = useState(6)
   const [instrucoes, setInstrucoes] = useState('')
+  const [modo, setModo] = useState<'criador' | 'marca'>('criador')
 
   // Step 4: preview + geração
   const [gerando, setGerando] = useState(false)
@@ -92,6 +93,7 @@ export default function CarrosselPage() {
   const [slidePngs, setSlidePngs] = useState<Record<number, string>>({}) // ordem -> dataURL
   const [renderizando, setRenderizando] = useState<Record<number, boolean>>({})
   const [erroGeracao, setErroGeracao] = useState<string | null>(null)
+  const [showWatermark, setShowWatermark] = useState(true)
 
   // Chat de ajustes
   const [chat, setChat] = useState<MensagemChat[]>([])
@@ -186,6 +188,7 @@ export default function CarrosselPage() {
           instrucoes,
           num_slides: numSlides,
           num_imagens: imagens.length,
+          modo,
         }),
       })
       let data: Record<string, unknown> = {}
@@ -197,6 +200,7 @@ export default function CarrosselPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${data.mensagem || data.error || 'Erro ao gerar'}`)
 
       const carrosselGerado = data.carrossel as CarrosselData
+      if (typeof data.show_watermark === 'boolean') setShowWatermark(data.show_watermark)
       setCarrossel(carrosselGerado)
       setHistoricoClaude([
         { role: 'user', content: `Gerei um carrossel sobre: ${conteudo.slice(0, 200)}` },
@@ -238,6 +242,8 @@ export default function CarrosselPage() {
           imagem_base64: imgBase64,
           paleta: c.paleta,
           total_slides: c.slides.length,
+          show_watermark: showWatermark,
+          modo,
         }),
       })
 
@@ -289,6 +295,7 @@ export default function CarrosselPage() {
           num_slides: carrossel?.slides.length ?? numSlides,
           num_imagens: imagens.length,
           historico: novoHistorico,
+          modo,
         }),
       })
       const data = await res.json()
@@ -717,6 +724,28 @@ export default function CarrosselPage() {
             <div>
               <h2 className="text-lg font-semibold text-[#f1f1f8] mb-1">Configurações do carrossel</h2>
               <p className="text-sm text-[#6b6b8a]">Quantos slides e algum detalhe extra que a Iara deve considerar.</p>
+            </div>
+
+            {/* Modo: Criador ou Marca */}
+            <div>
+              <label className="block text-sm font-medium text-[#c1c1d8] mb-3">
+                Modo
+              </label>
+              <div className="flex gap-2">
+                {(['criador', 'marca'] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setModo(m)}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${
+                      modo === m
+                        ? 'bg-iara-600/30 text-iara-300 border border-iara-600/40'
+                        : 'bg-[#0f0f20] text-[#9b9bb5] border border-[#1a1a2e] hover:border-iara-700/30'
+                    }`}
+                  >
+                    {m === 'criador' ? 'Criador de conteúdo' : 'Marca / Empresa'}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Número de slides */}

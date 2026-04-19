@@ -2,254 +2,716 @@ import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import type React from 'react'
 import type { Slide } from '../gerar/route'
 
+// ─── Font ─────────────────────────────────────────────────────────────────────
 let _fontCache: ArrayBuffer | null = null
-
 async function loadFont(reqUrl: string): Promise<ArrayBuffer | null> {
   if (_fontCache) return _fontCache
-  // 1) filesystem — funciona local
   try {
     const buf = readFileSync(join(process.cwd(), 'public', 'inter-bold.ttf'))
     _fontCache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
     return _fontCache
   } catch {}
-  // 2) fetch via origin da requisição — funciona em qualquer ambiente Vercel/Cloudflare
   try {
     const origin = new URL(reqUrl).origin
     const res = await fetch(`${origin}/inter-bold.ttf`)
-    if (res.ok) {
-      _fontCache = await res.arrayBuffer()
-      return _fontCache
-    }
+    if (res.ok) { _fontCache = await res.arrayBuffer(); return _fontCache }
   } catch {}
   return null
 }
 
-const FONT_SIZE = { pequeno: 28, medio: 38, grande: 54, gigante: 72 }
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+const BG   = '#08080f'
+const CARD = '#13131f'
+const GRAD_H = 'linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)'
+const GRAD_D = 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)'
+const VIOLET = '#a855f7'
+const TEXT  = '#ffffff'
+const TEXT_DIM   = 'rgba(255,255,255,0.72)'
+const TEXT_MUTED = 'rgba(255,255,255,0.52)'
+const TEXT_FAINT = 'rgba(255,255,255,0.28)'
+const BORDER     = 'rgba(255,255,255,0.08)'
+const EDGE = 72
 
-function hexToRgb(hex: string): [number, number, number] {
-  try {
-    const clean = (hex || '#6B5FD0').replace('#', '')
-    const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean
-    const n = parseInt(full, 16)
-    if (isNaN(n)) return [107, 95, 208]
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-  } catch {
-    return [107, 95, 208]
-  }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function detectMediaType(b64: string): string {
+  const h = b64.slice(0, 16)
+  if (h.startsWith('/9j/'))    return 'image/jpeg'
+  if (h.startsWith('iVBORw')) return 'image/png'
+  if (h.startsWith('R0lGOD')) return 'image/gif'
+  if (h.startsWith('UklGR'))  return 'image/webp'
+  return 'image/jpeg'
 }
 
-// Detecta o media_type real do base64 pelo cabeçalho mágico
-function detectMediaType(b64: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' {
-  try {
-    const header = b64.slice(0, 16)
-    if (header.startsWith('/9j/')) return 'image/jpeg'
-    if (header.startsWith('iVBORw')) return 'image/png'
-    if (header.startsWith('R0lGOD')) return 'image/gif'
-    if (header.startsWith('UklGR')) return 'image/webp'
-    return 'image/jpeg'
-  } catch {
-    return 'image/jpeg'
-  }
+function prepImg(raw: string | undefined): string | undefined {
+  if (!raw) return undefined
+  const clean = raw.replace(/^data:image\/[^;]+;base64,/, '')
+  return `data:${detectMediaType(clean)};base64,${clean}`
 }
 
+function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)) }
+
+// ─── Shared UI pieces ─────────────────────────────────────────────────────────
+
+function IaraStar({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32">
+      <defs>
+        <linearGradient id="isg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="50%" stopColor="#a855f7" />
+          <stop offset="100%" stopColor="#ec4899" />
+        </linearGradient>
+      </defs>
+      <path d="M16 0 L18.4 13.6 L32 16 L18.4 18.4 L16 32 L13.6 18.4 L0 16 L13.6 13.6 Z" fill="url(#isg)" />
+    </svg>
+  )
+}
+
+function SlideIndicator({ total, active, style = {} }: { total: number; active: number; style?: React.CSSProperties }) {
+  const count = clamp(total, 1, 10)
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', ...style }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{
+          width:  i === active ? 24 : 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: i === active ? VIOLET : 'rgba(255,255,255,0.28)',
+        }} />
+      ))}
+    </div>
+  )
+}
+
+function AccentLine({ w = 64, h = 4 }: { w?: number; h?: number }) {
+  return <div style={{ width: w, height: h, backgroundImage: GRAD_H, borderRadius: h / 2, display: 'flex' }} />
+}
+
+function BottomBar() {
+  return <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, backgroundImage: GRAD_H, display: 'flex' }} />
+}
+
+function Watermark() {
+  return (
+    <div style={{
+      position: 'absolute', right: 24, bottom: 24,
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '7px 14px 7px 10px',
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      borderRadius: 999,
+      border: '1px solid rgba(255,255,255,0.09)',
+      opacity: 0.65,
+    }}>
+      <IaraStar size={16} />
+      <span style={{ fontWeight: 700, fontSize: 16, color: '#fff', letterSpacing: -0.2 }}>Iara Hub</span>
+    </div>
+  )
+}
+
+// Image: full absolute cover
+function CoverImg({ src }: { src: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+  )
+}
+
+// ─── Archetype 1: cover_full ──────────────────────────────────────────────────
+// Foto cheia + scrim topo/base + título dominante em baixo
+function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  const titleLen = (slide.titulo || slide.corpo).length
+  const titleSize = titleLen > 55 ? 80 : titleLen > 35 ? 100 : 124
+  return (
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: BG, display: 'flex' }}>
+      {hasImg
+        ? <CoverImg src={imgSrc!} />
+        : <div style={{ position: 'absolute', inset: 0, backgroundImage: GRAD_D, opacity: 0.30, display: 'flex' }} />
+      }
+
+      {/* Scrim duplo — topo + base */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.80) 100%)',
+      }} />
+
+      {/* Eyebrow topo */}
+      <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <IaraStar size={26} />
+        <span style={{ fontSize: 18, letterSpacing: 2.5, textTransform: 'uppercase', color: 'rgba(255,255,255,0.90)', fontWeight: 600 }}>
+          {slide.eyebrow || 'novo post'}
+        </span>
+      </div>
+
+      {/* Título dominante */}
+      <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116 }}>
+        <h1 style={{
+          fontWeight: 800, fontSize: titleSize,
+          lineHeight: 0.92, letterSpacing: -3,
+          margin: 0, color: TEXT,
+          textShadow: '0 2px 40px rgba(0,0,0,0.4)',
+        }}>
+          {slide.titulo || slide.corpo}
+        </h1>
+      </div>
+
+      {/* Meta + indicador */}
+      <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: EDGE, display: 'flex', alignItems: 'center', gap: 24 }}>
+        <AccentLine />
+        {slide.handle && (
+          <span style={{ fontSize: 22, color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>{slide.handle}</span>
+        )}
+        <div style={{ flex: 1, display: 'flex' }} />
+        <SlideIndicator total={total} active={slide.ordem - 1} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 2: split_v ─────────────────────────────────────────────────────
+// 40% texto (fundo escuro) / 60% foto — editorial
+function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  const titleSize = (slide.titulo || '').length > 35 ? 50 : 68
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', backgroundColor: BG }}>
+
+      {/* Esquerda — texto 40% */}
+      <div style={{
+        width: 432,
+        padding: `${EDGE}px 48px`,
+        backgroundColor: BG,
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        borderRight: `1px solid ${BORDER}`,
+      }}>
+        <span style={{ fontSize: 17, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600 }}>
+          {slide.eyebrow || `${String(Math.max(1, slide.ordem - 1)).padStart(2, '0')} / ${String(Math.max(1, total - 2)).padStart(2, '0')}`}
+        </span>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          {slide.titulo && (
+            <h2 style={{ fontWeight: 800, fontSize: titleSize, lineHeight: 0.96, letterSpacing: -2, margin: 0, color: TEXT }}>
+              {slide.titulo}
+            </h2>
+          )}
+          <p style={{ fontWeight: 400, fontSize: 26, lineHeight: 1.45, color: TEXT_DIM, margin: 0 }}>
+            {slide.corpo}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <IaraStar size={14} />
+          <span style={{ fontSize: 14, color: TEXT_FAINT, letterSpacing: 0.5 }}>iarahub.com.br</span>
+        </div>
+      </div>
+
+      {/* Direita — foto 60% */}
+      <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
+        {hasImg
+          ? <CoverImg src={imgSrc!} />
+          : <div style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(135deg, ${CARD} 0%, rgba(99,102,241,0.25) 100%)`, display: 'flex' }} />
+        }
+        {/* Barra gradiente lateral esquerda */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: 3, bottom: 0, backgroundImage: 'linear-gradient(180deg, #6366f1, #a855f7, #ec4899)', display: 'flex' }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 3: top_text ────────────────────────────────────────────────────
+// Topo escuro com título dominante / base foto
+function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  const titleSize = (slide.titulo || '').length > 45 ? 76 : (slide.titulo || '').length > 30 ? 92 : 108
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', backgroundColor: BG }}>
+
+      {/* Foto na metade inferior */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 510, bottom: 0, display: 'flex', overflow: 'hidden' }}>
+        {hasImg
+          ? <CoverImg src={imgSrc!} />
+          : <div style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(180deg, ${CARD} 0%, rgba(168,85,247,0.35) 100%)`, display: 'flex' }} />
+        }
+        {/* Scrim de transição entre preto e foto */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 120, backgroundImage: `linear-gradient(180deg, ${BG} 0%, rgba(8,8,15,0) 100%)`, display: 'flex' }} />
+      </div>
+
+      {/* Número fantasma */}
+      <span style={{
+        position: 'absolute', top: 52, right: 48,
+        fontSize: 200, fontWeight: 900, lineHeight: 0.8,
+        color: 'rgba(255,255,255,0.05)', letterSpacing: -10,
+      }}>
+        {String(Math.max(1, slide.ordem - 1)).padStart(2, '0')}
+      </span>
+
+      {/* Eyebrow */}
+      <span style={{
+        position: 'absolute', top: EDGE + 20, left: EDGE,
+        fontSize: 17, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600,
+      }}>
+        {slide.eyebrow || `dica #${Math.max(1, slide.ordem - 1)}`}
+      </span>
+
+      {/* Título */}
+      {slide.titulo && (
+        <h2 style={{
+          position: 'absolute', left: EDGE, right: EDGE, top: 155,
+          fontWeight: 800, fontSize: titleSize,
+          lineHeight: 0.94, letterSpacing: -3, margin: 0, color: TEXT,
+        }}>
+          {slide.titulo}
+        </h2>
+      )}
+
+      {/* Corpo */}
+      <p style={{
+        position: 'absolute', left: EDGE, right: 300, top: 430,
+        fontWeight: 400, fontSize: 26, lineHeight: 1.4, color: TEXT_DIM, margin: 0,
+      }}>
+        {slide.corpo.length > 130 ? slide.corpo.slice(0, 130) + '...' : slide.corpo}
+      </p>
+
+      <SlideIndicator total={total} active={slide.ordem - 1} style={{ position: 'absolute', bottom: 50, left: EDGE }} />
+    </div>
+  )
+}
+
+// ─── Archetype 4: full_bleed ──────────────────────────────────────────────────
+// Foto total + texto limpo num canto com scrim radial cirúrgico
+function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  const titleSize = (slide.titulo || '').length > 35 ? 56 : (slide.titulo || '').length > 25 ? 68 : 80
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+      {hasImg
+        ? <CoverImg src={imgSrc!} />
+        : <div style={{ position: 'absolute', inset: 0, backgroundImage: GRAD_D, display: 'flex' }} />
+      }
+
+      {/* Scrim radial — canto inferior direito onde fica o texto */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        backgroundImage: 'radial-gradient(ellipse at 82% 88%, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0) 52%)',
+      }} />
+
+      {/* Chip número — topo direito */}
+      <div style={{
+        position: 'absolute', top: EDGE, right: EDGE,
+        padding: '10px 18px',
+        backgroundColor: 'rgba(0,0,0,0.42)',
+        borderRadius: 999,
+        border: '1px solid rgba(255,255,255,0.12)',
+        display: 'flex',
+      }}>
+        <span style={{ fontSize: 17, letterSpacing: 1.5, color: 'rgba(255,255,255,0.92)', fontWeight: 700 }}>
+          {String(slide.ordem).padStart(2, '0')}
+        </span>
+      </div>
+
+      {/* Texto canto inferior direito */}
+      <div style={{
+        position: 'absolute', right: EDGE, bottom: 112,
+        width: 560, display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'flex-end',
+      }}>
+        {slide.titulo && (
+          <h2 style={{
+            fontWeight: 800, fontSize: titleSize,
+            lineHeight: 0.96, letterSpacing: -2, margin: 0,
+            color: TEXT, textAlign: 'right',
+            textShadow: '0 2px 30px rgba(0,0,0,0.65)',
+          }}>
+            {slide.titulo}
+          </h2>
+        )}
+        <p style={{
+          fontWeight: 400, fontSize: 26, lineHeight: 1.4,
+          color: 'rgba(255,255,255,0.90)', margin: 0, textAlign: 'right',
+          textShadow: '0 1px 20px rgba(0,0,0,0.75)',
+        }}>
+          {slide.corpo.length > 100 ? slide.corpo.slice(0, 100) + '...' : slide.corpo}
+        </p>
+      </div>
+
+      <SlideIndicator total={total} active={slide.ordem - 1} style={{ position: 'absolute', bottom: EDGE, left: EDGE }} />
+    </div>
+  )
+}
+
+// ─── Archetype 5: quote ───────────────────────────────────────────────────────
+// Foto com overlay escuro forte (simula blur), quote centralizado
+function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  const titleSize = (slide.titulo || '').length > 70 ? 48 : (slide.titulo || '').length > 50 ? 58 : 68
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+      {hasImg
+        ? <CoverImg src={imgSrc!} />
+        : <div style={{ position: 'absolute', inset: 0, backgroundColor: CARD, display: 'flex' }} />
+      }
+
+      {/* Overlay escuro forte — simula glassmorphism blur */}
+      <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(8,8,15,0.72)', display: 'flex' }} />
+      {/* Toque de violet no centro */}
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse at 50% 50%, rgba(168,85,247,0.14) 0%, transparent 55%)', display: 'flex' }} />
+
+      {/* Eyebrow */}
+      <span style={{
+        position: 'absolute', top: 96, left: 0, right: 0,
+        textAlign: 'center',
+        fontSize: 17, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600,
+      }}>
+        {slide.eyebrow || `— fato #${Math.max(1, slide.ordem - 1)}`}
+      </span>
+
+      {/* Aspas decorativas */}
+      <span style={{
+        position: 'absolute', left: 72, top: 230,
+        fontSize: 220, fontWeight: 300, lineHeight: 0.8,
+        color: VIOLET, opacity: 0.45,
+      }}>"</span>
+
+      {/* Conteúdo central */}
+      <div style={{
+        position: 'absolute', left: 96, right: 96, top: 320,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 36,
+      }}>
+        {slide.titulo && (
+          <h2 style={{
+            fontWeight: 700, fontSize: titleSize,
+            lineHeight: 1.1, letterSpacing: -1.5, margin: 0,
+            textAlign: 'center', color: TEXT,
+          }}>
+            {slide.titulo}
+          </h2>
+        )}
+        <p style={{
+          fontWeight: 400, fontSize: 26, lineHeight: 1.4,
+          color: TEXT_DIM, margin: 0, textAlign: 'center',
+        }}>
+          {slide.corpo}
+        </p>
+      </div>
+
+      {/* Indicador centralizado */}
+      <div style={{ position: 'absolute', bottom: EDGE, left: 0, right: 0, display: 'flex', justifyContent: 'center' }}>
+        <SlideIndicator total={total} active={slide.ordem - 1} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 6: closing ─────────────────────────────────────────────────────
+// Fundo escuro, CTA com gradiente, barra gradiente base
+function renderClosing(slide: Slide, total: number) {
+  const ctaText = slide.cta || 'Salve esse post.'
+  return (
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: BG, display: 'flex' }}>
+      {/* Mesh gradiente de fundo sutil */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        backgroundImage: 'radial-gradient(circle at 90% 15%, rgba(99,102,241,0.14) 0%, transparent 40%), radial-gradient(circle at 10% 85%, rgba(168,85,247,0.10) 0%, transparent 40%)',
+      }} />
+
+      {/* Estrela + Iara Hub topo esquerdo */}
+      <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <IaraStar size={32} />
+        <span style={{ fontSize: 26, fontWeight: 700, color: TEXT, letterSpacing: -0.3 }}>Iara Hub</span>
+      </div>
+
+      {/* Eyebrow */}
+      <span style={{
+        position: 'absolute', top: 220, left: EDGE,
+        fontSize: 18, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600,
+      }}>
+        {slide.eyebrow || 'gostou?'}
+      </span>
+
+      {/* Título CTA */}
+      <h2 style={{
+        position: 'absolute', left: EDGE, right: EDGE, top: 290,
+        fontWeight: 800,
+        fontSize: ctaText.length > 25 ? 88 : 120,
+        lineHeight: 0.92, letterSpacing: -4, margin: 0, color: TEXT,
+      }}>
+        {ctaText}
+      </h2>
+
+      {/* Linha accent */}
+      <div style={{ position: 'absolute', left: EDGE, top: 560, width: 180, height: 6, backgroundImage: GRAD_H, borderRadius: 3, display: 'flex' }} />
+
+      {/* Corpo */}
+      <p style={{
+        position: 'absolute', left: EDGE, right: EDGE, top: 600,
+        fontWeight: 400, fontSize: 30, lineHeight: 1.4, color: TEXT_DIM, margin: 0,
+      }}>
+        {slide.corpo}
+      </p>
+
+      {/* Handle */}
+      {slide.handle && (
+        <div style={{
+          position: 'absolute', left: EDGE, top: 760,
+          display: 'flex', alignItems: 'center', gap: 28,
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 14, color: TEXT_FAINT, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600 }}>siga</span>
+            <span style={{ fontSize: 34, fontWeight: 700, color: TEXT, letterSpacing: -0.5 }}>{slide.handle}</span>
+          </div>
+          <div style={{ width: 1, height: 52, backgroundColor: BORDER, display: 'flex' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 14, color: TEXT_FAINT, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 600 }}>compartilhe</span>
+            <span style={{ fontSize: 28, fontWeight: 600, color: TEXT_MUTED }}>com quem precisa ler</span>
+          </div>
+        </div>
+      )}
+
+      <BottomBar />
+      <SlideIndicator total={total} active={slide.ordem - 1} style={{ position: 'absolute', bottom: 40, left: EDGE }} />
+    </div>
+  )
+}
+
+// ─── Archetype 7: brand_cover ─────────────────────────────────────────────────
+// Card escuro, produto em destaque, título bottom
+function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  const titleSize = (slide.titulo || '').length > 25 ? 88 : 116
+  return (
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: CARD, display: 'flex' }}>
+      {/* Radial violet no centro (halo de produto) */}
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(ellipse at 50% 55%, rgba(168,85,247,0.20) 0%, transparent 45%)', display: 'flex' }} />
+
+      {hasImg && <CoverImg src={imgSrc!} />}
+      {hasImg && (
+        /* Scrim topo + base para texto */
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex',
+          backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.85) 0%, rgba(19,19,31,0) 30%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.92) 100%)',
+        }} />
+      )}
+
+      {/* Header marca */}
+      <div style={{ position: 'absolute', top: EDGE, left: EDGE, right: EDGE, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <IaraStar size={28} />
+          <span style={{ fontSize: 20, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600 }}>
+            {slide.eyebrow || 'lançamento'}
+          </span>
+        </div>
+        <span style={{ fontSize: 17, letterSpacing: 2, color: 'rgba(168,85,247,0.85)', textTransform: 'uppercase', fontWeight: 600 }}>
+          novo
+        </span>
+      </div>
+
+      {/* Título bottom */}
+      <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116 }}>
+        <h1 style={{
+          fontWeight: 800, fontSize: titleSize,
+          lineHeight: 0.92, letterSpacing: -3, margin: 0, color: TEXT,
+          textShadow: hasImg ? '0 2px 40px rgba(0,0,0,0.4)' : 'none',
+        }}>
+          {slide.titulo || slide.corpo}
+        </h1>
+      </div>
+
+      <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: EDGE, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <AccentLine w={80} />
+        <SlideIndicator total={total} active={slide.ordem - 1} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 8: brand_story ─────────────────────────────────────────────────
+// Foto full bleed, scrim esquerdo, texto narrativo editorial
+function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: number) {
+  const hasImg = !!imgSrc
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+      {hasImg
+        ? <CoverImg src={imgSrc!} />
+        : <div style={{ position: 'absolute', inset: 0, backgroundColor: CARD, backgroundImage: 'radial-gradient(ellipse at 60% 40%, rgba(99,102,241,0.20) 0%, transparent 55%)', display: 'flex' }} />
+      }
+
+      {/* Scrim esquerdo gradiente */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        backgroundImage: 'linear-gradient(90deg, rgba(8,8,15,0.90) 0%, rgba(8,8,15,0.72) 38%, rgba(8,8,15,0) 65%)',
+      }} />
+
+      {/* Eyebrow */}
+      <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <IaraStar size={20} />
+        <span style={{ fontSize: 16, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600 }}>
+          {slide.eyebrow || 'bastidores'}
+        </span>
+      </div>
+
+      {/* Título curto */}
+      {slide.titulo && (
+        <h2 style={{
+          position: 'absolute', left: EDGE, top: 220, width: 560,
+          fontWeight: 700, fontSize: 56, lineHeight: 1, letterSpacing: -1.5, margin: 0, color: TEXT,
+        }}>
+          {slide.titulo}
+        </h2>
+      )}
+
+      {/* Corpo narrativo */}
+      <p style={{
+        position: 'absolute', left: EDGE, top: 340, width: 540,
+        fontWeight: 400, fontSize: 28, lineHeight: 1.55,
+        color: 'rgba(255,255,255,0.88)', margin: 0,
+      }}>
+        {slide.corpo}
+      </p>
+
+      {/* Linha inferior */}
+      <div style={{ position: 'absolute', bottom: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 40, height: 1, backgroundColor: 'rgba(255,255,255,0.20)', display: 'flex' }} />
+        {slide.handle && (
+          <span style={{ fontSize: 16, color: TEXT_MUTED, letterSpacing: 0.5, fontWeight: 500 }}>{slide.handle}</span>
+        )}
+      </div>
+
+      <SlideIndicator total={total} active={slide.ordem - 1} style={{ position: 'absolute', bottom: EDGE, right: EDGE }} />
+    </div>
+  )
+}
+
+// ─── Archetype 9: brand_promo ─────────────────────────────────────────────────
+// Tipografia como arte — número/desconto gigante com gradiente
+function renderBrandPromo(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titleSize = (slide.titulo || '').length > 30 ? 56 : (slide.titulo || '').length > 20 ? 68 : 80
+  return (
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: BG, display: 'flex' }}>
+      {/* Mesh gradiente */}
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex',
+        backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(236,72,153,0.18) 0%, transparent 40%), radial-gradient(circle at 15% 80%, rgba(99,102,241,0.18) 0%, transparent 42%)',
+      }} />
+
+      {/* Eyebrow */}
+      <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 32, height: 2, backgroundImage: GRAD_H, borderRadius: 1, display: 'flex' }} />
+        <span style={{ fontSize: 17, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600 }}>
+          {slide.eyebrow || 'oferta especial'}
+        </span>
+      </div>
+
+      {/* Título grande */}
+      <h2 style={{
+        position: 'absolute', left: EDGE, right: EDGE, top: 200,
+        fontWeight: 800, fontSize: titleSize,
+        lineHeight: 0.95, letterSpacing: -2, margin: 0, color: TEXT,
+      }}>
+        {slide.titulo}
+      </h2>
+
+      {/* Gradient accent line */}
+      <div style={{ position: 'absolute', left: EDGE, top: 440, width: 120, height: 6, backgroundImage: GRAD_H, borderRadius: 3, display: 'flex' }} />
+
+      {/* Corpo */}
+      <p style={{
+        position: 'absolute', left: EDGE, right: EDGE, top: 490,
+        fontWeight: 400, fontSize: 30, lineHeight: 1.4, color: TEXT_DIM, margin: 0,
+      }}>
+        {slide.corpo}
+      </p>
+
+      {/* CTA pill */}
+      {slide.cta && (
+        <div style={{
+          position: 'absolute', left: EDGE, top: 700,
+          padding: '18px 44px',
+          backgroundImage: GRAD_H,
+          borderRadius: 999,
+          display: 'flex',
+        }}>
+          <span style={{ fontSize: 26, fontWeight: 700, color: TEXT }}>{slide.cta}</span>
+        </div>
+      )}
+
+      <SlideIndicator total={total} active={slide.ordem - 1} style={{ position: 'absolute', bottom: EDGE, left: EDGE }} />
+      <BottomBar />
+    </div>
+  )
+}
+
+// ─── Archetype resolver ───────────────────────────────────────────────────────
+const CONTENT_CYCLE = ['split_v', 'top_text', 'full_bleed', 'quote'] as const
+const CONTENT_CYCLE_NO_IMG = ['top_text', 'quote', 'split_v', 'full_bleed'] as const
+
+function resolveArchetipo(slide: Slide, hasBg: boolean, modo: string): string {
+  if (slide.arquetipo) return slide.arquetipo
+  if (slide.tipo === 'capa') return modo === 'marca' ? 'brand_cover' : 'cover_full'
+  if (slide.tipo === 'encerramento') return modo === 'marca' ? 'brand_promo' : 'closing'
+  // Conteúdo — cicla entre os 4 arquétipos
+  const idx = (slide.ordem - 2 + 400) % 4
+  return (hasBg ? CONTENT_CYCLE : CONTENT_CYCLE_NO_IMG)[idx]
+}
+
+// ─── POST handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const slide: Slide = body.slide
     const imagem_base64: string | undefined = body.imagem_base64
-    const paleta: { primaria: string; secundaria: string; texto: string } = body.paleta ?? { primaria: '#6B5FD0', secundaria: '#C9A84C', texto: '#ffffff' }
-    const total_slides: number = typeof body.total_slides === 'number' ? body.total_slides : 0
+    const paleta: { primaria: string; secundaria: string; texto: string } = body.paleta ?? {}
+    const total_slides: number = typeof body.total_slides === 'number' ? body.total_slides : 6
+    const show_watermark: boolean = body.show_watermark === true
+    const modo: string = body.modo || 'criador'
 
     const fontData = await loadFont(req.url)
     const fontOptions = fontData
       ? [{ name: 'Inter', data: fontData, weight: 700 as const, style: 'normal' as const }]
       : []
 
-    const fs = FONT_SIZE[slide.tamanho_fonte as keyof typeof FONT_SIZE] ?? 38
-    const hasBg = typeof imagem_base64 === 'string' && imagem_base64.length > 0
-    const isCapa = slide.tipo === 'capa'
-    const isEncerramento = slide.tipo === 'encerramento'
+    const imgSrc = prepImg(imagem_base64)
+    const hasBg = !!imgSrc
+    const arquetipo = resolveArchetipo(slide, hasBg, modo)
 
-    const pri = paleta.primaria || '#6B5FD0'
-    const sec = paleta.secundaria || '#C9A84C'
-    const txtColor = slide.cor_texto || paleta.texto || '#ffffff'
-    const [pr, pg, pb] = hexToRgb(pri)
-    const [sr, sg, sb] = hexToRgb(sec)
+    // Fallback: se paleta tem cor primaria diferente do padrão, pode ser usado em versões futuras
+    void paleta
 
-    const pos: Record<string, { jc: string; ai: string; px: number; py: number }> = {
-      centro:         { jc: 'center',     ai: 'center',     px: 72, py: 72 },
-      topo:           { jc: 'flex-start', ai: 'center',     px: 72, py: 80 },
-      base:           { jc: 'flex-end',   ai: 'center',     px: 72, py: 80 },
-      esquerda:       { jc: 'center',     ai: 'flex-start', px: 72, py: 80 },
-      direita:        { jc: 'center',     ai: 'flex-end',   px: 72, py: 80 },
-      overlay_escuro: { jc: 'center',     ai: 'center',     px: 72, py: 72 },
-      moldura_branca: { jc: 'center',     ai: 'center',     px: 100, py: 100 },
-      moldura_preta:  { jc: 'center',     ai: 'center',     px: 100, py: 100 },
-    }
-    const p = pos[slide.layout] ?? pos.centro
-    const textAlign = p.ai === 'flex-start' ? 'left' : p.ai === 'flex-end' ? 'right' : 'center'
+    let slideContent: React.ReactElement
 
-    // Prepara src da imagem com media_type correto
-    let imgSrc: string | undefined
-    if (hasBg && imagem_base64) {
-      const clean = imagem_base64.replace(/^data:image\/[^;]+;base64,/, '')
-      const mt = detectMediaType(clean)
-      imgSrc = `data:${mt};base64,${clean}`
+    switch (arquetipo) {
+      case 'cover_full':   slideContent = renderCoverFull(slide, imgSrc, total_slides); break
+      case 'split_v':      slideContent = renderSplitV(slide, imgSrc, total_slides); break
+      case 'top_text':     slideContent = renderTopText(slide, imgSrc, total_slides); break
+      case 'full_bleed':   slideContent = renderFullBleed(slide, imgSrc, total_slides); break
+      case 'quote':        slideContent = renderQuote(slide, imgSrc, total_slides); break
+      case 'closing':      slideContent = renderClosing(slide, total_slides); break
+      case 'brand_cover':  slideContent = renderBrandCover(slide, imgSrc, total_slides); break
+      case 'brand_story':  slideContent = renderBrandStory(slide, imgSrc, total_slides); break
+      case 'brand_promo':  slideContent = renderBrandPromo(slide, imgSrc, total_slides); break
+      default:             slideContent = renderCoverFull(slide, imgSrc, total_slides)
     }
 
-    // Dots de progresso (max 10)
-    const dotCount = Math.min(total_slides, 10)
-    const dotIndexes = dotCount > 0 ? Array.from({ length: dotCount }, (_, i) => i) : []
-
-    // Força rendering dentro do try/catch
     const imgResponse = new ImageResponse(
       (
-        <div style={{ display: 'flex', width: '100%', height: '100%', position: 'relative', overflow: 'hidden', fontFamily: 'Inter', backgroundColor: pri }}>
-
-          {/* Camada 2: gradiente de fundo (sem imagem) */}
-          {!hasBg && (
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', backgroundImage: `linear-gradient(135deg, ${pri} 0%, ${sec} 100%)` }} />
-          )}
-
-          {/* Camada 2b: círculo decorativo */}
-          {!hasBg && (
-            <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: 300, backgroundColor: `rgba(${pr},${pg},${pb},0.35)`, top: -200, right: -200, display: 'flex' }} />
-          )}
-
-          {/* Camada 3: imagem */}
-          {hasBg && imgSrc && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgSrc} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          )}
-
-          {/* Camada 4: overlay na imagem */}
-          {hasBg && (
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.58) 100%)' }} />
-          )}
-
-          {/* Overlay escuro extra */}
-          {hasBg && slide.layout === 'overlay_escuro' && (
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', backgroundColor: 'rgba(0,0,0,0.30)' }} />
-          )}
-
-          {/* Molduras */}
-          {slide.layout === 'moldura_branca' && (
-            <div style={{ position: 'absolute', top: 28, left: 28, right: 28, bottom: 28, borderWidth: 3, borderStyle: 'solid', borderColor: 'rgba(255,255,255,0.85)', borderRadius: 10, display: 'flex' }} />
-          )}
-          {slide.layout === 'moldura_preta' && (
-            <div style={{ position: 'absolute', top: 28, left: 28, right: 28, bottom: 28, borderWidth: 3, borderStyle: 'solid', borderColor: 'rgba(0,0,0,0.75)', borderRadius: 10, display: 'flex' }} />
-          )}
-
-          {/* Barra superior */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 48, paddingRight: 48 }}>
-            {isCapa ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 8, paddingLeft: 18, paddingRight: 18, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderStyle: 'solid', borderColor: 'rgba(255,255,255,0.25)' }}>
-                <div style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#ffffff', display: 'flex' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', letterSpacing: '0.10em' }}>NOVO POST</span>
-              </div>
-            ) : dotIndexes.length > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {dotIndexes.map(i => (
-                  <div key={i} style={{ width: i === slide.ordem - 1 ? 26 : 8, height: 8, borderRadius: 4, backgroundColor: i === slide.ordem - 1 ? '#ffffff' : 'rgba(255,255,255,0.28)', display: 'flex' }} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex' }} />
-            )}
-            {!isCapa && (
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.50)' }}>
-                {slide.ordem}{total_slides > 0 ? `/${total_slides}` : ''}
-              </span>
-            )}
-          </div>
-
-          {/* Conteúdo principal */}
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: p.jc as 'center' | 'flex-start' | 'flex-end', alignItems: p.ai as 'center' | 'flex-start' | 'flex-end', paddingTop: p.py + 36, paddingBottom: p.py, paddingLeft: p.px, paddingRight: p.px }}>
-
-            {slide.emoji ? (
-              <div style={{ fontSize: isCapa ? Math.round(fs * 1.4) : Math.round(fs * 1.1), lineHeight: 1, marginBottom: 16, display: 'flex' }}>
-                {slide.emoji}
-              </div>
-            ) : null}
-
-            {!isCapa && !isEncerramento ? (
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20, alignSelf: p.ai as 'center' | 'flex-start' | 'flex-end' }}>
-                <div style={{ width: 32, height: 4, borderRadius: 2, backgroundColor: sec, marginRight: 10, display: 'flex' }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: sec, letterSpacing: '0.12em' }}>
-                  {`DICA ${slide.ordem > 1 ? slide.ordem - 1 : slide.ordem}`}
-                </span>
-              </div>
-            ) : null}
-
-            {slide.titulo ? (
-              <div style={{
-                fontSize: isCapa ? fs : Math.round(fs * 0.85),
-                fontWeight: 700,
-                color: txtColor,
-                lineHeight: isCapa ? 1.1 : 1.2,
-                textAlign: textAlign as 'center' | 'left' | 'right',
-                maxWidth: 900,
-                alignSelf: p.ai as 'center' | 'flex-start' | 'flex-end',
-                display: 'flex',
-                flexWrap: 'wrap',
-                ...(slide.cor_fundo_texto ? { backgroundColor: slide.cor_fundo_texto, paddingTop: 12, paddingBottom: 12, paddingLeft: 22, paddingRight: 22, borderRadius: 12 } : {}),
-              }}>
-                {slide.titulo}
-              </div>
-            ) : null}
-
-            {slide.corpo ? (
-              <div style={{
-                fontSize: isCapa ? Math.round(fs * 0.48) : Math.round(fs * 0.58),
-                fontWeight: 400,
-                color: isCapa ? 'rgba(255,255,255,0.82)' : txtColor,
-                lineHeight: 1.6,
-                textAlign: textAlign as 'center' | 'left' | 'right',
-                maxWidth: 860,
-                marginTop: slide.titulo ? 18 : 0,
-                alignSelf: p.ai as 'center' | 'flex-start' | 'flex-end',
-                display: 'flex',
-                flexWrap: 'wrap',
-                ...(slide.cor_fundo_texto && !isCapa ? {
-                  backgroundColor: slide.cor_fundo_texto.replace(/[\d.]+\)$/, '0.30)'),
-                  paddingTop: 10, paddingBottom: 10, paddingLeft: 18, paddingRight: 18, borderRadius: 10,
-                } : {}),
-              }}>
-                {slide.corpo}
-              </div>
-            ) : null}
-
-            {slide.cta ? (
-              <div style={{ marginTop: 28, display: 'flex', alignSelf: p.ai as 'center' | 'flex-start' | 'flex-end' }}>
-                <div style={{ fontSize: Math.round(fs * 0.46), fontWeight: 700, color: `rgba(${sr},${sg},${sb},1)` === sec ? '#0a0a14' : '#ffffff', backgroundColor: sec, paddingTop: 16, paddingBottom: 16, paddingLeft: 36, paddingRight: 36, borderRadius: 999, display: 'flex' }}>
-                  {slide.cta}
-                </div>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Linha accent inferior */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 5, display: 'flex', backgroundColor: sec }} />
-
-          {/* Hint "arraste" na capa */}
-          {isCapa ? (
-            <div style={{ position: 'absolute', bottom: 40, right: 48, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.38)' }}>ARRASTE →</span>
-            </div>
-          ) : null}
-
+        <div style={{
+          width: 1080, height: 1080,
+          position: 'relative',
+          backgroundColor: BG,
+          display: 'flex',
+          fontFamily: 'Inter',
+          overflow: 'hidden',
+        }}>
+          {slideContent}
+          {show_watermark && <Watermark />}
         </div>
       ),
       { width: 1080, height: 1080, fonts: fontOptions }
     )
 
-    // Força rendering dentro do try/catch para capturar erros do satori
     const buffer = await imgResponse.arrayBuffer()
-    return new Response(buffer, {
-      headers: { 'Content-Type': 'image/png' },
-    })
+    return new Response(buffer, { headers: { 'Content-Type': 'image/png' } })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
