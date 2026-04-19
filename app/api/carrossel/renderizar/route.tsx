@@ -52,6 +52,7 @@ function prepImg(raw: string | undefined): string | undefined {
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)) }
+function trunc(s: string, max: number) { return s.length > max ? s.slice(0, max) + '…' : s }
 
 // ─── Shared UI pieces ─────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
       <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116 }}>
         <h1 style={{
           fontWeight: 800, fontSize: titleSize,
-          lineHeight: 0.92, letterSpacing: -3,
+          lineHeight: 1.0, letterSpacing: -2,
           margin: 0, color: TEXT,
         }}>
           {(slide.titulo || slide.corpo).slice(0, 80)}
@@ -197,7 +198,7 @@ function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
             </h2>
           )}
           <p style={{ fontWeight: 400, fontSize: 26, lineHeight: 1.45, color: TEXT_DIM, margin: 0 }}>
-            {slide.corpo}
+            {trunc(slide.corpo, 120)}
           </p>
         </div>
 
@@ -260,7 +261,7 @@ function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) 
         <h2 style={{
           position: 'absolute', left: EDGE, right: EDGE, top: 155,
           fontWeight: 800, fontSize: titleSize,
-          lineHeight: 0.94, letterSpacing: -3, margin: 0, color: TEXT,
+          lineHeight: 0.94, letterSpacing: -2, margin: 0, color: TEXT,
         }}>
           {slide.titulo}
         </h2>
@@ -389,7 +390,7 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
           fontWeight: 400, fontSize: 26, lineHeight: 1.4,
           color: TEXT_DIM, margin: 0, textAlign: 'center',
         }}>
-          {slide.corpo}
+          {trunc(slide.corpo, 100)}
         </p>
       </div>
 
@@ -432,7 +433,7 @@ function renderClosing(slide: Slide, total: number) {
         position: 'absolute', left: EDGE, right: EDGE, top: 290,
         fontWeight: 800,
         fontSize: ctaText.length > 25 ? 88 : 120,
-        lineHeight: 0.92, letterSpacing: -4, margin: 0, color: TEXT,
+        lineHeight: 1.0, letterSpacing: -2, margin: 0, color: TEXT,
       }}>
         {ctaText}
       </h2>
@@ -445,7 +446,7 @@ function renderClosing(slide: Slide, total: number) {
         position: 'absolute', left: EDGE, right: EDGE, top: 600,
         fontWeight: 400, fontSize: 30, lineHeight: 1.4, color: TEXT_DIM, margin: 0,
       }}>
-        {slide.corpo}
+        {trunc(slide.corpo, 100)}
       </p>
 
       {/* Handle */}
@@ -508,10 +509,9 @@ function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: numbe
       <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116 }}>
         <h1 style={{
           fontWeight: 800, fontSize: titleSize,
-          lineHeight: 0.92, letterSpacing: -3, margin: 0, color: TEXT,
-          textShadow: hasImg ? '0 2px 40px rgba(0,0,0,0.4)' : 'none',
+          lineHeight: 1.0, letterSpacing: -2, margin: 0, color: TEXT,
         }}>
-          {slide.titulo || slide.corpo}
+          {trunc(slide.titulo || slide.corpo, 70)}
         </h1>
       </div>
 
@@ -564,7 +564,7 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
         fontWeight: 400, fontSize: 28, lineHeight: 1.55,
         color: 'rgba(255,255,255,0.88)', margin: 0,
       }}>
-        {slide.corpo}
+        {trunc(slide.corpo, 120)}
       </p>
 
       {/* Linha inferior */}
@@ -604,7 +604,7 @@ function renderBrandPromo(slide: Slide, _imgSrc: string | undefined, total: numb
       <h2 style={{
         position: 'absolute', left: EDGE, right: EDGE, top: 200,
         fontWeight: 800, fontSize: titleSize,
-        lineHeight: 0.95, letterSpacing: -2, margin: 0, color: TEXT,
+        lineHeight: 1.0, letterSpacing: -2, margin: 0, color: TEXT,
       }}>
         {slide.titulo}
       </h2>
@@ -617,7 +617,7 @@ function renderBrandPromo(slide: Slide, _imgSrc: string | undefined, total: numb
         position: 'absolute', left: EDGE, right: EDGE, top: 490,
         fontWeight: 400, fontSize: 30, lineHeight: 1.4, color: TEXT_DIM, margin: 0,
       }}>
-        {slide.corpo}
+        {trunc(slide.corpo, 100)}
       </p>
 
       {/* CTA pill */}
@@ -650,7 +650,7 @@ function renderFallback(slide: Slide, total: number) {
       <span style={{ fontSize: 17, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600, marginBottom: 32, display: 'flex' }}>
         {slide.eyebrow || `${String(slide.ordem).padStart(2, '0')} / ${String(total).padStart(2, '0')}`}
       </span>
-      <h2 style={{ fontWeight: 800, fontSize: titleSize, lineHeight: 0.95, letterSpacing: -3, margin: '0 0 36px', color: TEXT, display: 'flex' }}>
+      <h2 style={{ fontWeight: 800, fontSize: titleSize, lineHeight: 1.0, letterSpacing: -2, margin: '0 0 36px', color: TEXT, display: 'flex' }}>
         {title}
       </h2>
       {body && (
@@ -720,24 +720,29 @@ export async function POST(req: NextRequest) {
       slideContent = renderFallback(slide, total_slides)
     }
 
-    const imgResponse = new ImageResponse(
-      (
-        <div style={{
-          width: 1080, height: 1080,
-          position: 'relative',
-          backgroundColor: BG,
-          display: 'flex',
-          fontFamily: 'Inter',
-          overflow: 'hidden',
-        }}>
-          {slideContent}
-          {show_watermark && <Watermark />}
-        </div>
-      ),
-      { width: 1080, height: 1080, fonts: fontOptions }
+    const makeRoot = (content: React.ReactElement) => (
+      <div style={{
+        width: 1080, height: 1080,
+        position: 'relative',
+        backgroundColor: BG,
+        display: 'flex',
+        fontFamily: 'Inter',
+        overflow: 'hidden',
+      }}>
+        {content}
+        {show_watermark && <Watermark />}
+      </div>
     )
 
-    const buffer = await imgResponse.arrayBuffer()
+    let buffer: ArrayBuffer
+    try {
+      const imgResponse = new ImageResponse(makeRoot(slideContent), { width: 1080, height: 1080, fonts: fontOptions })
+      buffer = await imgResponse.arrayBuffer()
+    } catch (satoriErr) {
+      console.error('[renderizar] satori falhou, usando fallback:', arquetipo, satoriErr)
+      const fallbackResponse = new ImageResponse(makeRoot(renderFallback(slide, total_slides)), { width: 1080, height: 1080, fonts: fontOptions })
+      buffer = await fallbackResponse.arrayBuffer()
+    }
     return new Response(buffer, { headers: { 'Content-Type': 'image/png' } })
 
   } catch (err) {
