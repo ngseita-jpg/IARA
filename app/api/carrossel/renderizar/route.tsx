@@ -152,9 +152,8 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
           fontWeight: 800, fontSize: titleSize,
           lineHeight: 0.92, letterSpacing: -3,
           margin: 0, color: TEXT,
-          textShadow: '0 2px 40px rgba(0,0,0,0.4)',
         }}>
-          {slide.titulo || slide.corpo}
+          {(slide.titulo || slide.corpo).slice(0, 80)}
         </h1>
       </div>
 
@@ -286,7 +285,7 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
   const hasImg = !!imgSrc
   const titleSize = (slide.titulo || '').length > 35 ? 56 : (slide.titulo || '').length > 25 ? 68 : 80
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: BG, display: 'flex' }}>
       {hasImg
         ? <CoverImg src={imgSrc!} />
         : <div style={{ position: 'absolute', inset: 0, backgroundImage: GRAD_D, display: 'flex' }} />
@@ -322,7 +321,6 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
             fontWeight: 800, fontSize: titleSize,
             lineHeight: 0.96, letterSpacing: -2, margin: 0,
             color: TEXT, textAlign: 'right',
-            textShadow: '0 2px 30px rgba(0,0,0,0.65)',
           }}>
             {slide.titulo}
           </h2>
@@ -330,7 +328,6 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
         <p style={{
           fontWeight: 400, fontSize: 26, lineHeight: 1.4,
           color: 'rgba(255,255,255,0.90)', margin: 0, textAlign: 'right',
-          textShadow: '0 1px 20px rgba(0,0,0,0.75)',
         }}>
           {slide.corpo.length > 100 ? slide.corpo.slice(0, 100) + '...' : slide.corpo}
         </p>
@@ -642,6 +639,31 @@ function renderBrandPromo(slide: Slide, _imgSrc: string | undefined, total: numb
   )
 }
 
+// ─── Fallback slide (usado se arquétipo crashar) ──────────────────────────────
+function renderFallback(slide: Slide, total: number) {
+  const title = (slide.titulo || slide.corpo).slice(0, 80)
+  const body = slide.titulo ? slide.corpo.slice(0, 160) : ''
+  const titleSize = title.length > 45 ? 72 : title.length > 30 ? 88 : 108
+  return (
+    <div style={{ position: 'absolute', inset: 0, backgroundColor: BG, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${EDGE}px` }}>
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: GRAD_D, opacity: 0.12, display: 'flex' }} />
+      <span style={{ fontSize: 17, letterSpacing: 2.5, textTransform: 'uppercase', color: TEXT_MUTED, fontWeight: 600, marginBottom: 32, display: 'flex' }}>
+        {slide.eyebrow || `${String(slide.ordem).padStart(2, '0')} / ${String(total).padStart(2, '0')}`}
+      </span>
+      <h2 style={{ fontWeight: 800, fontSize: titleSize, lineHeight: 0.95, letterSpacing: -3, margin: '0 0 36px', color: TEXT, display: 'flex' }}>
+        {title}
+      </h2>
+      {body && (
+        <p style={{ fontWeight: 400, fontSize: 30, lineHeight: 1.45, color: TEXT_DIM, margin: 0, display: 'flex' }}>
+          {body}
+        </p>
+      )}
+      <SlideIndicator total={total} active={slide.ordem - 1} style={{ position: 'absolute', bottom: EDGE, left: EDGE }} />
+      <BottomBar />
+    </div>
+  )
+}
+
 // ─── Archetype resolver ───────────────────────────────────────────────────────
 const CONTENT_CYCLE = ['split_v', 'top_text', 'full_bleed', 'quote'] as const
 const CONTENT_CYCLE_NO_IMG = ['top_text', 'quote', 'split_v', 'full_bleed'] as const
@@ -680,17 +702,22 @@ export async function POST(req: NextRequest) {
 
     let slideContent: React.ReactElement
 
-    switch (arquetipo) {
-      case 'cover_full':   slideContent = renderCoverFull(slide, imgSrc, total_slides); break
-      case 'split_v':      slideContent = renderSplitV(slide, imgSrc, total_slides); break
-      case 'top_text':     slideContent = renderTopText(slide, imgSrc, total_slides); break
-      case 'full_bleed':   slideContent = renderFullBleed(slide, imgSrc, total_slides); break
-      case 'quote':        slideContent = renderQuote(slide, imgSrc, total_slides); break
-      case 'closing':      slideContent = renderClosing(slide, total_slides); break
-      case 'brand_cover':  slideContent = renderBrandCover(slide, imgSrc, total_slides); break
-      case 'brand_story':  slideContent = renderBrandStory(slide, imgSrc, total_slides); break
-      case 'brand_promo':  slideContent = renderBrandPromo(slide, imgSrc, total_slides); break
-      default:             slideContent = renderCoverFull(slide, imgSrc, total_slides)
+    try {
+      switch (arquetipo) {
+        case 'cover_full':   slideContent = renderCoverFull(slide, imgSrc, total_slides); break
+        case 'split_v':      slideContent = renderSplitV(slide, imgSrc, total_slides); break
+        case 'top_text':     slideContent = renderTopText(slide, imgSrc, total_slides); break
+        case 'full_bleed':   slideContent = renderFullBleed(slide, imgSrc, total_slides); break
+        case 'quote':        slideContent = renderQuote(slide, imgSrc, total_slides); break
+        case 'closing':      slideContent = renderClosing(slide, total_slides); break
+        case 'brand_cover':  slideContent = renderBrandCover(slide, imgSrc, total_slides); break
+        case 'brand_story':  slideContent = renderBrandStory(slide, imgSrc, total_slides); break
+        case 'brand_promo':  slideContent = renderBrandPromo(slide, imgSrc, total_slides); break
+        default:             slideContent = renderCoverFull(slide, imgSrc, total_slides)
+      }
+    } catch (archErr) {
+      console.error('[renderizar] arquétipo falhou, usando fallback:', arquetipo, archErr)
+      slideContent = renderFallback(slide, total_slides)
     }
 
     const imgResponse = new ImageResponse(

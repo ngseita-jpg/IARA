@@ -59,6 +59,7 @@ ${isMarca ? `
 ## Campos extras
 - "eyebrow": texto pequeno acima do título (ex: "01 / 05 · nutrição", "novo produto · outono 26")
 - "handle": arroba do criador/marca para o slide de encerramento (ex: "@dra.ana.nutri")
+- "imagem_index": OBRIGATÓRIO em todo slide que usa arquétipo cover_full, split_v, top_text, full_bleed, brand_cover, brand_story ou brand_promo. Distribua as imagens disponíveis de forma variada entre os slides. Índice começa em 0.
 
 ## Perfil ${isMarca ? 'da marca' : 'do criador'}
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
