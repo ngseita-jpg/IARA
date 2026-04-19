@@ -1,22 +1,27 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { ThumbnailLayout } from '../gerar/route'
 
 let _fontCache: ArrayBuffer | null = null
 
-async function fetchFont(): Promise<ArrayBuffer | null> {
+async function loadFont(reqUrl: string): Promise<ArrayBuffer | null> {
   if (_fontCache) return _fontCache
   try {
-    const res = await fetch(
-      'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff',
-      { signal: AbortSignal.timeout(4000) }
-    )
-    if (!res.ok) return null
-    _fontCache = await res.arrayBuffer()
+    const buf = readFileSync(join(process.cwd(), 'public', 'inter-bold.ttf'))
+    _fontCache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
     return _fontCache
-  } catch {
-    return null
-  }
+  } catch {}
+  try {
+    const origin = new URL(reqUrl).origin
+    const res = await fetch(`${origin}/inter-bold.ttf`)
+    if (res.ok) {
+      _fontCache = await res.arrayBuffer()
+      return _fontCache
+    }
+  } catch {}
+  return null
 }
 
 const FONT_SIZE = { pequeno: 52, medio: 72, grande: 96, gigante: 120 }
@@ -40,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
   const pos = posMap[layout.posicao_texto] ?? posMap.centro
 
-  const fontData = await fetchFont()
+  const fontData = await loadFont(req.url)
 
   const fontOptions = fontData
     ? [{ name: 'Inter', data: fontData, weight: 900 as const, style: 'normal' as const }]
