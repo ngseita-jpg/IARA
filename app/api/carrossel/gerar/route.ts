@@ -30,9 +30,19 @@ export type CarrosselData = {
   raciocinio: string
 }
 
-function buildSystemPrompt(perfil: Record<string, unknown> | null, modo: string): string {
+const PLATAFORMA_CONTEXT: Record<string, string> = {
+  instagram: 'Instagram — visual impactante, textos curtos e diretos, ganchos fortes no primeiro slide, emojis com moderação, máx 2 linhas por slide',
+  linkedin:  'LinkedIn — tom profissional e educativo, conteúdo de valor, storytelling com aprendizado, menos emojis, mais dados e insights práticos',
+  tiktok:    'TikTok — jovem, dinâmico e direto, linguagem super descontraída, slides rápidos de ler, muito gancho e curiosidade entre slides',
+  pinterest: 'Pinterest — visual e inspiracional, títulos marcantes, conteúdo evergreen, foco em estética e utilidade prática, subtítulos descritivos',
+}
+
+function buildSystemPrompt(perfil: Record<string, unknown> | null, modo: string, plataforma?: string): string {
   const isMarca = modo === 'marca'
-  return `Você é a Iara, especialista em design de carrosséis para ${isMarca ? 'marcas e empresas brasileiras' : 'criadores de conteúdo brasileiros'}.
+  const plataformaCtx = plataforma && PLATAFORMA_CONTEXT[plataforma]
+    ? `\n\n## Plataforma de destino\nEste carrossel será publicado no ${PLATAFORMA_CONTEXT[plataforma]}. Adapte linguagem, tamanho dos textos e tom de acordo.`
+    : ''
+  return `Você é a Iara, especialista em design de carrosséis para ${isMarca ? 'marcas e empresas brasileiras' : 'criadores de conteúdo brasileiros'}.${plataformaCtx}
 
 Você gera a estrutura completa de carrosséis no formato JSON com arquétipos de layout profissionais.
 
@@ -115,6 +125,7 @@ export async function POST(req: NextRequest) {
   const num_imagens = body.num_imagens as number | undefined
   const historico = body.historico as Anthropic.MessageParam[] | undefined
   const modo = (body.modo as string | undefined) ?? 'criador'
+  const plataforma = (body.plataforma as string | undefined) ?? 'instagram'
 
   console.log('[carrossel/gerar] step 4: perfil query')
   const { data: perfil, error: perfilErr } = await supabase
@@ -158,7 +169,7 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 3000,
-      system: buildSystemPrompt(perfil as Record<string, unknown> | null, modo),
+      system: buildSystemPrompt(perfil as Record<string, unknown> | null, modo, plataforma),
       messages,
     })
 
