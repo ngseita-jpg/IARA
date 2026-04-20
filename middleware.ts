@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
   const isOpenRoute = openRoutes.some((route) => pathname === route || pathname.startsWith(route))
 
   // Rotas de auth: redireciona usuário logado para dashboard
-  const authRoutes = ['/login', '/register', '/esqueci-senha']
+  const authRoutes = ['/login', '/register', '/esqueci-senha', '/redefinir-senha']
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
   // Usuário não autenticado em rota protegida → login
