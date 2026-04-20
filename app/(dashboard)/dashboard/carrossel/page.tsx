@@ -264,8 +264,10 @@ export default function CarrosselPage() {
     setRenderizando((prev) => ({ ...prev, [slide.ordem]: true }))
 
     // Usa imagem_index da IA; se não veio e temos imagens, distribui round-robin
-    const ARCHS_COM_IMAGEM = ['cover_full', 'split_v', 'top_text', 'full_bleed', 'brand_cover', 'brand_story', 'brand_promo', 'editorial', 'cinematic', 'caption_bar', 'inset_photo', 'warm_overlay', 'bold_type', 'side_right', 'neon_card']
-    const usarImagem = imagens.length > 0 && ARCHS_COM_IMAGEM.includes(slide.arquetipo ?? '')
+    // Só closing e brand_promo não usam foto — todo o resto usa se tiver imagem_index
+    const ARCHS_SEM_IMAGEM = new Set(['closing', 'brand_promo'])
+    const arquetipo = slide.arquetipo ?? ''
+    const usarImagem = imagens.length > 0 && !ARCHS_SEM_IMAGEM.has(arquetipo)
     const imgIdx = slide.imagem_index !== undefined ? slide.imagem_index : (usarImagem ? (slide.ordem - 1) % imagens.length : -1)
     const imgBase64 = imgIdx >= 0 && imagens[imgIdx]
       ? `data:image/jpeg;base64,${imagens[imgIdx]}`
