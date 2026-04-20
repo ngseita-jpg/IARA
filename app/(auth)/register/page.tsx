@@ -1,19 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle, Building2, Eye, EyeOff } from 'lucide-react'
 import { IaraLogo } from '@/components/iara-logo'
 
 type TipoConta = 'criador' | 'marca'
 
-export default function RegisterPage() {
+function RegisterForm() {
+  const searchParams = useSearchParams()
   const [tipoConta, setTipoConta] = useState<TipoConta>('criador')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [termosAceitos, setTermosAceitos] = useState(false)
+  const [maiorIdade, setMaiorIdade] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -22,10 +26,20 @@ export default function RegisterPage() {
     document.title = 'Criar conta grátis | Iara Hub'
   }, [])
 
+  // Lê ?tipo=marca da URL e aplica no toggle
+  useEffect(() => {
+    const tipo = searchParams.get('tipo')
+    if (tipo === 'marca') setTipoConta('marca')
+  }, [searchParams])
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     if (password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (!termosAceitos || !maiorIdade) {
+      setError('Você precisa aceitar os termos e confirmar que tem 18+ anos.')
       return
     }
     setLoading(true)
@@ -160,7 +174,7 @@ export default function RegisterPage() {
             </div>
           ))}
 
-          {/* Senha — separado para ter olhinho e hint */}
+          {/* Senha */}
           <div>
             <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">
               Senha
@@ -186,10 +200,39 @@ export default function RegisterPage() {
             <p className="mt-1.5 text-xs text-[#4a4a6a]">Mínimo 6 caracteres</p>
           </div>
 
+          {/* Checkboxes LGPD */}
+          <div className="space-y-3 pt-1">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={termosAceitos}
+                onChange={(e) => setTermosAceitos(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-iara-500 cursor-pointer flex-shrink-0"
+              />
+              <span className="text-xs text-[#6b6b8a] group-hover:text-[#9b9bb5] transition-colors leading-relaxed">
+                Li e aceito os{' '}
+                <Link href="/termos" target="_blank" className="text-iara-400 hover:underline">Termos de Uso</Link>
+                {' '}e a{' '}
+                <Link href="/privacidade" target="_blank" className="text-iara-400 hover:underline">Política de Privacidade</Link>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={maiorIdade}
+                onChange={(e) => setMaiorIdade(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-iara-500 cursor-pointer flex-shrink-0"
+              />
+              <span className="text-xs text-[#6b6b8a] group-hover:text-[#9b9bb5] transition-colors">
+                Confirmo que tenho 18 anos ou mais
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full mt-2 rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.01] disabled:opacity-50 disabled:scale-100"
+            disabled={loading || !termosAceitos || !maiorIdade}
+            className="w-full mt-2 rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.01] disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
             style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7)' }}
           >
             {loading ? (
@@ -217,5 +260,13 @@ export default function RegisterPage() {
         Gratuito para sempre no plano básico 🇧🇷
       </p>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }

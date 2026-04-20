@@ -11,16 +11,16 @@ export default function PrivacidadePage() {
     <div className="min-h-screen bg-[#0a0a14] text-[#f1f1f8]">
       <div className="max-w-3xl mx-auto px-4 py-12">
         <Link
-          href="/dashboard"
+          href="/"
           className="inline-flex items-center gap-2 text-sm text-[#6b6b8a] hover:text-iara-400 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Voltar ao dashboard
+          Voltar ao início
         </Link>
 
         <h1 className="text-3xl font-bold mb-2">Política de Privacidade</h1>
         <p className="text-sm text-[#6b6b8a] mb-10">
-          Última atualização: abril de 2025 · Em conformidade com a Lei nº 13.709/2018 (LGPD)
+          Última atualização: abril de 2026 · Em conformidade com a Lei nº 13.709/2018 (LGPD)
         </p>
 
         <div className="space-y-10 text-sm text-[#c1c1d8] leading-relaxed">
@@ -41,7 +41,7 @@ export default function PrivacidadePage() {
           <section>
             <h2 className="text-lg font-semibold text-[#f1f1f8] mb-3">2. Dados que coletamos</h2>
             <ul className="space-y-2 list-disc list-inside">
-              <li><strong className="text-[#f1f1f8]">Conta:</strong> e-mail, nome e provedor de autenticação (GitHub, Google).</li>
+              <li><strong className="text-[#f1f1f8]">Conta:</strong> e-mail e nome completo.</li>
               <li><strong className="text-[#f1f1f8]">Perfil de criador:</strong> nicho, tom de voz, plataformas, objetivo e informações que você preenche voluntariamente.</li>
               <li><strong className="text-[#f1f1f8]">Conteúdos gerados:</strong> roteiros, carrosseis, thumbnails e stories criados com o auxílio da IA são processados em tempo real e não são armazenados permanentemente.</li>
               <li><strong className="text-[#f1f1f8]">Análises de voz:</strong> gravações de áudio enviadas para o módulo de oratória. O áudio é enviado para transcrição e descartado após o processamento; apenas os resultados e feedbacks são salvos.</li>
@@ -190,7 +190,7 @@ export default function PrivacidadePage() {
 
         <div className="mt-12 pt-8 border-t border-[#1a1a2e] flex gap-4 text-xs text-[#4a4a6a]">
           <Link href="/termos" className="hover:text-iara-400 transition-colors">Termos de Uso</Link>
-          <Link href="/dashboard" className="hover:text-iara-400 transition-colors">Voltar ao dashboard</Link>
+          <Link href="/" className="hover:text-iara-400 transition-colors">Voltar ao início</Link>
         </div>
       </div>
     </div>

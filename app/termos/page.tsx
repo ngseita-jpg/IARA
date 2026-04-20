@@ -11,16 +11,16 @@ export default function TermosPage() {
     <div className="min-h-screen bg-[#0a0a14] text-[#f1f1f8]">
       <div className="max-w-3xl mx-auto px-4 py-12">
         <Link
-          href="/dashboard"
+          href="/"
           className="inline-flex items-center gap-2 text-sm text-[#6b6b8a] hover:text-iara-400 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Voltar ao dashboard
+          Voltar ao início
         </Link>
 
         <h1 className="text-3xl font-bold mb-2">Termos de Uso</h1>
         <p className="text-sm text-[#6b6b8a] mb-10">
-          Última atualização: abril de 2025
+          Última atualização: abril de 2026
         </p>
 
         <div className="space-y-10 text-sm text-[#c1c1d8] leading-relaxed">
@@ -149,7 +149,7 @@ export default function TermosPage() {
 
         <div className="mt-12 pt-8 border-t border-[#1a1a2e] flex gap-4 text-xs text-[#4a4a6a]">
           <Link href="/privacidade" className="hover:text-iara-400 transition-colors">Política de Privacidade</Link>
-          <Link href="/dashboard" className="hover:text-iara-400 transition-colors">Voltar ao dashboard</Link>
+          <Link href="/" className="hover:text-iara-400 transition-colors">Voltar ao início</Link>
         </div>
       </div>
     </div>
