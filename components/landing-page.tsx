@@ -64,7 +64,7 @@ const painPoints = [
 
 const affiliateTiers = [
   { name: 'Embaixador', commission: '15%', period: 'recorrente', desc: 'A partir de 10 indicações ativas, você recebe 15% de tudo que eles pagam enquanto forem assinantes.', color: 'from-iara-900/40 to-accent-purple/10', border: 'border-iara-700/30',     tag: 'text-iara-400',     badge: null },
-  { name: 'Parceiro',   commission: '20%', period: 'recorrente', desc: 'Com 30 indicações ativas, você sobe de nível e passa a ganhar 20% recorrente para sempre.',            color: 'from-accent-purple/20 to-accent-pink/10', border: 'border-accent-purple/40', tag: 'text-accent-purple', badge: 'Mais popular' },
+  { name: 'Parceiro',   commission: '20%', period: 'recorrente', desc: 'Com 30 indicações ativas, você sobe de nível e passa a ganhar 20% recorrente para sempre.',            color: 'from-accent-purple/20 to-accent-pink/10', border: 'border-accent-purple/40', tag: 'text-accent-purple', badge: null },
   { name: 'Elite',      commission: '25%', period: 'recorrente', desc: '50 indicações ativas. O topo da pirâmide — 25% recorrente mais bônus trimestral por volume.',          color: 'from-accent-pink/20 to-iara-600/10',  border: 'border-accent-pink/40',  tag: 'text-accent-pink',  badge: null },
 ]
 
