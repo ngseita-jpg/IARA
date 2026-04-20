@@ -35,11 +35,11 @@ export async function middleware(request: NextRequest) {
   const isPreviewMode = request.cookies.get('iara_preview')?.value === '1'
 
   // Rotas sempre acessíveis (logado ou não) — sem redirect para nenhum lado
-  const openRoutes = ['/', '/empresas', '/privacidade', '/termos', '/r/', '/preview', '/api/preview-mode', '/auth']
+  const openRoutes = ['/', '/empresas', '/privacidade', '/termos', '/r/', '/preview', '/api/preview-mode', '/auth', '/redefinir-senha']
   const isOpenRoute = openRoutes.some((route) => pathname === route || pathname.startsWith(route))
 
   // Rotas de auth: redireciona usuário logado para dashboard
-  const authRoutes = ['/login', '/register', '/esqueci-senha', '/redefinir-senha']
+  const authRoutes = ['/login', '/register', '/esqueci-senha']
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
   // Usuário não autenticado em rota protegida → login com aviso
