@@ -138,7 +138,7 @@ export default function OGImage() {
             display: 'flex',
           }}
         >
-          11 módulos integrados para criadores brasileiros crescerem mais rápido.
+          10 módulos integrados para criadores brasileiros crescerem mais rápido.
         </div>
 
         {/* Module pills */}

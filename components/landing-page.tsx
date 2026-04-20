@@ -308,7 +308,7 @@ export function LandingPage() {
             </motion.div>
             <a href="#modulos"
               className="flex items-center gap-2 w-full sm:w-auto px-8 py-4 rounded-2xl text-base font-semibold text-[#9b9bb5] border border-white/10 hover:border-iara-700/50 hover:text-[#f1f1f8] hover:bg-iara-900/20 transition-all duration-300 cursor-pointer">
-              Ver os 11 módulos
+              Ver os 10 módulos
               <ChevronDown className="w-4 h-4 opacity-50" />
             </a>
           </motion.div>
@@ -330,7 +330,7 @@ export function LandingPage() {
             className="flex sm:hidden items-center justify-center gap-5 mt-8 pt-6 border-t border-white/5"
           >
             {[
-              { value: '11+', label: 'Módulos IA' },
+              { value: '10+', label: 'Módulos IA' },
               { value: '6h+', label: 'Economizadas/semana' },
               { value: '100%', label: 'Feito pro Brasil' },
             ].map(s => (
@@ -435,7 +435,7 @@ export function LandingPage() {
                   ))}
                 </div>
                 <p className="text-[11px] text-[#9b9bb5]">
-                  <span className="font-bold text-[#f1f1f8]">11 módulos</span> de IA integrados
+                  <span className="font-bold text-[#f1f1f8]">10 módulos</span> de IA integrados
                 </p>
               </div>
             </motion.div>
@@ -523,7 +523,7 @@ export function LandingPage() {
             {[
               { icon: Zap,        color: 'text-iara-400',     bg: 'rgba(99,102,241,0.1)',  border: 'border-iara-700/25',     title: 'Rápido de verdade', sub: 'Roteiro, carrossel e thumbnails em menos de 2 minutos. Sem exagero.' },
               { icon: Brain,      color: 'text-accent-purple',bg: 'rgba(168,85,247,0.1)',  border: 'border-accent-purple/25',title: 'Personalizado',     sub: 'Cada output usa o seu perfil vocal, nicho e estilo. Nada genérico.' },
-              { icon: TrendingUp, color: 'text-accent-pink',  bg: 'rgba(236,72,153,0.1)',  border: 'border-accent-pink/25',  title: 'Tudo integrado',    sub: '11 módulos que se falam. Calendário, metas, métricas, mídia kit.' },
+              { icon: TrendingUp, color: 'text-accent-pink',  bg: 'rgba(236,72,153,0.1)',  border: 'border-accent-pink/25',  title: 'Tudo integrado',    sub: '10 módulos que se falam. Calendário, metas, métricas, mídia kit.' },
             ].map((f, i) => {
               const FIcon = f.icon
               return (
@@ -679,7 +679,7 @@ export function LandingPage() {
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-16">
             <motion.p variants={fadeUp} className="text-iara-400 text-xs font-bold uppercase tracking-widest mb-4">Tudo que você precisa</motion.p>
             <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-4">
-              11 módulos. Um único objetivo:{' '}
+              10 módulos. Um único objetivo:{' '}
               <span className="shimmer-text">seu crescimento.</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-[#6b6b8a] max-w-xl mx-auto text-lg">
