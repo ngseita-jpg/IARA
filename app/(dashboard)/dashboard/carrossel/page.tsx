@@ -31,6 +31,7 @@ import {
 import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
+import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 
@@ -83,6 +84,8 @@ export default function CarrosselPage() {
   const [imagens, setImagens] = useState<string[]>([]) // base64
   const [imagensPreview, setImagensPreview] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [analiseImagens, setAnaliseImagens] = useState<ImagemAnalise[]>([])
+  const [analisando, setAnalisando] = useState(false)
 
   // Step 3: config
   const [numSlides, setNumSlides] = useState(6)
@@ -170,6 +173,29 @@ export default function CarrosselPage() {
   function removerImagem(idx: number) {
     setImagens((prev) => prev.filter((_, i) => i !== idx))
     setImagensPreview((prev) => prev.filter((_, i) => i !== idx))
+    setAnaliseImagens([])
+  }
+
+  async function handleAnalisarImagens(imgs: string[]) {
+    if (!imgs.length) return
+    setAnalisando(true)
+    try {
+      const res = await fetch('/api/carrossel/analisar-imagens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imagens: imgs, modo }),
+      })
+      const data = await res.json()
+      if (data.analises?.length) {
+        setAnaliseImagens(data.analises)
+        // Garante que numSlides >= número de imagens
+        setNumSlides((prev) => Math.max(prev, imgs.length))
+      }
+    } catch {
+      // Análise falhou silenciosamente — geração continua sem ela
+    } finally {
+      setAnalisando(false)
+    }
   }
 
   // ───────────────────────────────────────────
@@ -192,8 +218,9 @@ export default function CarrosselPage() {
         body: JSON.stringify({
           conteudo,
           instrucoes,
-          num_slides: numSlides,
+          num_slides: Math.max(numSlides, imagens.length),
           num_imagens: imagens.length,
+          analise_imagens: analiseImagens.length ? analiseImagens : undefined,
           modo,
           plataforma,
         }),
@@ -731,11 +758,24 @@ export default function CarrosselPage() {
                 Voltar
               </button>
               <button
-                onClick={() => setStep('config')}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-iara-600 hover:bg-iara-500 text-white text-sm font-medium transition-all"
+                onClick={async () => {
+                  setStep('config')
+                  if (imagens.length) await handleAnalisarImagens(imagens)
+                }}
+                disabled={analisando}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-60 text-white text-sm font-medium transition-all"
               >
-                Próximo
-                <ChevronRight className="w-4 h-4" />
+                {analisando ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Iara analisando fotos…
+                  </>
+                ) : (
+                  <>
+                    Próximo
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>

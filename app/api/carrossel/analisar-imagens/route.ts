@@ -1,0 +1,104 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+export type ImagemAnalise = {
+  index: number
+  descricao: string
+  tem_rosto: boolean
+  posicao_foco: 'topo' | 'centro' | 'base' | 'esquerda' | 'direita' | 'distribuido'
+  mood: 'energetico' | 'calmo' | 'profissional' | 'casual' | 'inspirador' | 'emocional'
+  arquetipos_recomendados: string[]
+  arquetipos_evitar: string[]
+  contexto_copy: string
+}
+
+function detectMediaType(b64: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' {
+  const clean = b64.replace(/^data:image\/[^;]+;base64,/, '')
+  const h = clean.slice(0, 16)
+  if (h.startsWith('/9j/'))    return 'image/jpeg'
+  if (h.startsWith('iVBORw')) return 'image/png'
+  if (h.startsWith('R0lGOD')) return 'image/gif'
+  if (h.startsWith('UklGR'))  return 'image/webp'
+  return 'image/jpeg'
+}
+
+export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const body = await req.json()
+  const imagens: string[] = body.imagens ?? []
+  const modo: string = body.modo ?? 'criador'
+
+  if (!imagens.length) return NextResponse.json({ analises: [] })
+
+  const arquetiposCriador = ['cover_full', 'split_v', 'top_text', 'full_bleed', 'quote']
+  const arquetiposMarca   = ['brand_cover', 'brand_story', 'brand_promo']
+  const disponiveis = modo === 'marca' ? arquetiposMarca : arquetiposCriador
+
+  const imageBlocks: Anthropic.ImageBlockParam[] = imagens.slice(0, 8).map((b64) => ({
+    type: 'image' as const,
+    source: {
+      type: 'base64' as const,
+      media_type: detectMediaType(b64),
+      data: b64.replace(/^data:image\/[^;]+;base64,/, ''),
+    },
+  }))
+
+  const prompt = `Você recebe ${imagens.length} imagem(ns) para um carrossel de ${modo === 'marca' ? 'marca' : 'criador de conteúdo'} brasileiro.
+
+Analise cada imagem (índices 0 a ${imagens.length - 1}) e retorne um JSON array com objetos:
+
+{
+  "index": <número>,
+  "descricao": "<o que aparece na imagem, breve>",
+  "tem_rosto": <true|false>,
+  "posicao_foco": "<topo|centro|base|esquerda|direita|distribuido>",
+  "mood": "<energetico|calmo|profissional|casual|inspirador|emocional>",
+  "arquetipos_recomendados": [<subset de: ${disponiveis.join(', ')}>],
+  "arquetipos_evitar": [<layouts que colocariam texto sobre o rosto ou foco principal>],
+  "contexto_copy": "<o que essa imagem comunica e que sensação ela transmite — será usado pela IA para escrever textos alinhados>"
+}
+
+Regras para arquetipos_evitar:
+- Rosto no centro ou base → evite "cover_full" e "full_bleed" (texto sobreposto na base cobre o rosto)
+- Rosto no topo → evite "top_text" (texto fica no topo onde está o rosto)
+- "split_v" é seguro: o rosto fica na coluna direita (60%), texto na esquerda
+- "quote" é seguro: tem overlay escuro cobrindo tudo e o texto fica bem centralizado
+
+Retorne APENAS o JSON array, sem markdown.`
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          ...imageBlocks,
+          { type: 'text', text: prompt },
+        ],
+      }],
+    })
+
+    const texto = response.content
+      .filter(b => b.type === 'text')
+      .map(b => (b as { type: 'text'; text: string }).text)
+      .join('')
+
+    const jsonMatch = texto.match(/\[[\s\S]*\]/)
+    if (!jsonMatch) return NextResponse.json({ analises: [] })
+
+    const analises: ImagemAnalise[] = JSON.parse(jsonMatch[0])
+    return NextResponse.json({ analises })
+  } catch (err) {
+    console.error('[analisar-imagens]', err)
+    return NextResponse.json({ analises: [] })
+  }
+}
