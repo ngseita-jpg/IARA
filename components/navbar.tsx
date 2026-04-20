@@ -72,17 +72,17 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
   return (
     <>
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex flex-col w-64 min-h-screen border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40 overflow-hidden"
+      <aside className="hidden md:flex flex-col w-64 h-screen border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40 overflow-hidden"
         style={{ background: 'linear-gradient(180deg, #0e0e1e 0%, #0a0a14 100%)' }}>
         {/* Top glow */}
         <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none sidebar-top-glow" />
         {/* Logo */}
-        <Link href="/dashboard" className="px-2 mb-8 relative z-10">
+        <Link href="/dashboard" className="px-2 mb-8 relative z-10 flex-shrink-0">
           <IaraLogo size="sm" layout="horizontal" />
         </Link>
 
-        {/* Nav items */}
-        <nav className="flex-1 space-y-0.5 relative z-10">
+        {/* Nav items — scrollável */}
+        <nav className="flex-1 overflow-y-auto space-y-0.5 relative z-10 no-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -112,10 +112,12 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
         </nav>
 
         {/* Usage tracker */}
-        <UsoSidebar />
+        <div className="flex-shrink-0">
+          <UsoSidebar />
+        </div>
 
         {/* User + logout */}
-        <div className="border-t border-iara-900/30 pt-4 mt-4">
+        <div className="flex-shrink-0 border-t border-iara-900/30 pt-4 mt-4">
           {userEmail && (
             <p className="px-3 text-xs text-[#5a5a7a] truncate mb-3">{userEmail}</p>
           )}
