@@ -1,23 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle, Building2 } from 'lucide-react'
+import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle, Building2, Eye, EyeOff } from 'lucide-react'
 import { IaraLogo } from '@/components/iara-logo'
 
 type TipoConta = 'criador' | 'marca'
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [tipoConta, setTipoConta] = useState<TipoConta>('criador')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    document.title = 'Criar conta grátis | Iara Hub'
+  }, [])
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -138,7 +141,6 @@ export default function RegisterPage() {
               icon: User,
             },
             { label: 'E-mail', type: 'email', value: email, onChange: setEmail, placeholder: 'seu@email.com', icon: Mail },
-            { label: 'Senha', type: 'password', value: password, onChange: setPassword, placeholder: 'Mínimo 6 caracteres', icon: Lock },
           ].map(({ label, type, value, onChange, placeholder, icon: Icon }) => (
             <div key={label}>
               <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">
@@ -157,6 +159,32 @@ export default function RegisterPage() {
               </div>
             </div>
           ))}
+
+          {/* Senha — separado para ter olhinho e hint */}
+          <div>
+            <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2">
+              Senha
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3a3a5a]" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3.5 pl-11 pr-11 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#3a3a5a] hover:text-[#9b9bb5] transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs text-[#4a4a6a]">Mínimo 6 caracteres</p>
+          </div>
 
           <button
             type="submit"

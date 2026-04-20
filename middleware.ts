@@ -42,10 +42,11 @@ export async function middleware(request: NextRequest) {
   const authRoutes = ['/login', '/register', '/esqueci-senha', '/redefinir-senha']
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
 
-  // Usuário não autenticado em rota protegida → login
+  // Usuário não autenticado em rota protegida → login com aviso
   if (!user && !isOpenRoute && !isAuthRoute && !isPreviewMode) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.searchParams.set('mensagem', 'acesso-restrito')
     return NextResponse.redirect(url)
   }
 

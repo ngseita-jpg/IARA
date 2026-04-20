@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
-  title: 'Entrar na Iara Hub',
+  title: { default: 'Iara Hub', template: '%s | Iara Hub' },
   description: 'Acesse sua conta na Iara Hub e continue criando conteúdo com IA.',
 }
 

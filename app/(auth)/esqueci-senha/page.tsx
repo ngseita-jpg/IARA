@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Sparkles, Mail, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
@@ -10,6 +10,10 @@ export default function EsqueciSenhaPage() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    document.title = 'Redefinir senha | Iara Hub'
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
