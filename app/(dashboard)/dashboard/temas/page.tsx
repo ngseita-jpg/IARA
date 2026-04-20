@@ -22,6 +22,7 @@ interface Message {
   content: string          // raw text (with ideas block stripped)
   ideas?: Idea[]
   streaming?: boolean
+  generatingIdeas?: boolean  // true enquanto o bloco ```ideas está sendo escrito
 }
 
 /* ─────────────────────────── helpers ──────────────────────────────── */
@@ -125,6 +126,37 @@ function IdeaCard({ idea, index }: { idea: Idea; index: number }) {
   )
 }
 
+function IdeasSkeleton() {
+  return (
+    <div className="mt-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles className="w-4 h-4 text-iara-400 animate-pulse" />
+        <p className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Gerando suas ideias...</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="rounded-2xl border border-iara-900/40 bg-[#0f0f1e] p-5"
+            style={{ animation: `pulse 1.8s ease-in-out ${i * 200}ms infinite` }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-6 w-16 rounded-lg bg-[#1a1a2e]" />
+              <div className="h-4 w-20 rounded bg-[#1a1a2e]" />
+            </div>
+            <div className="h-0.5 rounded-full bg-[#1a1a2e] mb-4" />
+            <div className="h-5 w-3/4 rounded bg-[#1a1a2e] mb-2" />
+            <div className="h-5 w-1/2 rounded bg-[#1a1a2e] mb-4" />
+            <div className="rounded-xl p-3 bg-[#0a0a14]/60 border border-white/5 mb-4 space-y-2">
+              <div className="h-3 w-20 rounded bg-[#1a1a2e]" />
+              <div className="h-4 w-full rounded bg-[#1a1a2e]" />
+              <div className="h-4 w-4/5 rounded bg-[#1a1a2e]" />
+            </div>
+            <div className="h-9 rounded-xl bg-[#1a1a2e]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TypingDots() {
   return (
     <div className="flex items-center gap-1.5 px-4 py-3">
@@ -161,7 +193,7 @@ function MessageBubble({ msg }: { msg: Message }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        {msg.streaming && !msg.content ? (
+        {msg.streaming && !msg.content && !msg.generatingIdeas ? (
           <div className="rounded-2xl rounded-tl-sm bg-[#0f0f1e] border border-[#1a1a2e] w-fit">
             <TypingDots />
           </div>
@@ -172,6 +204,9 @@ function MessageBubble({ msg }: { msg: Message }) {
                 {msg.content}
               </div>
             )}
+
+            {/* Skeleton enquanto ideias são geradas */}
+            {msg.generatingIdeas && !msg.ideas && <IdeasSkeleton />}
 
             {/* Ideas board */}
             {msg.ideas && msg.ideas.length > 0 && (
@@ -282,9 +317,20 @@ export default function TemasPage() {
             if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
               raw += parsed.delta.text
               const { text, ideas } = parseIdeas(raw)
+              const hasStartedIdeas = raw.includes('```ideas')
+              // Esconde o JSON parcial — mostra só o texto antes do bloco
+              const displayText = hasStartedIdeas && !ideas
+                ? raw.slice(0, raw.indexOf('```ideas')).trim()
+                : text
               setMessages(prev => {
                 const updated = [...prev]
-                updated[placeholderIdx] = { role: 'assistant', content: text, ideas: ideas ?? undefined, streaming: true }
+                updated[placeholderIdx] = {
+                  role: 'assistant',
+                  content: displayText,
+                  ideas: ideas ?? undefined,
+                  streaming: true,
+                  generatingIdeas: hasStartedIdeas && !ideas,
+                }
                 return updated
               })
             }
