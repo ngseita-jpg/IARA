@@ -22,6 +22,9 @@ export type Slide = {
   arquetipo?: string
   eyebrow?: string
   handle?: string
+  // Dados da análise visual — usados pelo renderer para object-position e fallback de arquétipo
+  foto_foco?: 'topo' | 'centro' | 'base' | 'esquerda' | 'direita' | 'distribuido'
+  foto_tem_rosto?: boolean
 }
 
 export type CarrosselData = {
@@ -142,9 +145,9 @@ export async function POST(req: NextRequest) {
   const conteudo = conteudoRaw && conteudoRaw.length > 50000 ? conteudoRaw.slice(0, 50000) : conteudoRaw
   const instrucoes = body.instrucoes as string | undefined
   const num_imagens = typeof body.num_imagens === 'number' ? body.num_imagens : 0
-  // Garante que o número de slides nunca seja menor que o número de imagens enviadas
   const num_slides_solicitado = typeof body.num_slides === 'number' ? body.num_slides : 6
-  const num_slides = Math.max(num_slides_solicitado, num_imagens)
+  // +1 porque o slide de encerramento (closing/brand_promo) nunca usa foto
+  const num_slides = Math.max(num_slides_solicitado, num_imagens > 0 ? num_imagens + 1 : 0)
   const historico = body.historico as Anthropic.MessageParam[] | undefined
   const modo = (body.modo as string | undefined) ?? 'criador'
   const plataforma = (body.plataforma as string | undefined) ?? 'instagram'
@@ -231,6 +234,45 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
 
     if (!carrossel?.slides?.length) {
       return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })
+    }
+
+    // Post-processamento: garantir que todas as imagens sejam usadas
+    if (num_imagens > 0) {
+      const usados = new Set(
+        carrossel.slides
+          .filter(s => s.imagem_index !== undefined)
+          .map(s => s.imagem_index!)
+      )
+
+      const faltando = Array.from({ length: num_imagens }, (_, i) => i).filter(i => !usados.has(i))
+
+      if (faltando.length > 0) {
+        // Candidatos: slides que reutilizam índice OU têm quote no meio do carrossel
+        const candidatos = carrossel.slides.filter(s =>
+          s.tipo !== 'encerramento' &&
+          (s.arquetipo === 'quote' ||
+            (s.imagem_index !== undefined &&
+              carrossel.slides.filter(s2 => s2.imagem_index === s.imagem_index).length > 1))
+        )
+
+        for (let i = 0; i < faltando.length && i < candidatos.length; i++) {
+          const slide = candidatos[i]
+          slide.imagem_index = faltando[i]
+          if (slide.arquetipo === 'quote') slide.arquetipo = 'full_bleed'
+        }
+      }
+
+      // Enriquece cada slide com dados de análise visual da foto atribuída
+      if (analise_imagens?.length) {
+        carrossel.slides.forEach(slide => {
+          if (slide.imagem_index === undefined) return
+          const analise = analise_imagens.find(a => a.index === slide.imagem_index)
+          if (analise) {
+            slide.foto_foco = analise.posicao_foco
+            slide.foto_tem_rosto = analise.tem_rosto
+          }
+        })
+      }
     }
 
     const planoAtual = ((perfil?.plano as string) ?? 'free')

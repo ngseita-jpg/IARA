@@ -109,9 +109,19 @@ function Watermark() {
   )
 }
 
-function Photo({ src }: { src: string }) {
+function fotoObjectPosition(foco?: string): string {
+  switch (foco) {
+    case 'topo':     return 'center top'
+    case 'base':     return 'center bottom'
+    case 'esquerda': return 'left center'
+    case 'direita':  return 'right center'
+    default:         return 'center center'
+  }
+}
+
+function Photo({ src, foco }: { src: string; foco?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+  return <img src={src} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: fotoObjectPosition(foco) }} />
 }
 
 // ─── Archetype 1: cover_full ──────────────────────────────────────────────────
@@ -122,7 +132,7 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Background */}
       {imgSrc
-        ? <Photo src={imgSrc} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim topo */}
@@ -194,7 +204,7 @@ function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
       {/* Coluna direita — foto ou gradiente */}
       <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.35) 100%)', display: 'flex' }} />
         }
         <div style={{ position: 'absolute', top: 0, left: 0, width: 4, bottom: 0, backgroundImage: GRAD_H, display: 'flex' }} />
@@ -213,7 +223,7 @@ function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) 
       {/* Metade inferior — foto ou gradiente */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 520, bottom: 0, display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, #1a1a2e 0%, rgba(168,85,247,0.40) 100%)', display: 'flex' }} />
         }
         {/* Fade topo para bg */}
@@ -255,7 +265,7 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Background */}
       {imgSrc
-        ? <Photo src={imgSrc} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim base para texto */}
@@ -298,7 +308,7 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
       {/* Background */}
       {imgSrc
-        ? <Photo src={imgSrc} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }} />
       }
       {/* Overlay escuro */}
@@ -391,7 +401,7 @@ function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: numbe
   const fs   = text.length > 30 ? 88 : 112
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }}>
-      {imgSrc && <Photo src={imgSrc} />}
+      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
       {imgSrc && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.80) 0%, rgba(19,19,31,0) 35%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.90) 100%)', display: 'flex' }} />
       )}
@@ -429,7 +439,7 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
       {imgSrc
-        ? <Photo src={imgSrc} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.30) 100%)', display: 'flex' }} />
       }
       {/* Scrim esquerdo */}
@@ -537,12 +547,24 @@ function renderFallback(slide: Slide, total: number) {
 const CYCLE      = ['split_v', 'top_text', 'full_bleed', 'quote'] as const
 const CYCLE_NOIMG = ['top_text', 'quote', 'split_v', 'full_bleed'] as const
 
+// Arquétipos que sobrepõem texto no centro/base da foto (risco de cobrir rosto)
+const ARCHS_RISCO_ROSTO = new Set(['cover_full', 'full_bleed', 'brand_cover'])
+
 function resolveArq(slide: Slide, hasBg: boolean, modo: string): string {
-  if (slide.arquetipo) return slide.arquetipo
-  if (slide.tipo === 'capa') return modo === 'marca' ? 'brand_cover' : 'cover_full'
-  if (slide.tipo === 'encerramento') return modo === 'marca' ? 'brand_promo' : 'closing'
-  const idx = (slide.ordem - 2 + 400) % 4
-  return (hasBg ? CYCLE : CYCLE_NOIMG)[idx]
+  let arq = slide.arquetipo
+  if (!arq) {
+    if (slide.tipo === 'capa') arq = modo === 'marca' ? 'brand_cover' : 'cover_full'
+    else if (slide.tipo === 'encerramento') arq = modo === 'marca' ? 'brand_promo' : 'closing'
+    else {
+      const idx = (slide.ordem - 2 + 400) % 4
+      arq = (hasBg ? CYCLE : CYCLE_NOIMG)[idx]
+    }
+  }
+  // Fallback de segurança: rosto no centro + arquétipo de risco → split_v (texto à esquerda, foto à direita)
+  if (slide.foto_tem_rosto && slide.foto_foco === 'centro' && ARCHS_RISCO_ROSTO.has(arq)) {
+    arq = modo === 'marca' ? 'brand_story' : 'split_v'
+  }
+  return arq
 }
 
 // ─── POST ─────────────────────────────────────────────────────────────────────
