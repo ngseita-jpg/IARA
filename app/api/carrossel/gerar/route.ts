@@ -74,12 +74,20 @@ ${isMarca ? `
 - brand_story: story da marca — título grande à esquerda, texto à direita, foto como background
 - brand_promo: encerramento/promoção — gradiente, título, corpo e CTA com botão
 ` : `
-- cover_full: capa — foto full-bleed, título na base com scrim escuro. Texto NÃO cobre rostos no topo
-- split_v: split vertical — texto à esquerda (40%), foto à direita (60%). Sempre seguro para rostos
-- top_text: título e texto na metade SUPERIOR, foto na metade inferior. Texto NÃO cobre rostos no centro/base
-- full_bleed: foto preenche tudo, texto na BASE com scrim. Evite se há rosto no centro/base
-- quote: citação tipográfica — overlay escuro, aspas grandes, texto centralizado. Sempre seguro
-- closing: encerramento — sem foto, gradiente, CTA central e handle em destaque
+- cover_full: capa clássica — foto full-bleed, título grande na base com scrim escuro
+- split_v: split vertical — texto à esquerda (40%), foto à direita (60%). Seguro para rostos
+- top_text: texto na metade superior, foto na metade inferior. Seguro para rostos no centro/base
+- full_bleed: foto preenche tudo, texto no centro-base com scrim
+- quote: citação tipográfica — overlay escuro, aspas gigantes, texto centralizado
+- closing: encerramento — sem foto, gradiente dark, CTA central e handle
+- editorial: painel branco à esquerda (estética revista/luxo), foto à direita — visual clean e premium
+- cinematic: estilo cinema — foto na faixa central, barras pretas topo e base com texto. Visual impactante
+- caption_bar: foto ocupa 65% superior, barra escura com texto na base — estilo feed moderno
+- inset_photo: foto emoldurada com margens visíveis — design de card premium, não full-bleed
+- warm_overlay: overlay âmbar/quente sobre a foto — clima lifestyle, humano, orgânico
+- bold_type: tipografia enorme dominante (fonte gigante), foto como textura de fundo sutil
+- side_right: foto à esquerda (55%), painel de texto à direita — inverso do split_v
+- neon_card: card centralizado com borda luminosa, foto no fundo com overlay forte — visual tech/premium
 `}
 
 ## Regras de arquétipo e foto
