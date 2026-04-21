@@ -27,7 +27,9 @@ import {
   Images,
   Pencil,
   Check,
+  Wand2,
 } from 'lucide-react'
+import type { RefinamentoResponse } from '@/app/api/carrossel/refinar/route'
 import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
@@ -53,7 +55,7 @@ function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<str
   })
 }
 
-type Step = 'conteudo' | 'imagens' | 'config' | 'preview'
+type Step = 'conteudo' | 'imagens' | 'config' | 'refinar' | 'preview'
 
 type MensagemChat = {
   role: 'user' | 'assistant'
@@ -111,6 +113,12 @@ export default function CarrosselPage() {
   const [bancoAberto, setBancoAberto] = useState(false)
   const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>('inter')
   const [incluirEncerramento, setIncluirEncerramento] = useState(true)
+
+  // Step refinar
+  const [refinamento, setRefinamento] = useState<RefinamentoResponse | null>(null)
+  const [refinandoLoading, setRefinandoLoading] = useState(false)
+  const [anguloSelecionado, setAnguloSelecionado] = useState<number | null>(null)
+  const [respostasPerguntas, setRespostasPerguntas] = useState<(string | null)[]>([null, null])
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
@@ -201,6 +209,43 @@ export default function CarrosselPage() {
   }
 
   // ───────────────────────────────────────────
+  // Step refinar: pede análise ao Haiku
+  // ───────────────────────────────────────────
+  async function handleRefinar() {
+    setRefinandoLoading(true)
+    setRefinamento(null)
+    setAnguloSelecionado(null)
+    setRespostasPerguntas([null, null])
+    const conteudo = modoConteudo === 'url'
+      ? (leitura?.conteudo || textoManual || url)
+      : textoManual
+    try {
+      const res = await fetch('/api/carrossel/refinar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conteudo, num_slides: numSlides, modo, plataforma, num_imagens: imagens.length }),
+      })
+      const data = await res.json()
+      if (res.ok) setRefinamento(data)
+    } catch { /* falha silenciosa — usuário pode pular */ }
+    finally { setRefinandoLoading(false) }
+  }
+
+  function buildInstrucoesRefinadas(): string {
+    const partes: string[] = []
+    if (instrucoes.trim()) partes.push(instrucoes.trim())
+    if (refinamento && anguloSelecionado !== null) {
+      const angulo = refinamento.angulos[anguloSelecionado]
+      partes.push(`Ângulo editorial: "${angulo.titulo}" — ${angulo.descricao}`)
+    }
+    refinamento?.perguntas.forEach((p, i) => {
+      const r = respostasPerguntas[i]
+      if (r) partes.push(`${p.pergunta}: ${r}`)
+    })
+    return partes.join('. ')
+  }
+
+  // ───────────────────────────────────────────
   // Step 4: gerar carrossel
   // ───────────────────────────────────────────
   async function handleGerar() {
@@ -219,7 +264,7 @@ export default function CarrosselPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conteudo,
-          instrucoes,
+          instrucoes: buildInstrucoesRefinadas(),
           num_slides: Math.max(numSlides, imagens.length),
           num_imagens: imagens.length,
           analise_imagens: analiseImagens.length ? analiseImagens : undefined,
@@ -437,9 +482,9 @@ export default function CarrosselPage() {
   // ───────────────────────────────────────────
   // Navegação entre steps
   // ───────────────────────────────────────────
-  const steps: Step[] = ['conteudo', 'imagens', 'config', 'preview']
-  const stepLabels = ['Conteúdo', 'Imagens', 'Configurar', 'Gerar']
-  const stepIcons = [FileText, ImageIcon, Sliders, Sparkles]
+  const steps: Step[] = ['conteudo', 'imagens', 'config', 'refinar', 'preview']
+  const stepLabels = ['Conteúdo', 'Imagens', 'Configurar', 'Refinar', 'Gerar']
+  const stepIcons = [FileText, ImageIcon, Sliders, Wand2, Sparkles]
   const currentStepIdx = steps.indexOf(step)
 
   function podeProsseguir() {
@@ -985,18 +1030,164 @@ export default function CarrosselPage() {
                 Voltar
               </button>
               <button
-                onClick={() => { setStep('preview'); handleGerar() }}
+                onClick={() => { setStep('refinar'); handleRefinar() }}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-iara-600 to-accent-purple hover:opacity-90 text-white text-sm font-medium transition-all shadow-lg shadow-iara-900/30"
               >
-                <Sparkles className="w-4 h-4" />
-                Gerar carrossel
+                <Wand2 className="w-4 h-4" />
+                Refinar brief
               </button>
             </div>
           </div>
         )}
 
         {/* ═══════════════════════════════════ */}
-        {/* STEP 4: PREVIEW */}
+        {/* STEP 4: REFINAR */}
+        {/* ═══════════════════════════════════ */}
+        {step === 'refinar' && (
+          <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[#f1f1f8]">Refinar o brief</h2>
+                <p className="text-sm text-[#6b6b8a] mt-0.5">
+                  A Iara analisou seu conteúdo. Escolha o ângulo e responda 2 perguntas — leva 30 segundos e muda tudo.
+                </p>
+              </div>
+              <button
+                onClick={() => { setStep('preview'); handleGerar() }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-xs font-medium transition-all flex-shrink-0"
+              >
+                Pular e gerar assim
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Loading */}
+            {refinandoLoading && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-10 h-10 rounded-xl bg-iara-600/20 flex items-center justify-center">
+                  <Wand2 className="w-5 h-5 text-iara-400 animate-pulse" />
+                </div>
+                <p className="text-sm text-[#6b6b8a]">Iara analisando seu conteúdo...</p>
+              </div>
+            )}
+
+            {/* Resultado */}
+            {!refinandoLoading && refinamento && (
+              <div className="space-y-6">
+
+                {/* Análise */}
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-iara-900/20 border border-iara-700/30">
+                  <Sparkles className="w-4 h-4 text-iara-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-iara-200">{refinamento.analise}</p>
+                </div>
+
+                {/* Ângulos */}
+                <div>
+                  <p className="text-xs font-semibold text-[#9b9bb5] uppercase tracking-wider mb-3">
+                    Escolha o ângulo editorial
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {refinamento.angulos.map((a, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setAnguloSelecionado(i === anguloSelecionado ? null : i)}
+                        className={`p-4 rounded-xl border text-left transition-all ${
+                          anguloSelecionado === i
+                            ? 'border-iara-500 bg-iara-600/20'
+                            : 'border-[#1a1a2e] bg-[#0f0f20] hover:border-iara-700/40'
+                        }`}
+                      >
+                        <div className="text-2xl mb-2">{a.emoji}</div>
+                        <p className={`text-sm font-semibold mb-1 ${anguloSelecionado === i ? 'text-iara-200' : 'text-[#c1c1d8]'}`}>
+                          {a.titulo}
+                        </p>
+                        <p className="text-xs text-[#6b6b8a] leading-relaxed">{a.descricao}</p>
+                        {anguloSelecionado === i && (
+                          <div className="mt-2 flex items-center gap-1 text-iara-400">
+                            <Check className="w-3 h-3" />
+                            <span className="text-[11px] font-medium">Selecionado</span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Perguntas */}
+                <div className="space-y-5">
+                  <p className="text-xs font-semibold text-[#9b9bb5] uppercase tracking-wider">
+                    2 perguntas rápidas
+                  </p>
+                  {refinamento.perguntas.map((p, i) => (
+                    <div key={i} className="space-y-2">
+                      <p className="text-sm font-medium text-[#c1c1d8]">{p.pergunta}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {p.sugestoes.map((s, j) => (
+                          <button
+                            key={j}
+                            onClick={() => setRespostasPerguntas(prev => {
+                              const nova = [...prev]
+                              nova[i] = nova[i] === s ? null : s
+                              return nova
+                            })}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                              respostasPerguntas[i] === s
+                                ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                                : 'border-[#1a1a2e] bg-[#0a0a14] text-[#9b9bb5] hover:border-iara-700/40 hover:text-[#c1c1d8]'
+                            }`}
+                          >
+                            {respostasPerguntas[i] === s && <span className="mr-1">✓</span>}
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Preview do brief */}
+                {(anguloSelecionado !== null || respostasPerguntas.some(r => r)) && (
+                  <div className="p-4 rounded-xl bg-[#0a0a14] border border-[#1a1a2e]">
+                    <p className="text-[10px] font-semibold text-[#4a4a6a] uppercase tracking-wider mb-2">Brief que será enviado à IA</p>
+                    <p className="text-xs text-[#9b9bb5] leading-relaxed">{buildInstrucoesRefinadas()}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Fallback se refinar falhou */}
+            {!refinandoLoading && !refinamento && (
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <AlertCircle className="w-6 h-6 text-[#4a4a6a]" />
+                <p className="text-sm text-[#6b6b8a]">Não foi possível analisar o conteúdo.</p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#1a1a2e]">
+              <button
+                onClick={() => setStep('config')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Voltar
+              </button>
+              <button
+                onClick={() => { setStep('preview'); handleGerar() }}
+                disabled={refinandoLoading}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-iara-600 to-accent-purple hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all shadow-lg shadow-iara-900/30"
+              >
+                <Sparkles className="w-4 h-4" />
+                {anguloSelecionado !== null || respostasPerguntas.some(r => r)
+                  ? 'Gerar com esse brief'
+                  : 'Gerar carrossel'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════ */}
+        {/* STEP 5: PREVIEW */}
         {/* ═══════════════════════════════════ */}
         {step === 'preview' && (
           <div className="space-y-6">
