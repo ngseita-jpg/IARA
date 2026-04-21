@@ -6,18 +6,28 @@ import type React from 'react'
 import type { Slide } from '../gerar/route'
 
 // ─── Font ─────────────────────────────────────────────────────────────────────
-let _fontCache: ArrayBuffer | null = null
-async function loadFont(reqUrl: string): Promise<ArrayBuffer | null> {
-  if (_fontCache) return _fontCache
+const _fontCaches: Record<string, ArrayBuffer> = {}
+
+async function loadFont(reqUrl: string, fonte?: string): Promise<ArrayBuffer | null> {
+  const key = fonte || 'inter'
+  if (_fontCaches[key]) return _fontCaches[key]
+
+  const fileName = fonte === 'oswald' ? 'oswald-bold.woff2'
+    : fonte === 'playfair' ? 'playfair-bold.woff2'
+    : 'inter-bold.ttf'
+
   try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'inter-bold.ttf'))
-    _fontCache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
-    return _fontCache
+    const buf = readFileSync(join(process.cwd(), 'public', fileName))
+    _fontCaches[key] = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+    return _fontCaches[key]
   } catch {}
   try {
     const origin = new URL(reqUrl).origin
-    const res = await fetch(`${origin}/inter-bold.ttf`)
-    if (res.ok) { _fontCache = await res.arrayBuffer(); return _fontCache }
+    const res = await fetch(`${origin}/${fileName}`)
+    if (res.ok) {
+      _fontCaches[key] = await res.arrayBuffer()
+      return _fontCaches[key]
+    }
   } catch {}
   return null
 }
@@ -1351,9 +1361,11 @@ export async function POST(req: NextRequest) {
     const show_wm: boolean = body.show_watermark === true
     const modo: string = body.modo || 'criador'
 
-    const fontData = await loadFont(req.url)
+    const fonte = (body.fonte as string | undefined) || 'inter'
+    const fontData = await loadFont(req.url, fonte)
+    const fontFamilyName = fonte === 'oswald' ? 'Oswald' : fonte === 'playfair' ? 'Playfair' : 'Inter'
     const fonts = fontData
-      ? [{ name: 'Inter', data: fontData, weight: 700 as const, style: 'normal' as const }]
+      ? [{ name: fontFamilyName, data: fontData, weight: 700 as const, style: 'normal' as const }]
       : []
 
     const imgSrc = prepImg(body.imagem_base64 as string | undefined)

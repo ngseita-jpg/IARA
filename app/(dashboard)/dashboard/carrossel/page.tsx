@@ -109,6 +109,7 @@ export default function CarrosselPage() {
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
   const [bancoAberto, setBancoAberto] = useState(false)
+  const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>('inter')
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
@@ -265,7 +266,7 @@ export default function CarrosselPage() {
 
     // Usa imagem_index da IA; se não veio e temos imagens, distribui round-robin
     // Só closing e brand_promo não usam foto — todo o resto usa se tiver imagem_index
-    const ARCHS_SEM_IMAGEM = new Set(['closing', 'brand_promo'])
+    const ARCHS_SEM_IMAGEM = new Set(['brand_promo'])
     const arquetipo = slide.arquetipo ?? ''
     const usarImagem = imagens.length > 0 && !ARCHS_SEM_IMAGEM.has(arquetipo)
     const imgIdx = slide.imagem_index !== undefined ? slide.imagem_index : (usarImagem ? (slide.ordem - 1) % imagens.length : -1)
@@ -284,6 +285,7 @@ export default function CarrosselPage() {
           total_slides: c.slides.length,
           show_watermark: showWatermark,
           modo,
+          fonte: fonteCarrossel,
         }),
       })
 
@@ -985,6 +987,28 @@ export default function CarrosselPage() {
             {/* Grid de slides */}
             {carrossel && !gerando && (
               <>
+                {/* Seletor de fonte */}
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
+                  <span className="text-xs font-medium text-[#6b6b8a] uppercase tracking-wider">Fonte</span>
+                  {([
+                    { id: 'inter',    label: 'Moderna',   desc: 'Inter' },
+                    { id: 'oswald',   label: 'Impacto',   desc: 'Oswald' },
+                    { id: 'playfair', label: 'Editorial', desc: 'Playfair' },
+                  ] as const).map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => { setFonteCarrossel(f.id); carrossel && renderizarTodos(carrossel) }}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                        fonteCarrossel === f.id
+                          ? 'border-iara-500 bg-iara-600/20 text-iara-300'
+                          : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-iara-700/40 hover:text-[#9b9bb5]'
+                      }`}
+                    >
+                      {f.label} <span className="opacity-50 font-normal">{f.desc}</span>
+                    </button>
+                  ))}
+                </div>
+
                 {/* Header com raciocínio + download all */}
                 <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#0f0f20] border border-iara-700/20">
                   <div className="flex-1">
@@ -1272,12 +1296,21 @@ export default function CarrosselPage() {
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'cover_full',  label: 'Foto cheia',        desc: 'Foto preenche tudo' },
-                    { id: 'split_v',     label: 'Lado a lado',       desc: 'Texto + foto' },
-                    { id: 'top_text',    label: 'Texto em cima',     desc: 'Texto acima da foto' },
-                    { id: 'full_bleed',  label: 'Foco na foto',      desc: 'Texto no canto' },
-                    { id: 'quote',       label: 'Citação',           desc: 'Frase em destaque' },
-                    { id: 'closing',     label: 'Encerramento',      desc: 'CTA e assinatura' },
+                    { id: 'cover_full',    label: 'Foto cheia',      desc: 'Foto preenche tudo' },
+                    { id: 'split_v',       label: 'Lado a lado',     desc: 'Texto esq + foto dir' },
+                    { id: 'side_right',    label: 'Lado invertido',  desc: 'Foto esq + texto dir' },
+                    { id: 'caption_bar',   label: 'Legenda',         desc: 'Foto 65% + barra texto' },
+                    { id: 'editorial',     label: 'Editorial',       desc: 'Painel branco + foto' },
+                    { id: 'cinematic',     label: 'Cinema',          desc: 'Estilo letterbox' },
+                    { id: 'photo_top_full',label: 'Foto grande',     desc: 'Foto 75% + texto' },
+                    { id: 'inset_photo',   label: 'Moldura',         desc: 'Foto com margens' },
+                    { id: 'magazine_full', label: 'Revista',         desc: 'Card sobre foto' },
+                    { id: 'photo_frame',   label: 'Polaroid',        desc: 'Estilo foto antiga' },
+                    { id: 'quote',         label: 'Citação',         desc: 'Frase em destaque' },
+                    { id: 'highlight_box', label: 'Destaque',        desc: 'Número/dado em foco' },
+                    { id: 'list_card',     label: 'Lista',           desc: 'Itens numerados' },
+                    { id: 'minimal_text',  label: 'Mínimo',          desc: 'Só tipografia' },
+                    { id: 'closing',       label: 'Encerramento',    desc: 'CTA + foto de fundo' },
                   ].map(op => (
                     <button
                       key={op.id}
