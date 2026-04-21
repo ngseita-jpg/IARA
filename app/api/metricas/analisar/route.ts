@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { joinArr } from '@/lib/parseArr'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
 PERFIL DO CRIADOR:
 - Nome/Marca: ${profile.nome_artistico ?? 'não informado'}
 - Nicho: ${profile.nicho ?? 'não informado'}
-- Tom de voz: ${profile.tom_de_voz ?? 'não informado'}
+- Tom de voz: ${joinArr(profile.tom_de_voz) || 'não informado'}
 - Objetivo: ${(() => { try { const r = JSON.parse(profile.objetivo||''); return Array.isArray(r) ? r.join(', ') : profile.objetivo } catch { return profile.objetivo } })()||'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Perfil vocal: ${profile.voz_perfil}` : ''}

@@ -256,7 +256,7 @@ export default function PerfilPage() {
             formatos:           data.formatos           ?? [],
             frequencia:         data.frequencia         ?? '',
             conteudo_marcante:  data.conteudo_marcante  ?? '',
-            tom_de_voz:         data.tom_de_voz         ?? '',
+            tom_de_voz:         parseStrArr(data.tom_de_voz).join(', '),
             diferencial:        data.diferencial        ?? '',
             inspiracoes:        data.inspiracoes        ?? '',
             objetivos:          parseStrArr(data.objetivo),
@@ -280,10 +280,17 @@ export default function PerfilPage() {
 
   async function saveProfile() {
     setSaving(true)
+    // tom_de_voz internamente é CSV ("Descontraído, Educativo") mas é salvo como JSON
+    // pra manter compatibilidade com o onboarding novo e os consumers que usam parseArr
+    const tomArr = profile.tom_de_voz ? profile.tom_de_voz.split(',').map(s => s.trim()).filter(Boolean) : []
+    const payload = {
+      ...profile,
+      tom_de_voz: tomArr.length ? JSON.stringify(tomArr) : '',
+    }
     await fetch('/api/perfil', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile),
+      body: JSON.stringify(payload),
     })
     setSaving(false)
   }

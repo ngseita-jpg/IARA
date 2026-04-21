@@ -74,8 +74,12 @@ export default function MarcaOnboardingPage() {
   // Step 1
   const [nomeEmpresa, setNomeEmpresa] = useState('')
   const [cnpj, setCnpj] = useState('')
-  const [segmento, setSegmento] = useState('')
+  const [segmentos, setSegmentos] = useState<string[]>([])
   const [porte, setPorte] = useState('')
+
+  function toggleSegmento(v: string) {
+    setSegmentos(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
+  }
 
   // Step 2
   const [site, setSite] = useState('')
@@ -100,7 +104,7 @@ export default function MarcaOnboardingPage() {
   }
 
   function canAdvance() {
-    if (step === 0) return nomeEmpresa.trim() && segmento && porte
+    if (step === 0) return nomeEmpresa.trim() && segmentos.length > 0 && porte
     if (step === 1) return true
     if (step === 2) return nichosInteresse.length > 0 && plataformasFoco.length > 0 && orcamentoMedio
     return false
@@ -109,30 +113,53 @@ export default function MarcaOnboardingPage() {
   async function handleFinish() {
     setLoading(true)
     setError(null)
-    try {
-      const res = await fetch('/api/marca/perfil', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome_empresa: nomeEmpresa.trim(),
-          cnpj: cnpj.trim() || null,
-          segmento,
-          porte,
-          site: site.trim() || null,
-          instagram: instagram.trim() || null,
-          sobre: sobre.trim() || null,
-          nichos_interesse: nichosInteresse,
-          plataformas_foco: plataformasFoco,
-          orcamento_medio: orcamentoMedio,
-          onboarding_completo: true,
-        }),
-      })
-      if (!res.ok) throw new Error('Erro ao salvar perfil')
-      router.push('/marca/dashboard')
-    } catch {
-      setError('Erro ao salvar. Tente novamente.')
-      setLoading(false)
+
+    const body = JSON.stringify({
+      nome_empresa: nomeEmpresa.trim(),
+      cnpj: cnpj.trim() || null,
+      segmento: JSON.stringify(segmentos),
+      porte,
+      site: site.trim() || null,
+      instagram: instagram.trim() || null,
+      sobre: sobre.trim() || null,
+      nichos_interesse: nichosInteresse,
+      plataformas_foco: plataformasFoco,
+      orcamento_medio: orcamentoMedio,
+      onboarding_completo: true,
+    })
+
+    const tentar = async (): Promise<{ ok: true } | { ok: false; msg: string }> => {
+      try {
+        const res = await fetch('/api/marca/perfil', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          return { ok: false, msg: data.error || `HTTP ${res.status}` }
+        }
+        return { ok: true }
+      } catch (e) {
+        return { ok: false, msg: e instanceof Error ? e.message : 'rede indisponível' }
+      }
     }
+
+    for (let i = 0; i < 3; i++) {
+      const r = await tentar()
+      if (r.ok) {
+        await new Promise(res => setTimeout(res, 250))
+        router.push('/marca/dashboard')
+        return
+      }
+      console.error(`[marca/onboarding] tentativa ${i + 1} falhou:`, r.msg)
+      if (i < 2) {
+        await new Promise(res => setTimeout(res, 1000 * (i + 1)))
+      } else {
+        setError(`Erro ao salvar. Tente novamente. (${r.msg})`)
+      }
+    }
+    setLoading(false)
   }
 
   return (
@@ -207,16 +234,16 @@ export default function MarcaOnboardingPage() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-3">
-                  Segmento *
+                  Segmento * <span className="normal-case font-normal text-[#4a4a6a]">(pode marcar mais de um)</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {SEGMENTOS.map(s => (
                     <button
                       key={s.value}
                       type="button"
-                      onClick={() => setSegmento(s.value)}
+                      onClick={() => toggleSegmento(s.value)}
                       className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl text-xs font-medium transition-all border ${
-                        segmento === s.value
+                        segmentos.includes(s.value)
                           ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
                           : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-iara-900/50 hover:text-[#9b9bb5]'
                       }`}

@@ -44,7 +44,7 @@ CRIAÇÃO:
 ${p.conteudo_marcante ? `- Conteúdo que bombou (nas palavras dele): "${p.conteudo_marcante}"` : ''}
 
 ESTILO E VOZ:
-- Tom de voz: ${p.tom_de_voz ?? 'não informado'}
+- Tom de voz: ${parseArr(p.tom_de_voz) || 'não informado'}
 - Diferencial único: ${p.diferencial ?? 'não informado'}
 ${p.inspiracoes ? `- Inspirações: ${p.inspiracoes}` : ''}
 

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { joinArr } from '@/lib/parseArr'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -110,7 +111,7 @@ Nome/Como se apresenta: ${profile.nome_artistico || 'Não informado'}
 Nicho: ${profile.nicho || 'Não informado'}
 Plataformas principais: ${profile.plataformas?.join(', ') || 'Não informado'}
 Objetivo principal: ${(() => { try { const r = JSON.parse(profile.objetivo||''); return Array.isArray(r) ? r.join(', ') : profile.objetivo } catch { return profile.objetivo } })()||'Não informado'}
-Tom de voz e estilo: ${profile.tom_de_voz || 'Não informado'}
+Tom de voz e estilo: ${joinArr(profile.tom_de_voz) || 'Não informado'}
 Sobre o criador: ${profile.sobre || 'Não informado'}
 ${profile.voz_perfil ? `Perfil vocal (analisado por IA): ${profile.voz_perfil}` : ''}
 

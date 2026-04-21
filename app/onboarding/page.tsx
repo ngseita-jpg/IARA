@@ -59,8 +59,9 @@ export default function OnboardingPage() {
   const [nomeArtistico, setNomeArtistico] = useState('')
   const [nichos, setNichos] = useState<string[]>([])
   const [plataformas, setPlataformas] = useState<string[]>([])
-  const [tomDeVoz, setTomDeVoz] = useState('')
+  const [tomDeVoz, setTomDeVoz] = useState<string[]>([])
   const [objetivos, setObjetivos] = useState<string[]>([])
+  const [erroMsg, setErroMsg] = useState<string | null>(null)
 
   function toggleNicho(n: string) {
     setNichos(prev => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n])
@@ -73,25 +74,58 @@ export default function OnboardingPage() {
   function podeProsseguir() {
     if (step === 1) return nomeArtistico.trim().length > 0
     if (step === 2) return nichos.length > 0 && plataformas.length > 0
-    if (step === 3) return !!tomDeVoz && objetivos.length > 0
+    if (step === 3) return tomDeVoz.length > 0 && objetivos.length > 0
     return true
   }
 
   async function handleFinalizar() {
     setSalvando(true)
     setErroSalvar(false)
-    try {
-      const res = await fetch('/api/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome_artistico: nomeArtistico, nicho: nichos.join(', '), plataformas, tom_de_voz: tomDeVoz, objetivo: JSON.stringify(objetivos) }),
-      })
-      if (!res.ok) throw new Error()
-      router.push('/dashboard')
-    } catch {
-      setErroSalvar(true)
-      setSalvando(false)
+    setErroMsg(null)
+
+    const body = JSON.stringify({
+      nome_artistico: nomeArtistico,
+      nicho: nichos.join(', '),
+      plataformas,
+      tom_de_voz: JSON.stringify(tomDeVoz),
+      objetivo: JSON.stringify(objetivos),
+    })
+
+    const tentar = async (): Promise<{ ok: true } | { ok: false; msg: string }> => {
+      try {
+        const res = await fetch('/api/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          return { ok: false, msg: data.error || `HTTP ${res.status}` }
+        }
+        return { ok: true }
+      } catch (e) {
+        return { ok: false, msg: e instanceof Error ? e.message : 'rede indisponível' }
+      }
     }
+
+    // 3 tentativas com backoff (0s, 1s, 2s) — cobre hiccups de rede e latência do Supabase
+    for (let i = 0; i < 3; i++) {
+      const r = await tentar()
+      if (r.ok) {
+        // Pequena pausa pra sessão/cookies propagarem antes do redirect
+        await new Promise(res => setTimeout(res, 250))
+        router.push('/dashboard')
+        return
+      }
+      console.error(`[onboarding] tentativa ${i + 1} falhou:`, r.msg)
+      if (i < 2) {
+        await new Promise(res => setTimeout(res, 1000 * (i + 1)))
+      } else {
+        setErroSalvar(true)
+        setErroMsg(r.msg)
+      }
+    }
+    setSalvando(false)
   }
 
   const stepTitles = ['Seu nome', 'Seu nicho', 'Sua identidade', '']
@@ -235,12 +269,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2.5">Tom de voz *</p>
+                  <p className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider mb-2.5">Tom de voz * <span className="normal-case font-normal text-[#4a4a6a]">(pode marcar mais de um)</span></p>
                   <div className="grid grid-cols-2 gap-2">
                     {TONS.map(t => (
-                      <button key={t.value} onClick={() => setTomDeVoz(t.value)}
+                      <button key={t.value} onClick={() => setTomDeVoz(prev => prev.includes(t.value) ? prev.filter(x => x !== t.value) : [...prev, t.value])}
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-xs font-medium text-left transition-all ${
-                          tomDeVoz === t.value
+                          tomDeVoz.includes(t.value)
                             ? 'bg-iara-600/20 border-iara-500/50 text-iara-300'
                             : 'bg-[#0a0a14] border-[#1a1a2e] text-[#5a5a7a] hover:border-iara-700/40 hover:text-[#9b9bb5]'
                         }`}>
@@ -293,7 +327,7 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-2 gap-2 text-left">
                   {[
                     { label: 'Nicho', value: nichos.join(', ') },
-                    { label: 'Tom de voz', value: tomDeVoz.split(' e ')[0] },
+                    { label: 'Tom de voz', value: tomDeVoz.map(t => t.split(' e ')[0]).join(', ') },
                     { label: 'Plataformas', value: plataformas.slice(0, 3).join(', ') },
                     { label: 'Objetivos', value: objetivos[0]?.split(' ').slice(0, 3).join(' ') + (objetivos.length > 1 ? ` +${objetivos.length - 1}` : '…') },
                   ].map(item => (
@@ -332,7 +366,10 @@ export default function OnboardingPage() {
                   }
                 </button>
                 {erroSalvar && (
-                  <p className="text-xs text-red-400 text-center">Erro ao salvar. Tente novamente.</p>
+                  <div className="text-xs text-red-400 text-center space-y-1">
+                    <p>Erro ao salvar. Tente novamente.</p>
+                    {erroMsg && <p className="text-[10px] text-red-400/60 font-mono">{erroMsg}</p>}
+                  </div>
                 )}
               </div>
               )}

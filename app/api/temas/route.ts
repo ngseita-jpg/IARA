@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { joinArr } from '@/lib/parseArr'
 
 const anthropic = new Anthropic()
 
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .single()
     if (profile?.nicho) {
-      profileNote = `\n\nContexto do perfil: nicho="${profile.nicho}", tom="${profile.tom_de_voz ?? 'não definido'}", plataformas="${profile.plataformas ?? 'não definido'}". Use esse contexto para personalizar as perguntas e ideias.`
+      profileNote = `\n\nContexto do perfil: nicho="${profile.nicho}", tom="${joinArr(profile.tom_de_voz) || 'não definido'}", plataformas="${profile.plataformas ?? 'não definido'}". Use esse contexto para personalizar as perguntas e ideias.`
     }
   }
 

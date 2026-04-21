@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ImagemAnalise } from '../analisar-imagens/route'
+import { joinArr } from '@/lib/parseArr'
 
 export const maxDuration = 60
 
@@ -120,7 +121,7 @@ ${isMarca ? `
 ## Perfil ${isMarca ? 'da marca' : 'do criador'}
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
 Nicho: ${perfil.nicho ?? 'não informado'}
-Tom de voz: ${perfil.tom_de_voz ?? 'não informado'}
+Tom de voz: ${joinArr(perfil.tom_de_voz) || 'não informado'}
 Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use linguagem direta, brasileira e próxima do leitor.'}
 
 ## Formato de saída (JSON puro, sem markdown)

@@ -36,7 +36,6 @@ import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
-import { SlideEditorInline } from '@/components/slide-editor-inline'
 
 function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
   return new Promise((resolve) => {
@@ -123,7 +122,6 @@ export default function CarrosselPage() {
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -356,23 +354,17 @@ export default function CarrosselPage() {
   }
 
   // ───────────────────────────────────────────
-  // Edição manual de slide — aplica em tempo real
+  // Edição manual de slide
   // ───────────────────────────────────────────
-  function handleEditarSlide(novoSlide: Slide) {
-    if (!carrossel) return
-    // Atualiza o slide no carrossel imediatamente (responsivo)
+  function handleAplicarEdicao() {
+    if (!slideEditando || !carrossel) return
     const slidesAtualizados = carrossel.slides.map(s =>
-      s.ordem === novoSlide.ordem ? novoSlide : s
+      s.ordem === slideEditando.ordem ? slideEditando : s
     )
     const carrosselAtualizado = { ...carrossel, slides: slidesAtualizados }
     setCarrossel(carrosselAtualizado)
-    setSlideEditando(novoSlide)
-
-    // Re-render com debounce (evita spam de requisições enquanto digita ou arrasta slider)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      renderizarSlide(novoSlide, carrosselAtualizado)
-    }, 350)
+    renderizarSlide(slideEditando, carrosselAtualizado)
+    setSlideEditando(null)
   }
 
   // ───────────────────────────────────────────

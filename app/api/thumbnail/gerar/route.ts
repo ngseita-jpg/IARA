@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { joinArr } from '@/lib/parseArr'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -107,7 +108,7 @@ Sua função é criar thumbnails ÚNICAS, fiéis ao conteúdo e ao criador, usan
 ## Perfil do criador
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
 Nicho: ${perfil.nicho ?? 'não informado'}
-Tom de voz: ${perfil.tom_de_voz ?? 'não informado'}` : 'Perfil não configurado — otimize para máximo CTR geral.'}
+Tom de voz: ${joinArr(perfil.tom_de_voz) || 'não informado'}` : 'Perfil não configurado — otimize para máximo CTR geral.'}
 
 ## Formato de saída (JSON puro, sem markdown)
 Preencha TODOS os campos obrigatórios. Campos opcionais: omita se não for usar.
