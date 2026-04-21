@@ -16,6 +16,12 @@ import {
   Radio,
   History,
   Trophy,
+  Link as LinkIcon,
+  Type,
+  Newspaper,
+  AlertCircle,
+  CheckCircle,
+  X,
 } from 'lucide-react'
 import Link from 'next/link'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
@@ -81,6 +87,15 @@ export default function RoteirosPage() {
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
+  // Fonte de conteúdo
+  type ModoEntrada = 'url' | 'texto' | 'tema'
+  const [modoEntrada, setModoEntrada] = useState<ModoEntrada>('tema')
+  const [urlConteudo, setUrlConteudo] = useState('')
+  const [textoConteudo, setTextoConteudo] = useState('')
+  const [leitura, setLeitura] = useState<{ titulo: string; conteudo: string; aviso?: string } | null>(null)
+  const [lendo, setLendo] = useState(false)
+  const [erroLeitura, setErroLeitura] = useState<string | null>(null)
+
   // Salva no histórico quando o streaming termina
   const roteiroRef = useRef('')
   useEffect(() => { roteiroRef.current = roteiro }, [roteiro])
@@ -97,9 +112,44 @@ export default function RoteirosPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading])
 
+  async function handleLerUrl() {
+    if (!urlConteudo.trim()) return
+    setLendo(true)
+    setErroLeitura(null)
+    setLeitura(null)
+    try {
+      const res = await fetch('/api/carrossel/ler-conteudo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlConteudo }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao ler URL')
+      setLeitura(data)
+      if (data.titulo && !tema) setTema(data.titulo.slice(0, 120))
+    } catch (e: unknown) {
+      setErroLeitura(e instanceof Error ? e.message : 'Erro ao ler URL')
+    } finally {
+      setLendo(false)
+    }
+  }
+
+  function getConteudoBase(): string | undefined {
+    if (modoEntrada === 'url') return leitura?.conteudo || undefined
+    if (modoEntrada === 'texto') return textoConteudo.trim() || undefined
+    return undefined
+  }
+
+  function podaGerar(): boolean {
+    if (!formato) return false
+    if (modoEntrada === 'url') return !!(leitura?.conteudo || textoConteudo.trim())
+    if (modoEntrada === 'texto') return !!textoConteudo.trim()
+    return !!tema.trim()
+  }
+
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
-    if (!tema.trim() || !formato) return
+    if (!podaGerar()) return
 
     setLoading(true)
     setError(null)
@@ -111,6 +161,7 @@ export default function RoteirosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tema, formato, duracao, estilo, objetivo, modo,
+          conteudo_base: getConteudoBase(),
           inspiracao: inspiracaoVideo
             ? { titulo: inspiracaoVideo.titulo, transcricao: inspiracaoVideo.transcricao }
             : null,
@@ -264,17 +315,110 @@ export default function RoteirosPage() {
           </div>
 
           <form onSubmit={handleGenerate} className="space-y-5">
-            {/* Tema */}
+
+            {/* Fonte de conteúdo */}
+            <div>
+              <label className="iara-label">Fonte do conteúdo</label>
+              <div className="flex gap-1.5 mb-3">
+                {([
+                  { id: 'tema',  icon: <FileText className="w-3.5 h-3.5" />,  label: 'Só o tema' },
+                  { id: 'url',   icon: <LinkIcon className="w-3.5 h-3.5" />,  label: 'Colar link' },
+                  { id: 'texto', icon: <Type className="w-3.5 h-3.5" />,      label: 'Colar texto' },
+                ] as const).map(op => (
+                  <button key={op.id} type="button" onClick={() => setModoEntrada(op.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                      modoEntrada === op.id
+                        ? 'bg-iara-600/20 text-iara-300 border-iara-600/30'
+                        : 'bg-[#0f0f1e] text-[#6b6b8a] border-[#1a1a2e] hover:border-iara-700/30 hover:text-[#9b9bb5]'
+                    }`}>
+                    {op.icon}{op.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* URL */}
+              {modoEntrada === 'url' && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-2 mb-2">
+                    {[
+                      { label: 'YouTube',   icon: <YouTubeIcon size={18} />,   dica: 'Extrai transcrição' },
+                      { label: 'Artigo',    icon: <Newspaper className="w-4 h-4 text-[#9b9bb5]" />, dica: 'Lê o texto' },
+                      { label: 'TikTok',    icon: <TikTokIcon size={18} />,    dica: 'Cole manualmente' },
+                      { label: 'Instagram', icon: <InstagramIcon size={18} />, dica: 'Cole manualmente' },
+                    ].map(p => (
+                      <div key={p.label} className="p-2 rounded-lg bg-[#0a0a14] border border-[#1a1a2e] text-center">
+                        <div className="flex justify-center mb-1">{p.icon}</div>
+                        <p className="text-[10px] font-medium text-[#c1c1d8]">{p.label}</p>
+                        <p className="text-[10px] text-[#4a4a6a]">{p.dica}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input type="text" value={urlConteudo}
+                      onChange={e => { setUrlConteudo(e.target.value); setLeitura(null); setErroLeitura(null) }}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleLerUrl())}
+                      placeholder="https://youtube.com/watch?v=... ou link de artigo"
+                      className="iara-input flex-1"
+                    />
+                    <button type="button" onClick={handleLerUrl} disabled={!urlConteudo.trim() || lendo}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-xs font-medium transition-all flex-shrink-0">
+                      {lendo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                      {lendo ? 'Lendo...' : 'Ler'}
+                    </button>
+                  </div>
+                  {erroLeitura && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-xs">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />{erroLeitura}
+                    </div>
+                  )}
+                  {leitura?.conteudo && (
+                    <div className="p-3 rounded-xl bg-[#0f0f1e] border border-green-700/30">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                        <span className="text-xs font-medium text-green-300">Conteúdo extraído!</span>
+                        <button type="button" onClick={() => { setLeitura(null); setUrlConteudo('') }}
+                          className="ml-auto p-0.5 text-[#4a4a6a] hover:text-red-400 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="text-xs font-medium text-[#f1f1f8] mb-0.5">{leitura.titulo}</p>
+                      <p className="text-[11px] text-[#5a5a7a] line-clamp-2">{leitura.conteudo.slice(0, 200)}...</p>
+                    </div>
+                  )}
+                  {leitura && !leitura.conteudo && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-900/20 border border-yellow-700/30 text-yellow-400 text-xs">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        {leitura.aviso || 'Não foi possível extrair. Cole o conteúdo manualmente abaixo.'}
+                      </div>
+                      <textarea value={textoConteudo} onChange={e => setTextoConteudo(e.target.value)}
+                        placeholder="Cole aqui a transcrição ou texto do conteúdo..."
+                        rows={4} className="iara-input resize-none" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Texto colado */}
+              {modoEntrada === 'texto' && (
+                <textarea value={textoConteudo} onChange={e => setTextoConteudo(e.target.value)}
+                  placeholder="Cole aqui o texto de um artigo, transcrição de vídeo, thread, post... A Iara transforma em roteiro."
+                  rows={6} className="iara-input resize-none" />
+              )}
+            </div>
+
+            {/* Tema — obrigatório no modo 'tema', opcional nos outros */}
             <div>
               <label className="iara-label">
-                Tema do conteúdo <span className="text-red-500">*</span>
+                {modoEntrada === 'tema' ? <>Tema do conteúdo <span className="text-red-500">*</span></> : <>Ângulo / foco <span className="text-[#5a5a7a] font-normal">(opcional)</span></>}
               </label>
               <textarea
-                required
                 value={tema}
                 onChange={(e) => setTema(e.target.value)}
-                placeholder="Ex: 3 erros que impedem iniciantes de emagrecer, como usar IA para produtividade, por que a maioria das startups falha no marketing..."
-                rows={3}
+                placeholder={modoEntrada === 'tema'
+                  ? 'Ex: 3 erros que impedem iniciantes de emagrecer, como usar IA para produtividade...'
+                  : 'Ex: foco nos iniciantes, destacar o erro mais comum, tom mais prático...'}
+                rows={modoEntrada === 'tema' ? 3 : 2}
                 className="iara-input resize-none"
               />
             </div>
@@ -426,7 +570,7 @@ export default function RoteirosPage() {
 
             <button
               type="submit"
-              disabled={loading || !tema.trim() || !formato}
+              disabled={loading || !podaGerar()}
               className="iara-btn-primary w-full py-3 text-base"
             >
               {loading ? (

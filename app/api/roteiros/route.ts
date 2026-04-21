@@ -76,10 +76,16 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { tema, formato, duracao, estilo, objetivo, modo, inspiracao } = body
+  const { tema, formato, duracao, estilo, objetivo, modo, inspiracao, conteudo_base } = body
 
-  if (!tema || !formato) {
-    return new Response(JSON.stringify({ error: 'Tema e formato são obrigatórios' }), {
+  if (!formato) {
+    return new Response(JSON.stringify({ error: 'Formato é obrigatório' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  if (!tema && !conteudo_base) {
+    return new Response(JSON.stringify({ error: 'Informe o tema ou cole um conteúdo base' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     })
@@ -116,9 +122,16 @@ Perfil não configurado — gere um roteiro autêntico e engajador em português
     ? 'Gere 4 hooks alternativos com abordagens distintas para o tema abaixo.'
     : 'Gere um roteiro completo pronto para gravação.'
 
+  const fonteCtx = conteudo_base
+    ? `## Conteúdo base (transforme isso em roteiro — não copie, reinterprete no estilo do criador)
+${conteudo_base.slice(0, 6000)}
+
+${tema ? `Ângulo/foco desejado: ${tema}` : 'Identifique o ângulo mais interessante para o formato escolhido.'}`
+    : `**Tema:** ${tema}`
+
   const userPrompt = `${modoTexto}
 
-**Tema:** ${tema}
+${fonteCtx}
 **Formato:** ${formato}
 **Duração aproximada:** ${duracao || 'Não especificada'}
 **Estilo/tom adicional:** ${estilo || 'Use o perfil do criador como referência'}
