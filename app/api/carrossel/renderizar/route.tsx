@@ -1320,7 +1320,7 @@ function renderStepCard(slide: Slide, _imgSrc: string | undefined, total: number
 // Ciclo para slides COM foto — arquétipos que exibem a foto sem overlay pesado
 const CYCLE_PHOTO = ['split_v','editorial','caption_bar','side_right','cinematic','duo_panel','photo_top_full','story_arc','photo_frame','inset_photo','dark_split','magazine_full'] as const
 // Ciclo para slides SEM foto — arquétipos tipográficos
-const CYCLE_NOIMG = ['top_text','bold_type','list_card','highlight_box','dark_card_center','color_block','step_card','minimal_text','gradient_text','neon_card','quote','gradient_text'] as const
+const CYCLE_NOIMG = ['top_text','bold_type','list_card','highlight_box','dark_card_center','color_block','step_card','minimal_text','gradient_text','neon_card','quote','dark_card_center'] as const
 
 // Arquétipos que sobrepõem texto no centro/base da foto (risco de cobrir rosto)
 const ARCHS_RISCO_ROSTO = new Set(['cover_full', 'full_bleed', 'brand_cover'])
