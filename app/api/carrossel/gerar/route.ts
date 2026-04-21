@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ImagemAnalise } from '../analisar-imagens/route'
 
@@ -143,7 +143,15 @@ Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use l
   "paleta": { "primaria": "#6366f1", "secundaria": "#a855f7", "texto": "#ffffff" },
   "fonte_sugerida": "Inter",
   "raciocinio": "explique brevemente suas escolhas de design e copy"
-}`
+}
+
+## Qualidade do texto — REGRAS OBRIGATÓRIAS
+- Escreva em português brasileiro fluente e natural — zero erros gramaticais
+- Títulos: máximo 8 palavras, diretos, impactantes, sem clichês
+- Corpo: frases curtas (máximo 20 palavras), concretas, acionáveis
+- NUNCA use: "Descubra", "Incrível", "Transforme sua vida", "Você merece", "Dica poderosa"
+- Use linguagem de quem realmente entende do assunto — específico, concreto, direto
+- Cada slide deve ter UMA ideia central, não três mezcladas`
 }
 
 export async function POST(req: NextRequest) {
@@ -169,15 +177,16 @@ export async function POST(req: NextRequest) {
   const instrucoes = body.instrucoes as string | undefined
   const num_imagens = typeof body.num_imagens === 'number' ? body.num_imagens : 0
   const num_slides_solicitado = typeof body.num_slides === 'number' ? body.num_slides : 6
-  // +1 porque o slide de encerramento (closing/brand_promo) nunca usa foto
-  const num_slides = Math.max(num_slides_solicitado, num_imagens > 0 ? num_imagens + 1 : 0)
+  const incluir_encerramento = body.incluir_encerramento !== false // default true
+  const num_slides = Math.max(num_slides_solicitado, num_imagens > 0 && incluir_encerramento ? num_imagens + 1 : num_imagens > 0 ? num_imagens : 0)
   const historico = body.historico as Anthropic.MessageParam[] | undefined
   const modo = (body.modo as string | undefined) ?? 'criador'
   const plataforma = (body.plataforma as string | undefined) ?? 'instagram'
   const analise_imagens = body.analise_imagens as ImagemAnalise[] | undefined
 
   console.log('[carrossel/gerar] step 4: perfil query')
-  const { data: perfil, error: perfilErr } = await supabase
+  const adminClient = createAdminClient()
+  const { data: perfil, error: perfilErr } = await adminClient
     .from('creator_profiles')
     .select('nome_artistico, nicho, tom_de_voz, sobre, plano')
     .eq('user_id', user.id)
@@ -216,7 +225,11 @@ REGRA CRÍTICA: Cada imagem DEVE ser usada em pelo menos um slide. Com ${num_sli
 3. Garantir que rostos fiquem visíveis e não cobertos por texto`
   })()
 
-  const userMsg = `Crie um carrossel com exatamente ${num_slides} slides sobre o seguinte conteúdo:
+  const encerramentoInstrucao = incluir_encerramento
+    ? ''
+    : '\n\nIMPORTANTE: NÃO inclua slide de encerramento/closing. Todos os slides devem ser de conteúdo (tipo "conteudo"), exceto o slide 1 que é a capa.'
+
+  const userMsg = `Crie um carrossel com exatamente ${num_slides} slides sobre o seguinte conteúdo:${encerramentoInstrucao}
 
 ${conteudo}
 
@@ -254,6 +267,44 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
     } catch {
       return NextResponse.json({ error: 'Erro ao interpretar resposta da IA. Tente novamente.' }, { status: 500 })
     }
+
+    // ── Revisão automática do texto ──────────────────────────────────────────
+    try {
+      const slidesParaRevisar = carrossel.slides.map(s => ({
+        ordem: s.ordem, titulo: s.titulo, corpo: s.corpo, cta: s.cta, eyebrow: s.eyebrow
+      }))
+      const revisao = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: `Você é um revisor de texto especializado em copy para redes sociais brasileiras. Revise e melhore SOMENTE os textos (titulo, corpo, cta, eyebrow) dos slides abaixo. Mantenha a intenção e o tamanho — apenas corrija erros, melhore fluidez e torne cada frase mais humana e natural de ler em voz alta. Retorne APENAS JSON com o mesmo formato:
+
+${JSON.stringify(slidesParaRevisar)}
+
+Regras:
+- Zero erros gramaticais
+- Português brasileiro natural (como um humano falaria)
+- Títulos: impactantes, diretos, máx 8 palavras
+- Nenhum clichê: sem "Descubra", "Incrível", "Transforme", "Poderoso"
+- Se o texto já estiver bom, mantenha igual
+- Retorne APENAS o JSON array, sem markdown nem explicações`
+        }]
+      })
+      const revisadoRaw = revisao.content[0].type === 'text' ? revisao.content[0].text.trim() : null
+      if (revisadoRaw) {
+        const slidesr: Array<{ordem:number;titulo?:string;corpo?:string;cta?:string;eyebrow?:string}> = JSON.parse(revisadoRaw.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,''))
+        for (const rev of slidesr) {
+          const orig = carrossel.slides.find(s => s.ordem === rev.ordem)
+          if (orig) {
+            if (rev.titulo)  orig.titulo  = rev.titulo
+            if (rev.corpo)   orig.corpo   = rev.corpo
+            if (rev.cta)     orig.cta     = rev.cta
+            if (rev.eyebrow) orig.eyebrow = rev.eyebrow
+          }
+        }
+      }
+    } catch { /* revisão falhou silenciosamente — usa texto original */ }
 
     if (!carrossel?.slides?.length) {
       return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })

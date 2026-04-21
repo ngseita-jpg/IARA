@@ -6,18 +6,28 @@ import type React from 'react'
 import type { Slide } from '../gerar/route'
 
 // ─── Font ─────────────────────────────────────────────────────────────────────
-let _fontCache: ArrayBuffer | null = null
-async function loadFont(reqUrl: string): Promise<ArrayBuffer | null> {
-  if (_fontCache) return _fontCache
+const _fontCaches: Record<string, ArrayBuffer> = {}
+
+async function loadFont(reqUrl: string, fonte?: string): Promise<ArrayBuffer | null> {
+  const key = fonte || 'inter'
+  if (_fontCaches[key]) return _fontCaches[key]
+
+  const fileName = fonte === 'oswald' ? 'oswald-bold.woff2'
+    : fonte === 'playfair' ? 'playfair-bold.woff2'
+    : 'inter-bold.ttf'
+
   try {
-    const buf = readFileSync(join(process.cwd(), 'public', 'inter-bold.ttf'))
-    _fontCache = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
-    return _fontCache
+    const buf = readFileSync(join(process.cwd(), 'public', fileName))
+    _fontCaches[key] = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
+    return _fontCaches[key]
   } catch {}
   try {
     const origin = new URL(reqUrl).origin
-    const res = await fetch(`${origin}/inter-bold.ttf`)
-    if (res.ok) { _fontCache = await res.arrayBuffer(); return _fontCache }
+    const res = await fetch(`${origin}/${fileName}`)
+    if (res.ok) {
+      _fontCaches[key] = await res.arrayBuffer()
+      return _fontCaches[key]
+    }
   } catch {}
   return null
 }
@@ -154,10 +164,8 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
         ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
-      {/* Scrim topo */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 300, backgroundImage: `linear-gradient(180deg, rgba(0,0,0,${clamp(0.65 * OV, 0, 0.95)}) 0%, rgba(0,0,0,0) 100%)`, display: 'flex' }} />
-      {/* Scrim base */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 520, backgroundImage: `linear-gradient(0deg, rgba(0,0,0,${clamp(0.88 * OV, 0, 0.98)}) 0%, rgba(0,0,0,0) 100%)`, display: 'flex' }} />
+      {/* Scrim base — apenas atrás do texto */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 220, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
 
       {/* Eyebrow topo */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -290,7 +298,7 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim base para texto */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 600, backgroundImage: `linear-gradient(0deg, rgba(0,0,0,${clamp(0.82 * OV, 0, 0.96)}) 0%, rgba(0,0,0,0) 100%)`, display: 'flex' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 420, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
 
       {/* Chip número */}
       <div style={{ position: 'absolute', top: EDGE, right: EDGE, paddingTop: 10, paddingBottom: 10, paddingLeft: 18, paddingRight: 18, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 999, display: 'flex' }}>
@@ -334,8 +342,8 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
         ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }} />
       }
-      {/* Overlay gradiente — deixa a foto respirar no topo/base, escurece a faixa central onde o texto vive */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: `linear-gradient(180deg, rgba(8,8,15,${clamp(0.35 * OV, 0, 0.85)}) 0%, rgba(8,8,15,${clamp(0.68 * OV, 0, 0.92)}) 30%, rgba(8,8,15,${clamp(0.68 * OV, 0, 0.92)}) 75%, rgba(8,8,15,${clamp(0.38 * OV, 0, 0.85)}) 100%)`, display: 'flex' }} />
+      {/* Overlay escuro */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.45)', display: 'flex' }} />
 
       {/* Aspas — decorativo */}
       <div style={{ position: 'absolute', left: 64, top: 200, fontSize: 240, fontWeight: 900, color: VIOLET, lineHeight: 1.0, opacity: 0.85 }}>
@@ -367,14 +375,19 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
 }
 
 // ─── Archetype 6: closing ─────────────────────────────────────────────────────
-function renderClosing(slide: Slide, total: number) {
-  const cta  = trunc(slide.cta || 'Salve esse post.', 120)
-  const info = trunc(slide.corpo, 200)
-  const fs   = autoFit({ text: cta, maxFont: 116, minFont: 48, idealChars: 20 })
+function renderClosing(slide: Slide, total: number, imgSrc?: string) {
+  const cta  = trunc(slide.cta || 'Salve esse post.', 30)
+  const info = trunc(slide.corpo, 80)
+  const fs   = cta.length > 20 ? 88 : 116
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
-      {/* Gradiente decorativo único */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(8,8,15,0) 50%)', display: 'flex' }} />
+      {/* Foto de fundo se disponível */}
+      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
+      {/* Overlay leve sobre foto */}
+      {imgSrc
+        ? <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.55)', display: 'flex' }} />
+        : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(8,8,15,0) 50%)', display: 'flex' }} />
+      }
 
       {/* Logo topo */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -426,7 +439,7 @@ function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: numbe
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }}>
       {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
       {imgSrc && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.80) 0%, rgba(19,19,31,0) 35%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.90) 100%)', display: 'flex' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.55) 0%, rgba(19,19,31,0) 35%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.65) 100%)', display: 'flex' }} />
       )}
       {!imgSrc && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
@@ -467,7 +480,7 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.30) 100%)', display: 'flex' }} />
       }
       {/* Scrim esquerdo */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(90deg, rgba(8,8,15,0.92) 0%, rgba(8,8,15,0.70) 42%, rgba(8,8,15,0) 68%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(90deg, rgba(8,8,15,0.75) 0%, rgba(8,8,15,0.55) 42%, rgba(8,8,15,0) 68%)', display: 'flex' }} />
 
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 10 }}>
         <IaraStar size={18} />
@@ -797,12 +810,8 @@ function renderWarmOverlay(slide: Slide, imgSrc: string | undefined, total: numb
         ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #3d1a05 0%, #7c3a12 100%)', display: 'flex' }} />
       }
-      {/* Overlay âmbar quente */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: `rgba(120, 60, 10, ${clamp(0.52 * OV, 0, 0.9)})`, display: 'flex' }} />
-      {/* Scrim base forte */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 560, backgroundImage: `linear-gradient(0deg, rgba(20,8,0,${clamp(0.95 * OV, 0, 0.98)}) 0%, rgba(20,8,0,0) 100%)`, display: 'flex' }} />
-      {/* Scrim topo leve */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, backgroundImage: `linear-gradient(180deg, rgba(20,8,0,${clamp(0.55 * OV, 0, 0.9)}) 0%, rgba(20,8,0,0) 100%)`, display: 'flex' }} />
+      {/* Scrim base — apenas atrás do texto */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 260, backgroundImage: 'linear-gradient(0deg, rgba(10,4,0,0.60) 0%, rgba(10,4,0,0) 100%)', display: 'flex' }} />
 
       {/* Eyebrow */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -851,7 +860,7 @@ function renderBoldType(slide: Slide, imgSrc: string | undefined, total: number)
       {imgSrc && (
         <>
           <Photo src={imgSrc} foco={slide.foto_foco} />
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: `linear-gradient(180deg, rgba(0,0,0,${clamp(0.35 * OV, 0, 0.85)}) 0%, rgba(0,0,0,${clamp(0.55 * OV, 0, 0.9)}) 40%, rgba(0,0,0,${clamp(0.78 * OV, 0, 0.95)}) 100%)`, display: 'flex' }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex' }} />
         </>
       )}
       {!imgSrc && (
@@ -966,7 +975,7 @@ function renderNeonCard(slide: Slide, imgSrc: string | undefined, total: number)
       {imgSrc && (
         <>
           <Photo src={imgSrc} foco={slide.foto_foco} />
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: `radial-gradient(ellipse at center, rgba(2,2,9,${clamp(0.88 * OV, 0, 0.96)}) 0%, rgba(2,2,9,${clamp(0.68 * OV, 0, 0.9)}) 50%, rgba(2,2,9,${clamp(0.48 * OV, 0, 0.85)}) 100%)`, display: 'flex' }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(2,2,9,0.55)', display: 'flex' }} />
         </>
       )}
 
@@ -1013,9 +1022,342 @@ function renderNeonCard(slide: Slide, imgSrc: string | undefined, total: number)
   )
 }
 
+// ─── Archetype 18: minimal_text ─────────────────────────────────────────────
+// Fundo sólido escuro, tipografia minimalista — sem foto, foco total no texto
+function renderMinimalText(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 55)
+  const corpo  = trunc(slide.corpo, 120)
+  const fs = titulo.length > 38 ? 64 : titulo.length > 24 ? 80 : 96
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:BG, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:EDGE, paddingRight:EDGE }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(8,8,15,0) 55%)', display:'flex' }} />
+      <div style={{ position:'absolute', left:EDGE, top:EDGE, display:'flex', alignItems:'center', gap:10 }}>
+        <GradBar w={40} h={3} />
+        <span style={{ fontSize:13, color:TEXT_MUTED, fontWeight:600, letterSpacing:2 }}>{trunc(slide.eyebrow||'insight', 38).toUpperCase()}</span>
+      </div>
+      {titulo && <div style={{ fontSize:fs, fontWeight:900, color:TEXT, lineHeight:1.05, letterSpacing:-2, marginBottom:32 }}>{titulo}</div>}
+      {corpo && <div style={{ fontSize:26, fontWeight:400, color:TEXT_DIM, lineHeight:1.55, maxWidth:880 }}>{corpo}</div>}
+      <div style={{ position:'absolute', bottom:EDGE, left:EDGE, right:EDGE, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}><IaraStar size={14} /><span style={{ fontSize:12, color:TEXT_FAINT, fontWeight:600 }}>iarahub.com.br</span></div>
+        <Dots total={total} active={slide.ordem-1} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 19: gradient_text ─────────────────────────────────────────────
+// Texto com background em gradiente vibrante — para slides de destaque ou capas impactantes
+function renderGradientText(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 48)
+  const corpo  = trunc(slide.corpo, 100)
+  const fs = titulo.length > 32 ? 72 : titulo.length > 20 ? 90 : 110
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #1e1b4b 0%, #312e81 35%, #4c1d95 65%, #2d1654 100%)', display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:EDGE, paddingRight:EDGE }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'radial-gradient(circle at 80% 20%, rgba(139,92,246,0.25) 0%, transparent 60%)', display:'flex' }} />
+      <span style={{ fontSize:13, color:'rgba(196,181,253,0.7)', fontWeight:700, letterSpacing:3, marginBottom:28 }}>{trunc(slide.eyebrow||'insight', 40).toUpperCase()}</span>
+      {titulo && <div style={{ fontSize:fs, fontWeight:900, color:'#f5f3ff', lineHeight:1.0, letterSpacing:-2, marginBottom:32 }}>{titulo}</div>}
+      <div style={{ width:80, height:4, backgroundImage:GRAD_H, borderRadius:2, marginBottom:28, display:'flex' }} />
+      {corpo && <div style={{ fontSize:26, fontWeight:400, color:'rgba(221,214,254,0.85)', lineHeight:1.5, maxWidth:860 }}>{corpo}</div>}
+      <div style={{ position:'absolute', bottom:EDGE, right:EDGE, display:'flex' }}><Dots total={total} active={slide.ordem-1} /></div>
+    </div>
+  )
+}
+
+// ─── Archetype 20: photo_top_full ────────────────────────────────────────────
+// Foto preenche topo (75%), texto mínimo e limpo na base — para fotos de destaque total
+function renderPhotoTopFull(slide: Slide, imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 42)
+  const corpo  = trunc(slide.corpo, 70)
+  const fs = titulo.length > 28 ? 52 : titulo.length > 18 ? 64 : 78
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', flexDirection:'column', backgroundColor:BG }}>
+      <div style={{ flex:1, position:'relative', display:'flex', overflow:'hidden' }}>
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, height:60, backgroundImage:`linear-gradient(0deg, ${BG} 0%, rgba(8,8,15,0) 100%)`, display:'flex' }} />
+        <div style={{ position:'absolute', top:28, right:32, paddingTop:8, paddingBottom:8, paddingLeft:16, paddingRight:16, backgroundColor:'rgba(0,0,0,0.40)', borderRadius:999, display:'flex', alignItems:'center', gap:8 }}>
+          <IaraStar size={12} />
+          <span style={{ fontSize:12, color:'rgba(255,255,255,0.85)', fontWeight:600 }}>{String(slide.ordem).padStart(2,'0')}/{String(total).padStart(2,'0')}</span>
+        </div>
+      </div>
+      <div style={{ height:270, backgroundColor:BG, display:'flex', flexDirection:'column', justifyContent:'space-between', paddingTop:24, paddingBottom:36, paddingLeft:EDGE, paddingRight:EDGE, flexShrink:0 }}>
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          {corpo && <div style={{ fontSize:19, color:TEXT_DIM, fontWeight:400, flex:1, marginRight:24 }}>{corpo}</div>}
+          <Dots total={total} active={slide.ordem-1} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 21: list_card ─────────────────────────────────────────────────
+// Card com lista numerada — para slides de "N razões / N erros / N dicas"
+function renderListCard(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 45)
+  const itens  = (slide.corpo || '').split(/\n|•|·|–|-/).map(s => s.trim()).filter(Boolean).slice(0, 4)
+  const corpo  = itens.length ? null : trunc(slide.corpo, 120)
+  const fs = titulo.length > 30 ? 58 : titulo.length > 20 ? 72 : 86
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:CARD, display:'flex', flexDirection:'column', justifyContent:'space-between', paddingTop:EDGE, paddingBottom:EDGE, paddingLeft:EDGE, paddingRight:EDGE }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, rgba(99,102,241,0.07) 0%, rgba(8,8,15,0) 60%)', display:'flex' }} />
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {slide.eyebrow && <span style={{ fontSize:12, color:VIOLET, fontWeight:700, letterSpacing:2 }}>{trunc(slide.eyebrow,40).toUpperCase()}</span>}
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+        {itens.length > 0 ? itens.map((item, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:20 }}>
+            <div style={{ width:40, height:40, borderRadius:10, backgroundImage:GRAD_D, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <span style={{ fontSize:18, fontWeight:800, color:'#fff' }}>{i+1}</span>
+            </div>
+            <span style={{ fontSize:24, fontWeight:400, color:TEXT_DIM, lineHeight:1.4, paddingTop:8 }}>{item}</span>
+          </div>
+        )) : corpo && <div style={{ fontSize:26, fontWeight:400, color:TEXT_DIM, lineHeight:1.5 }}>{corpo}</div>}
+      </div>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <GradBar w={48} h={3} />
+        <Dots total={total} active={slide.ordem-1} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 22: dark_split ────────────────────────────────────────────────
+// Split 50/50 com fundo escuro ambos os lados — lado esquerdo foto com scrim, lado direito texto
+function renderDarkSplit(slide: Slide, imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 42)
+  const corpo  = trunc(slide.corpo, 100)
+  const fs = titulo.length > 28 ? 52 : titulo.length > 18 ? 64 : 78
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', backgroundColor:BG }}>
+      <div style={{ width:540, position:'relative', display:'flex', overflow:'hidden', flexShrink:0 }}>
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+        <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(90deg, rgba(8,8,15,0) 50%, rgba(8,8,15,0.85) 100%)', display:'flex' }} />
+        <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, backgroundImage:GRAD_H, display:'flex' }} />
+      </div>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:44, paddingRight:EDGE, gap:28 }}>
+        {slide.eyebrow && <span style={{ fontSize:13, color:TEXT_MUTED, fontWeight:600, letterSpacing:1.5 }}>{trunc(slide.eyebrow,35).toUpperCase()}</span>}
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+        {corpo && <div style={{ fontSize:22, fontWeight:400, color:TEXT_DIM, lineHeight:1.5 }}>{corpo}</div>}
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}><IaraStar size={14} /><Dots total={total} active={slide.ordem-1} /></div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 23: highlight_box ─────────────────────────────────────────────
+// Caixa de destaque com borda colorida — para estatísticas, números e fatos impactantes
+function renderHighlightBox(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 40)
+  const corpo  = trunc(slide.corpo, 100)
+  const numero = titulo.match(/^\d[\d.,k%+\s]*/) ? titulo : null
+  const resto  = numero ? titulo.slice(numero[0].length).trim() : titulo
+  const fsNum  = 180
+  const fsRest = resto.length > 20 ? 42 : resto.length > 12 ? 54 : 66
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:BG, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'radial-gradient(circle at 50% 50%, rgba(99,102,241,0.12) 0%, transparent 65%)', display:'flex' }} />
+      <div style={{ position:'absolute', top:EDGE, left:EDGE, display:'flex', alignItems:'center', gap:10 }}>
+        <GradBar w={36} h={3} />
+        <span style={{ fontSize:12, color:TEXT_MUTED, fontWeight:600, letterSpacing:2 }}>{trunc(slide.eyebrow||'dado', 40).toUpperCase()}</span>
+      </div>
+      <div style={{ width:880, paddingTop:72, paddingBottom:72, paddingLeft:72, paddingRight:72, border:'1px solid rgba(99,102,241,0.30)', borderRadius:24, display:'flex', flexDirection:'column', alignItems:'center', gap:20, backgroundColor:'rgba(19,19,31,0.60)' }}>
+        {numero && <div style={{ fontSize:fsNum, fontWeight:900, color:VIOLET, lineHeight:0.9, letterSpacing:-6 }}>{numero[0].trim()}</div>}
+        {resto && <div style={{ fontSize:fsRest, fontWeight:700, color:TEXT, lineHeight:1.05, letterSpacing:-1.5, textAlign:'center' }}>{resto}</div>}
+        <div style={{ width:64, height:3, backgroundImage:GRAD_H, borderRadius:2, display:'flex' }} />
+        {corpo && <div style={{ fontSize:24, fontWeight:400, color:TEXT_DIM, lineHeight:1.5, textAlign:'center', maxWidth:680 }}>{corpo}</div>}
+      </div>
+      <div style={{ position:'absolute', bottom:EDGE, right:EDGE, display:'flex' }}><Dots total={total} active={slide.ordem-1} /></div>
+    </div>
+  )
+}
+
+// ─── Archetype 24: magazine_full ─────────────────────────────────────────────
+// Foto full-bleed com painel de texto flutuante no centro — estética de revista de luxo
+function renderMagazineFull(slide: Slide, imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 44)
+  const corpo  = trunc(slide.corpo, 80)
+  const fs = titulo.length > 28 ? 52 : titulo.length > 18 ? 64 : 78
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', backgroundColor:BG }}>
+      {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(180deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.55) 100%)', display:'flex' }} />
+      <div style={{ position:'absolute', left:EDGE, right:EDGE, bottom:100, backgroundColor:'rgba(8,8,15,0.72)', borderRadius:20, paddingTop:40, paddingBottom:40, paddingLeft:52, paddingRight:52, border:'1px solid rgba(255,255,255,0.08)', display:'flex', flexDirection:'column', gap:16 }}>
+        {slide.eyebrow && <span style={{ fontSize:12, color:VIOLET, fontWeight:700, letterSpacing:2 }}>{trunc(slide.eyebrow,40).toUpperCase()}</span>}
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+        {corpo && <div style={{ fontSize:20, fontWeight:400, color:TEXT_DIM, lineHeight:1.4 }}>{corpo}</div>}
+      </div>
+      <div style={{ position:'absolute', top:EDGE, left:EDGE, display:'flex', alignItems:'center', gap:10 }}>
+        <IaraStar size={20} />
+        <span style={{ fontSize:15, color:'rgba(255,255,255,0.80)', fontWeight:600 }}>{String(slide.ordem).padStart(2,'0')}/{String(total).padStart(2,'0')}</span>
+      </div>
+      <div style={{ position:'absolute', bottom:EDGE-16, right:EDGE+52, display:'flex' }}><Dots total={total} active={slide.ordem-1} /></div>
+    </div>
+  )
+}
+
+// ─── Archetype 25: story_arc ─────────────────────────────────────────────────
+// Layout de storytelling — número grande decorativo, foto à direita, texto à esquerda
+function renderStoryArc(slide: Slide, imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 40)
+  const corpo  = trunc(slide.corpo, 90)
+  const fs = titulo.length > 26 ? 56 : titulo.length > 16 ? 70 : 84
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', backgroundColor:BG }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(8,8,15,0) 55%)', display:'flex' }} />
+      <div style={{ position:'absolute', left:EDGE-20, top:60, fontSize:420, fontWeight:900, color:'rgba(99,102,241,0.06)', lineHeight:1, letterSpacing:-20 }}>{String(slide.ordem).padStart(2,'0')}</div>
+      <div style={{ width:500, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:EDGE, paddingRight:40, gap:28, zIndex:1 }}>
+        <div style={{ width:5, height:72, backgroundImage:GRAD_H, borderRadius:3, display:'flex' }} />
+        {slide.eyebrow && <span style={{ fontSize:13, color:TEXT_MUTED, fontWeight:600, letterSpacing:1.5 }}>{trunc(slide.eyebrow,35)}</span>}
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+        {corpo && <div style={{ fontSize:22, fontWeight:400, color:TEXT_DIM, lineHeight:1.5 }}>{corpo}</div>}
+        <Dots total={total} active={slide.ordem-1} />
+      </div>
+      <div style={{ flex:1, position:'relative', display:'flex', overflow:'hidden' }}>
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.35) 100%)', display:'flex' }} />}
+        <div style={{ position:'absolute', top:0, left:0, width:80, bottom:0, backgroundImage:`linear-gradient(90deg, ${BG} 0%, rgba(8,8,15,0) 100%)`, display:'flex' }} />
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:4, backgroundImage:GRAD_H, display:'flex' }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 26: dark_card_center ──────────────────────────────────────────
+// Card centralizado com moldura — estética premium, ideal para citações e dicas isoladas
+function renderDarkCardCenter(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 52)
+  const corpo  = trunc(slide.corpo, 110)
+  const fs = titulo.length > 34 ? 56 : titulo.length > 22 ? 70 : 86
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:'#050510', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.15) 0%, transparent 60%)', display:'flex' }} />
+      <div style={{ position:'absolute', top:EDGE, left:EDGE, right:EDGE, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}><IaraStar size={18} /><span style={{ fontSize:14, color:TEXT_MUTED, fontWeight:600, letterSpacing:1 }}>{trunc(slide.eyebrow||'IARA HUB',35).toUpperCase()}</span></div>
+        <span style={{ fontSize:13, color:TEXT_FAINT, fontWeight:700 }}>{String(slide.ordem).padStart(2,'0')} / {String(total).padStart(2,'0')}</span>
+      </div>
+      <div style={{ width:924, paddingTop:64, paddingBottom:64, paddingLeft:72, paddingRight:72, border:'1px solid rgba(255,255,255,0.07)', borderRadius:28, backgroundColor:'rgba(19,19,31,0.50)', display:'flex', flexDirection:'column', gap:32 }}>
+        <div style={{ width:56, height:4, backgroundImage:GRAD_H, borderRadius:2, display:'flex' }} />
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+        {corpo && <div style={{ fontSize:26, fontWeight:400, color:TEXT_DIM, lineHeight:1.55 }}>{corpo}</div>}
+      </div>
+      <div style={{ position:'absolute', bottom:EDGE, right:EDGE, display:'flex' }}><Dots total={total} active={slide.ordem-1} /></div>
+    </div>
+  )
+}
+
+// ─── Archetype 27: photo_frame ───────────────────────────────────────────────
+// Foto com moldura branca estilo polaroid — para conteúdo pessoal e nostálgico
+function renderPhotoFrame(slide: Slide, imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 40)
+  const corpo  = trunc(slide.corpo, 80)
+  const FRAME  = 32
+  const CAP    = 90
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', alignItems:'center', justifyContent:'center', backgroundColor:'#f0ede8' }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'radial-gradient(circle at 30% 70%, rgba(200,190,180,0.5) 0%, transparent 60%)', display:'flex' }} />
+      <div style={{ width:860, height:970, backgroundColor:'#ffffff', borderRadius:4, boxShadow:'0 8px 60px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ flex:1, position:'relative', margin:FRAME, marginBottom:0, display:'flex', overflow:'hidden' }}>
+          {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #e8e0d8 0%, #d0c8c0 100%)', display:'flex' }} />}
+        </div>
+        <div style={{ height:CAP+FRAME, paddingLeft:FRAME+12, paddingRight:FRAME+12, paddingTop:20, paddingBottom:16, display:'flex', flexDirection:'column', gap:6, backgroundColor:'#ffffff' }}>
+          {titulo && <div style={{ fontSize:22, fontWeight:700, color:'#1a1a1a', lineHeight:1.2, letterSpacing:-0.5 }}>{titulo}</div>}
+          {corpo && <div style={{ fontSize:16, fontWeight:400, color:'#666660', lineHeight:1.4 }}>{corpo}</div>}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:4 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}><IaraStar size={12} /><span style={{ fontSize:11, color:'#aaaaaa', fontWeight:600 }}>IARA HUB</span></div>
+            <Dots total={total} active={slide.ordem-1} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 28: color_block ───────────────────────────────────────────────
+// Bloco de cor sólido vibrante — sem foto, puramente tipográfico com cor de destaque
+function renderColorBlock(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 45)
+  const corpo  = trunc(slide.corpo, 100)
+  const fs = titulo.length > 30 ? 68 : titulo.length > 18 ? 84 : 104
+  const COLORS = ['#6366f1','#7c3aed','#a855f7','#ec4899','#0891b2','#059669']
+  const accent = COLORS[(slide.ordem - 1) % COLORS.length]
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', flexDirection:'column', backgroundColor:BG }}>
+      <div style={{ height:6, backgroundImage:GRAD_H, display:'flex' }} />
+      <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:EDGE, paddingRight:EDGE, gap:32 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+          <div style={{ width:52, height:52, borderRadius:14, backgroundColor:accent, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <span style={{ fontSize:24, fontWeight:900, color:'#fff' }}>{String(slide.ordem).padStart(2,'0')}</span>
+          </div>
+          {slide.eyebrow && <span style={{ fontSize:14, color:TEXT_MUTED, fontWeight:600, letterSpacing:1.5 }}>{trunc(slide.eyebrow,40).toUpperCase()}</span>}
+        </div>
+        {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-2 }}>{titulo}</div>}
+        <div style={{ width:100, height:4, backgroundColor:accent, borderRadius:2, display:'flex' }} />
+        {corpo && <div style={{ fontSize:26, fontWeight:400, color:TEXT_DIM, lineHeight:1.5, maxWidth:860 }}>{corpo}</div>}
+      </div>
+      <div style={{ height:72, paddingLeft:EDGE, paddingRight:EDGE, display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:'1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}><IaraStar size={14} /><span style={{ fontSize:12, color:TEXT_FAINT }}>iarahub.com.br</span></div>
+        <Dots total={total} active={slide.ordem-1} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 29: duo_panel ─────────────────────────────────────────────────
+// Dois painéis lado a lado com foto no painel direito e texto no esquerdo — mais espaçoso
+function renderDuoPanel(slide: Slide, imgSrc: string | undefined, total: number) {
+  const titulo = trunc(slide.titulo, 38)
+  const corpo  = trunc(slide.corpo, 90)
+  const fs = titulo.length > 25 ? 58 : titulo.length > 16 ? 72 : 88
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', backgroundColor:CARD }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'space-between', paddingTop:EDGE, paddingBottom:EDGE, paddingLeft:EDGE, paddingRight:48 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}><GradBar w={32} h={3} />{slide.eyebrow && <span style={{ fontSize:12, color:TEXT_MUTED, fontWeight:600, letterSpacing:2 }}>{trunc(slide.eyebrow,35).toUpperCase()}</span>}</div>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+          {titulo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5 }}>{titulo}</div>}
+          {corpo && <div style={{ fontSize:22, fontWeight:400, color:TEXT_DIM, lineHeight:1.5 }}>{corpo}</div>}
+        </div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}><IaraStar size={16} /><Dots total={total} active={slide.ordem-1} /></div>
+      </div>
+      <div style={{ width:480, position:'relative', display:'flex', overflow:'hidden', flexShrink:0 }}>
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+        <div style={{ position:'absolute', top:0, right:0, bottom:0, width:4, backgroundImage:GRAD_H, display:'flex' }} />
+        <div style={{ position:'absolute', top:0, left:0, width:60, bottom:0, backgroundImage:`linear-gradient(90deg, ${CARD} 0%, rgba(19,19,31,0) 100%)`, display:'flex' }} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Archetype 30: step_card ─────────────────────────────────────────────────
+// Card de passo a passo — número grande, seta decorativa, passo claro e corpo de apoio
+function renderStepCard(slide: Slide, _imgSrc: string | undefined, total: number) {
+  const passo  = trunc(slide.titulo, 50)
+  const corpo  = trunc(slide.corpo, 110)
+  const num    = slide.ordem - 1 // passo atual (slide 2 = passo 1, etc.)
+  const fs = passo.length > 32 ? 56 : passo.length > 20 ? 68 : 82
+  return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:BG, display:'flex', flexDirection:'column', justifyContent:'center', paddingLeft:EDGE, paddingRight:EDGE }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, rgba(99,102,241,0.07) 0%, rgba(8,8,15,0) 50%)', display:'flex' }} />
+      <div style={{ position:'absolute', right:EDGE-20, top:60, fontSize:360, fontWeight:900, color:'rgba(99,102,241,0.07)', lineHeight:1, letterSpacing:-15 }}>{String(num).padStart(2,'0')}</div>
+      <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:44 }}>
+        <div style={{ width:64, height:64, borderRadius:18, backgroundImage:GRAD_D, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <span style={{ fontSize:28, fontWeight:900, color:'#fff' }}>{num}</span>
+        </div>
+        {slide.eyebrow && <span style={{ fontSize:14, color:VIOLET, fontWeight:600, letterSpacing:1.5 }}>{trunc(slide.eyebrow,40).toUpperCase()}</span>}
+      </div>
+      {passo && <div style={{ fontSize:fs, fontWeight:800, color:TEXT, lineHeight:1.05, letterSpacing:-1.5, marginBottom:32 }}>{passo}</div>}
+      {corpo && <div style={{ fontSize:26, fontWeight:400, color:TEXT_DIM, lineHeight:1.5, maxWidth:880 }}>{corpo}</div>}
+      <div style={{ position:'absolute', bottom:EDGE, right:EDGE, display:'flex' }}><Dots total={total} active={slide.ordem-1} /></div>
+    </div>
+  )
+}
+
 // ─── Resolver ─────────────────────────────────────────────────────────────────
-const CYCLE       = ['split_v', 'editorial', 'cinematic', 'caption_bar', 'inset_photo', 'top_text', 'side_right', 'bold_type', 'full_bleed', 'warm_overlay', 'neon_card', 'quote'] as const
-const CYCLE_NOIMG = ['top_text', 'bold_type', 'quote', 'neon_card'] as const
+// Ciclo para slides COM foto — arquétipos que exibem a foto sem overlay pesado
+const CYCLE_PHOTO = ['split_v','editorial','caption_bar','side_right','cinematic','duo_panel','photo_top_full','story_arc','photo_frame','inset_photo','dark_split','magazine_full'] as const
+// Ciclo para slides SEM foto — arquétipos tipográficos
+const CYCLE_NOIMG = ['top_text','bold_type','list_card','highlight_box','dark_card_center','color_block','step_card','minimal_text','gradient_text','neon_card','quote','dark_card_center'] as const
 
 // Arquétipos que sobrepõem texto no centro/base da foto (risco de cobrir rosto)
 const ARCHS_RISCO_ROSTO = new Set(['cover_full', 'full_bleed', 'brand_cover'])
@@ -1026,9 +1368,8 @@ function resolveArq(slide: Slide, hasBg: boolean, modo: string): string {
     if (slide.tipo === 'capa') arq = modo === 'marca' ? 'brand_cover' : 'cover_full'
     else if (slide.tipo === 'encerramento') arq = modo === 'marca' ? 'brand_promo' : 'closing'
     else {
-      const pool = hasBg ? CYCLE : CYCLE_NOIMG
-      const idx = ((slide.ordem - 2) % pool.length + pool.length) % pool.length
-      arq = pool[idx]
+      const idx = (slide.ordem - 2) % (hasBg ? CYCLE_PHOTO.length : CYCLE_NOIMG.length)
+      arq = (hasBg ? CYCLE_PHOTO : CYCLE_NOIMG)[idx]
     }
   }
   // Fallback de segurança: rosto no centro + arquétipo de risco → split_v (texto à esquerda, foto à direita)
@@ -1047,9 +1388,11 @@ export async function POST(req: NextRequest) {
     const show_wm: boolean = body.show_watermark === true
     const modo: string = body.modo || 'criador'
 
-    const fontData = await loadFont(req.url)
+    const fonte = (body.fonte as string | undefined) || 'inter'
+    const fontData = await loadFont(req.url, fonte)
+    const fontFamilyName = fonte === 'oswald' ? 'Oswald' : fonte === 'playfair' ? 'Playfair' : 'Inter'
     const fonts = fontData
-      ? [{ name: 'Inter', data: fontData, weight: 700 as const, style: 'normal' as const }]
+      ? [{ name: fontFamilyName, data: fontData, weight: 700 as const, style: 'normal' as const }]
       : []
 
     const imgSrc = prepImg(body.imagem_base64 as string | undefined)
@@ -1062,7 +1405,7 @@ export async function POST(req: NextRequest) {
       case 'top_text':     content = renderTopText(slide, imgSrc, total); break
       case 'full_bleed':   content = renderFullBleed(slide, imgSrc, total); break
       case 'quote':        content = renderQuote(slide, imgSrc, total); break
-      case 'closing':      content = renderClosing(slide, total); break
+      case 'closing':      content = renderClosing(slide, total, imgSrc); break
       case 'brand_cover':  content = renderBrandCover(slide, imgSrc, total); break
       case 'brand_story':  content = renderBrandStory(slide, imgSrc, total); break
       case 'brand_promo':  content = renderBrandPromo(slide, imgSrc, total); break
@@ -1073,8 +1416,21 @@ export async function POST(req: NextRequest) {
       case 'warm_overlay': content = renderWarmOverlay(slide, imgSrc, total); break
       case 'bold_type':    content = renderBoldType(slide, imgSrc, total); break
       case 'side_right':   content = renderSideRight(slide, imgSrc, total); break
-      case 'neon_card':    content = renderNeonCard(slide, imgSrc, total); break
-      default:             content = renderFallback(slide, total)
+      case 'neon_card':       content = renderNeonCard(slide, imgSrc, total); break
+      case 'minimal_text':    content = renderMinimalText(slide, imgSrc, total); break
+      case 'gradient_text':   content = renderGradientText(slide, imgSrc, total); break
+      case 'photo_top_full':  content = renderPhotoTopFull(slide, imgSrc, total); break
+      case 'list_card':       content = renderListCard(slide, imgSrc, total); break
+      case 'dark_split':      content = renderDarkSplit(slide, imgSrc, total); break
+      case 'highlight_box':   content = renderHighlightBox(slide, imgSrc, total); break
+      case 'magazine_full':   content = renderMagazineFull(slide, imgSrc, total); break
+      case 'story_arc':       content = renderStoryArc(slide, imgSrc, total); break
+      case 'dark_card_center':content = renderDarkCardCenter(slide, imgSrc, total); break
+      case 'photo_frame':     content = renderPhotoFrame(slide, imgSrc, total); break
+      case 'color_block':     content = renderColorBlock(slide, imgSrc, total); break
+      case 'duo_panel':       content = renderDuoPanel(slide, imgSrc, total); break
+      case 'step_card':       content = renderStepCard(slide, imgSrc, total); break
+      default:                content = renderFallback(slide, total)
     }
 
     const root = (c: React.ReactElement) => (

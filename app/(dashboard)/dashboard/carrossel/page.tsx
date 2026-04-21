@@ -26,7 +26,10 @@ import {
   Trophy,
   Images,
   Pencil,
+  Check,
+  Wand2,
 } from 'lucide-react'
+import type { RefinamentoResponse } from '@/app/api/carrossel/refinar/route'
 import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
 import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
@@ -53,7 +56,7 @@ function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<str
   })
 }
 
-type Step = 'conteudo' | 'imagens' | 'config' | 'preview'
+type Step = 'conteudo' | 'imagens' | 'config' | 'refinar' | 'preview'
 
 type MensagemChat = {
   role: 'user' | 'assistant'
@@ -109,6 +112,14 @@ export default function CarrosselPage() {
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
   const [bancoAberto, setBancoAberto] = useState(false)
+  const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>('inter')
+  const [incluirEncerramento, setIncluirEncerramento] = useState(true)
+
+  // Step refinar
+  const [refinamento, setRefinamento] = useState<RefinamentoResponse | null>(null)
+  const [refinandoLoading, setRefinandoLoading] = useState(false)
+  const [anguloSelecionado, setAnguloSelecionado] = useState<number | null>(null)
+  const [respostasPerguntas, setRespostasPerguntas] = useState<(string | null)[]>([null, null])
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
@@ -200,6 +211,43 @@ export default function CarrosselPage() {
   }
 
   // ───────────────────────────────────────────
+  // Step refinar: pede análise ao Haiku
+  // ───────────────────────────────────────────
+  async function handleRefinar() {
+    setRefinandoLoading(true)
+    setRefinamento(null)
+    setAnguloSelecionado(null)
+    setRespostasPerguntas([null, null])
+    const conteudo = modoConteudo === 'url'
+      ? (leitura?.conteudo || textoManual || url)
+      : textoManual
+    try {
+      const res = await fetch('/api/carrossel/refinar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conteudo, num_slides: numSlides, modo, plataforma, num_imagens: imagens.length }),
+      })
+      const data = await res.json()
+      if (res.ok) setRefinamento(data)
+    } catch { /* falha silenciosa — usuário pode pular */ }
+    finally { setRefinandoLoading(false) }
+  }
+
+  function buildInstrucoesRefinadas(): string {
+    const partes: string[] = []
+    if (instrucoes.trim()) partes.push(instrucoes.trim())
+    if (refinamento && anguloSelecionado !== null) {
+      const angulo = refinamento.angulos[anguloSelecionado]
+      partes.push(`Ângulo editorial: "${angulo.titulo}" — ${angulo.descricao}`)
+    }
+    refinamento?.perguntas.forEach((p, i) => {
+      const r = respostasPerguntas[i]
+      if (r) partes.push(`${p.pergunta}: ${r}`)
+    })
+    return partes.join('. ')
+  }
+
+  // ───────────────────────────────────────────
   // Step 4: gerar carrossel
   // ───────────────────────────────────────────
   async function handleGerar() {
@@ -218,12 +266,13 @@ export default function CarrosselPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conteudo,
-          instrucoes,
+          instrucoes: buildInstrucoesRefinadas(),
           num_slides: Math.max(numSlides, imagens.length),
           num_imagens: imagens.length,
           analise_imagens: analiseImagens.length ? analiseImagens : undefined,
           modo,
           plataforma,
+          incluir_encerramento: incluirEncerramento,
         }),
       })
       let data: Record<string, unknown> = {}
@@ -264,9 +313,12 @@ export default function CarrosselPage() {
   async function renderizarSlide(slide: Slide, c: CarrosselData) {
     setRenderizando((prev) => ({ ...prev, [slide.ordem]: true }))
 
-    // imagem_index indefinido = sem foto (respeita decisão do usuário no editor).
-    // Slides gerados pela IA já vêm com imagem_index definido pelo post-processamento em gerar/route.ts.
-    const imgIdx = typeof slide.imagem_index === 'number' ? slide.imagem_index : -1
+    // Usa imagem_index da IA; se não veio e temos imagens, distribui round-robin
+    // Só closing e brand_promo não usam foto — todo o resto usa se tiver imagem_index
+    const ARCHS_SEM_IMAGEM = new Set(['brand_promo'])
+    const arquetipo = slide.arquetipo ?? ''
+    const usarImagem = imagens.length > 0 && !ARCHS_SEM_IMAGEM.has(arquetipo)
+    const imgIdx = slide.imagem_index !== undefined ? slide.imagem_index : (usarImagem ? (slide.ordem - 1) % imagens.length : -1)
     const imgBase64 = imgIdx >= 0 && imagens[imgIdx]
       ? `data:image/jpeg;base64,${imagens[imgIdx]}`
       : undefined
@@ -282,6 +334,7 @@ export default function CarrosselPage() {
           total_slides: c.slides.length,
           show_watermark: showWatermark,
           modo,
+          fonte: fonteCarrossel,
         }),
       })
 
@@ -376,6 +429,8 @@ export default function CarrosselPage() {
   // ───────────────────────────────────────────
   // Download
   // ───────────────────────────────────────────
+  const [exportandoZip, setExportandoZip] = useState(false)
+
   function downloadSlide(ordem: number) {
     const url = slidePngs[ordem]
     if (!url) return
@@ -394,12 +449,50 @@ export default function CarrosselPage() {
     })
   }
 
+  async function exportarParaInstagram() {
+    const pngsValidos = Object.entries(slidePngs)
+      .filter(([, url]) => url && !url.startsWith('ERROR:'))
+      .sort(([a], [b]) => Number(a) - Number(b))
+    if (!pngsValidos.length) return
+    setExportandoZip(true)
+    try {
+      const tituloBase = (carrossel?.slides[0]?.titulo ?? 'carrossel')
+        .toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)
+
+      // Busca todos os blobs
+      const files = await Promise.all(
+        pngsValidos.map(async ([ordem, blobUrl]) => {
+          const res = await fetch(blobUrl)
+          const blob = await res.blob()
+          return new File([blob], `${tituloBase}-slide-${ordem.padStart(2, '0')}.png`, { type: 'image/png' })
+        })
+      )
+
+      // Web Share API (funciona no celular — salva na galeria ou abre menu nativo)
+      if (navigator.canShare?.({ files })) {
+        await navigator.share({ files, title: tituloBase })
+        return
+      }
+
+      // Fallback desktop: baixa um por um
+      for (const file of files) {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(file)
+        a.download = file.name
+        a.click()
+        await new Promise(r => setTimeout(r, 200))
+      }
+    } finally {
+      setExportandoZip(false)
+    }
+  }
+
   // ───────────────────────────────────────────
   // Navegação entre steps
   // ───────────────────────────────────────────
-  const steps: Step[] = ['conteudo', 'imagens', 'config', 'preview']
-  const stepLabels = ['Conteúdo', 'Imagens', 'Configurar', 'Gerar']
-  const stepIcons = [FileText, ImageIcon, Sliders, Sparkles]
+  const steps: Step[] = ['conteudo', 'imagens', 'config', 'refinar', 'preview']
+  const stepLabels = ['Conteúdo', 'Imagens', 'Configurar', 'Refinar', 'Gerar']
+  const stepIcons = [FileText, ImageIcon, Sliders, Wand2, Sparkles]
   const currentStepIdx = steps.indexOf(step)
 
   function podeProsseguir() {
@@ -884,6 +977,20 @@ export default function CarrosselPage() {
               />
             </div>
 
+            {/* Slide de encerramento */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-[#0f0f20] border border-[#1a1a2e]">
+              <div>
+                <p className="text-sm font-medium text-[#c1c1d8]">Slide de encerramento</p>
+                <p className="text-xs text-[#6b6b8a] mt-0.5">Adiciona um slide final com CTA e seu @</p>
+              </div>
+              <button
+                onClick={() => setIncluirEncerramento(v => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${incluirEncerramento ? 'bg-iara-600' : 'bg-[#2a2a4a]'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${incluirEncerramento ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
             {/* perfil nudge */}
             <Link
               href="/dashboard/perfil"
@@ -931,18 +1038,164 @@ export default function CarrosselPage() {
                 Voltar
               </button>
               <button
-                onClick={() => { setStep('preview'); handleGerar() }}
+                onClick={() => { setStep('refinar'); handleRefinar() }}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-iara-600 to-accent-purple hover:opacity-90 text-white text-sm font-medium transition-all shadow-lg shadow-iara-900/30"
               >
-                <Sparkles className="w-4 h-4" />
-                Gerar carrossel
+                <Wand2 className="w-4 h-4" />
+                Refinar brief
               </button>
             </div>
           </div>
         )}
 
         {/* ═══════════════════════════════════ */}
-        {/* STEP 4: PREVIEW */}
+        {/* STEP 4: REFINAR */}
+        {/* ═══════════════════════════════════ */}
+        {step === 'refinar' && (
+          <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-[#f1f1f8]">Refinar o brief</h2>
+                <p className="text-sm text-[#6b6b8a] mt-0.5">
+                  A Iara analisou seu conteúdo. Escolha o ângulo e responda 2 perguntas — leva 30 segundos e muda tudo.
+                </p>
+              </div>
+              <button
+                onClick={() => { setStep('preview'); handleGerar() }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-xs font-medium transition-all flex-shrink-0"
+              >
+                Pular e gerar assim
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Loading */}
+            {refinandoLoading && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-10 h-10 rounded-xl bg-iara-600/20 flex items-center justify-center">
+                  <Wand2 className="w-5 h-5 text-iara-400 animate-pulse" />
+                </div>
+                <p className="text-sm text-[#6b6b8a]">Iara analisando seu conteúdo...</p>
+              </div>
+            )}
+
+            {/* Resultado */}
+            {!refinandoLoading && refinamento && (
+              <div className="space-y-6">
+
+                {/* Análise */}
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-iara-900/20 border border-iara-700/30">
+                  <Sparkles className="w-4 h-4 text-iara-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-iara-200">{refinamento.analise}</p>
+                </div>
+
+                {/* Ângulos */}
+                <div>
+                  <p className="text-xs font-semibold text-[#9b9bb5] uppercase tracking-wider mb-3">
+                    Escolha o ângulo editorial
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {refinamento.angulos.map((a, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setAnguloSelecionado(i === anguloSelecionado ? null : i)}
+                        className={`p-4 rounded-xl border text-left transition-all ${
+                          anguloSelecionado === i
+                            ? 'border-iara-500 bg-iara-600/20'
+                            : 'border-[#1a1a2e] bg-[#0f0f20] hover:border-iara-700/40'
+                        }`}
+                      >
+                        <div className="text-2xl mb-2">{a.emoji}</div>
+                        <p className={`text-sm font-semibold mb-1 ${anguloSelecionado === i ? 'text-iara-200' : 'text-[#c1c1d8]'}`}>
+                          {a.titulo}
+                        </p>
+                        <p className="text-xs text-[#6b6b8a] leading-relaxed">{a.descricao}</p>
+                        {anguloSelecionado === i && (
+                          <div className="mt-2 flex items-center gap-1 text-iara-400">
+                            <Check className="w-3 h-3" />
+                            <span className="text-[11px] font-medium">Selecionado</span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Perguntas */}
+                <div className="space-y-5">
+                  <p className="text-xs font-semibold text-[#9b9bb5] uppercase tracking-wider">
+                    2 perguntas rápidas
+                  </p>
+                  {refinamento.perguntas.map((p, i) => (
+                    <div key={i} className="space-y-2">
+                      <p className="text-sm font-medium text-[#c1c1d8]">{p.pergunta}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {p.sugestoes.map((s, j) => (
+                          <button
+                            key={j}
+                            onClick={() => setRespostasPerguntas(prev => {
+                              const nova = [...prev]
+                              nova[i] = nova[i] === s ? null : s
+                              return nova
+                            })}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                              respostasPerguntas[i] === s
+                                ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                                : 'border-[#1a1a2e] bg-[#0a0a14] text-[#9b9bb5] hover:border-iara-700/40 hover:text-[#c1c1d8]'
+                            }`}
+                          >
+                            {respostasPerguntas[i] === s && <span className="mr-1">✓</span>}
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Preview do brief */}
+                {(anguloSelecionado !== null || respostasPerguntas.some(r => r)) && (
+                  <div className="p-4 rounded-xl bg-[#0a0a14] border border-[#1a1a2e]">
+                    <p className="text-[10px] font-semibold text-[#4a4a6a] uppercase tracking-wider mb-2">Brief que será enviado à IA</p>
+                    <p className="text-xs text-[#9b9bb5] leading-relaxed">{buildInstrucoesRefinadas()}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Fallback se refinar falhou */}
+            {!refinandoLoading && !refinamento && (
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <AlertCircle className="w-6 h-6 text-[#4a4a6a]" />
+                <p className="text-sm text-[#6b6b8a]">Não foi possível analisar o conteúdo.</p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#1a1a2e]">
+              <button
+                onClick={() => setStep('config')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Voltar
+              </button>
+              <button
+                onClick={() => { setStep('preview'); handleGerar() }}
+                disabled={refinandoLoading}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-iara-600 to-accent-purple hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all shadow-lg shadow-iara-900/30"
+              >
+                <Sparkles className="w-4 h-4" />
+                {anguloSelecionado !== null || respostasPerguntas.some(r => r)
+                  ? 'Gerar com esse brief'
+                  : 'Gerar carrossel'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════ */}
+        {/* STEP 5: PREVIEW */}
         {/* ═══════════════════════════════════ */}
         {step === 'preview' && (
           <div className="space-y-6">
@@ -989,6 +1242,28 @@ export default function CarrosselPage() {
             {/* Grid de slides */}
             {carrossel && !gerando && (
               <>
+                {/* Seletor de fonte */}
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
+                  <span className="text-xs font-medium text-[#6b6b8a] uppercase tracking-wider">Fonte</span>
+                  {([
+                    { id: 'inter',    label: 'Moderna',   desc: 'Inter' },
+                    { id: 'oswald',   label: 'Impacto',   desc: 'Oswald' },
+                    { id: 'playfair', label: 'Editorial', desc: 'Playfair' },
+                  ] as const).map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => { setFonteCarrossel(f.id); carrossel && renderizarTodos(carrossel) }}
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                        fonteCarrossel === f.id
+                          ? 'border-iara-500 bg-iara-600/20 text-iara-300'
+                          : 'border-[#1a1a2e] text-[#6b6b8a] hover:border-iara-700/40 hover:text-[#9b9bb5]'
+                      }`}
+                    >
+                      {f.label} <span className="opacity-50 font-normal">{f.desc}</span>
+                    </button>
+                  ))}
+                </div>
+
                 {/* Header com raciocínio + download all */}
                 <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#0f0f20] border border-iara-700/20">
                   <div className="flex-1">
@@ -1006,12 +1281,20 @@ export default function CarrosselPage() {
                       </button>
                     )}
                     <button
+                      onClick={exportarParaInstagram}
+                      disabled={exportandoZip || Object.values(slidePngs).filter(p => !p.startsWith('ERROR:')).length === 0}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap shadow-lg"
+                    >
+                      {exportandoZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <InstagramIcon size={16} />}
+                      {exportandoZip ? 'Preparando...' : 'Salvar na galeria'}
+                    </button>
+                    <button
                       onClick={downloadTodos}
                       disabled={Object.values(slidePngs).filter(p => !p.startsWith('ERROR:')).length === 0}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a2e] border border-[#2a2a4a] hover:border-iara-700/40 disabled:opacity-40 text-[#9b9bb5] hover:text-white text-sm font-medium transition-all whitespace-nowrap"
                     >
                       <Download className="w-4 h-4" />
-                      Baixar todos
+                      PNG avulsos
                     </button>
                   </div>
                 </div>
@@ -1191,16 +1474,143 @@ export default function CarrosselPage() {
         )}
       </div>
 
-      {/* ── Editor inline do slide ── */}
-      {slideEditando && carrossel && (
-        <SlideEditorInline
-          slide={slideEditando}
-          imagensPreview={imagensPreview}
-          total={carrossel.slides.length}
-          modo={modo}
-          onChange={handleEditarSlide}
-          onClose={() => setSlideEditando(null)}
-        />
+      {/* ── Painel de edição manual ── */}
+      {slideEditando && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setSlideEditando(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-lg bg-[#0d0d1a] border border-[#1a1a2e] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1a1a2e]">
+              <div>
+                <p className="text-sm font-semibold text-[#f1f1f8]">Editar slide {slideEditando.ordem}</p>
+                <p className="text-xs text-[#5a5a7a] mt-0.5">Mude o texto e clique em Aplicar — sem gastar créditos</p>
+              </div>
+              <button onClick={() => setSlideEditando(null)} className="p-1.5 rounded-lg hover:bg-[#1a1a2e] text-[#6b6b8a] transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+
+              {/* Título */}
+              <div>
+                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
+                  Título principal
+                  <span className="text-[#4a4a6a] font-normal ml-1">(frase de impacto, curta)</span>
+                </label>
+                <input
+                  value={slideEditando.titulo ?? ''}
+                  onChange={e => setSlideEditando(s => s ? { ...s, titulo: e.target.value } : s)}
+                  placeholder="Ex: 3 hábitos que mudaram minha vida"
+                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
+                />
+              </div>
+
+              {/* Corpo */}
+              <div>
+                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
+                  Texto do slide
+                  <span className="text-[#4a4a6a] font-normal ml-1">(explicação, detalhe)</span>
+                </label>
+                <textarea
+                  value={slideEditando.corpo}
+                  onChange={e => setSlideEditando(s => s ? { ...s, corpo: e.target.value } : s)}
+                  rows={3}
+                  placeholder="Ex: Acordar cedo, ler 10 minutos e tomar água antes do café..."
+                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500 resize-none"
+                />
+              </div>
+
+              {/* CTA */}
+              <div>
+                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
+                  Chamada para ação
+                  <span className="text-[#4a4a6a] font-normal ml-1">(opcional — botão ou link)</span>
+                </label>
+                <input
+                  value={slideEditando.cta ?? ''}
+                  onChange={e => setSlideEditando(s => s ? { ...s, cta: e.target.value } : s)}
+                  placeholder="Ex: Salva esse post!"
+                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
+                />
+              </div>
+
+              {/* Handle */}
+              <div>
+                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
+                  Seu @ nas redes
+                  <span className="text-[#4a4a6a] font-normal ml-1">(aparece no rodapé)</span>
+                </label>
+                <input
+                  value={slideEditando.handle ?? ''}
+                  onChange={e => setSlideEditando(s => s ? { ...s, handle: e.target.value } : s)}
+                  placeholder="Ex: @seunome"
+                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
+                />
+              </div>
+
+              {/* Estilo do slide */}
+              <div>
+                <label className="block text-xs font-medium text-[#c1c1d8] mb-2">
+                  Estilo visual
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'cover_full',    label: 'Foto cheia',      desc: 'Foto preenche tudo' },
+                    { id: 'split_v',       label: 'Lado a lado',     desc: 'Texto esq + foto dir' },
+                    { id: 'side_right',    label: 'Lado invertido',  desc: 'Foto esq + texto dir' },
+                    { id: 'caption_bar',   label: 'Legenda',         desc: 'Foto 65% + barra texto' },
+                    { id: 'editorial',     label: 'Editorial',       desc: 'Painel branco + foto' },
+                    { id: 'cinematic',     label: 'Cinema',          desc: 'Estilo letterbox' },
+                    { id: 'photo_top_full',label: 'Foto grande',     desc: 'Foto 75% + texto' },
+                    { id: 'inset_photo',   label: 'Moldura',         desc: 'Foto com margens' },
+                    { id: 'magazine_full', label: 'Revista',         desc: 'Card sobre foto' },
+                    { id: 'photo_frame',   label: 'Polaroid',        desc: 'Estilo foto antiga' },
+                    { id: 'quote',         label: 'Citação',         desc: 'Frase em destaque' },
+                    { id: 'highlight_box', label: 'Destaque',        desc: 'Número/dado em foco' },
+                    { id: 'list_card',     label: 'Lista',           desc: 'Itens numerados' },
+                    { id: 'minimal_text',  label: 'Mínimo',          desc: 'Só tipografia' },
+                    { id: 'closing',       label: 'Encerramento',    desc: 'CTA + foto de fundo' },
+                  ].map(op => (
+                    <button
+                      key={op.id}
+                      onClick={() => setSlideEditando(s => s ? { ...s, arquetipo: op.id } : s)}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                        (slideEditando.arquetipo ?? '') === op.id
+                          ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                          : 'border-[#1a1a2e] bg-[#08080f] text-[#9b9bb5] hover:border-iara-700/40'
+                      }`}
+                    >
+                      <p className="text-[11px] font-semibold leading-tight">{op.label}</p>
+                      <p className="text-[10px] text-[#5a5a7a] mt-0.5 leading-tight">{op.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 pb-5 flex gap-2">
+              <button
+                onClick={() => setSlideEditando(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[#1a1a2e] text-sm text-[#9b9bb5] hover:border-[#2a2a3e] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAplicarEdicao}
+                className="flex-1 py-2.5 rounded-xl bg-iara-600 hover:bg-iara-500 text-sm font-semibold text-white transition-all flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Aplicar mudanças
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {bancoAberto && (

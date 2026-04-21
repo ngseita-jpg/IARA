@@ -44,17 +44,6 @@ export default async function DashboardLayout({
     redirect('/marca/dashboard')
   }
 
-  // Redireciona para onboarding se não completou
-  const { data: profile } = await supabase
-    .from('creator_profiles')
-    .select('onboarding_completo')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!profile?.onboarding_completo) {
-    redirect('/onboarding')
-  }
-
   return (
     <div className="min-h-screen app-bg relative">
       <div className="fixed inset-0 app-bg-grid opacity-[0.35] pointer-events-none z-0" />

@@ -10,31 +10,27 @@ export default function Icon() {
         style={{
           width: 32,
           height: 32,
-          borderRadius: '50%',
-          background: '#0d0d20',
-          border: '1px solid rgba(139,92,246,0.35)',
+          background: '#0d0b1e',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {/* 4-pointed star */}
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          style={{ display: 'flex' }}
-        >
+        <svg width="22" height="22" viewBox="0 0 24 24" style={{ display: 'flex' }}>
           <defs>
-            <linearGradient id="g" x1="40%" y1="0%" x2="60%" y2="100%">
-              <stop offset="0%"   stopColor="#ddd6fe" />
-              <stop offset="45%"  stopColor="#a78bfa" />
-              <stop offset="100%" stopColor="#7c3aed" />
+            <linearGradient id="g" x1="20%" y1="0%" x2="75%" y2="100%">
+              <stop offset="0%"   stopColor="#ede9fe" />
+              <stop offset="38%"  stopColor="#a78bfa" />
+              <stop offset="100%" stopColor="#6d28d9" />
             </linearGradient>
           </defs>
           <path
             d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
             fill="url(#g)"
+          />
+          <path
+            d="M12 12 L14.5 9.5 L22 12 L14.5 14.5 Z"
+            fill="rgba(4,2,18,0.52)"
           />
         </svg>
       </div>
