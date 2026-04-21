@@ -5,119 +5,77 @@ interface IaraLogoProps {
 }
 
 const ICON = {
-  sm: { wrap: 32, svg: 17 },
-  md: { wrap: 52, svg: 28 },
-  lg: { wrap: 64, svg: 34 },
+  sm: { size: 28, svg: 18 },
+  md: { size: 44, svg: 28 },
+  lg: { size: 56, svg: 36 },
 }
 
 const TEXT = {
-  sm: { iara: 'text-[15px]', hub: 'text-[9px]', lineW: 7 },
-  md: { iara: 'text-[22px]', hub: 'text-[10px]', lineW: 13 },
-  lg: { iara: 'text-[28px]', hub: 'text-xs',     lineW: 18 },
+  sm: { iara: 'text-[15px]', hub: 'text-[8.5px]' },
+  md: { iara: 'text-[22px]', hub: 'text-[11px]' },
+  lg: { iara: 'text-[28px]', hub: 'text-[13px]' },
+}
+
+export function IaraStar({ size = 32, id = 'iara-star' }: { size?: number; id?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id={`${id}-grad`} x1="20%" y1="0%" x2="75%" y2="100%">
+          <stop offset="0%"   stopColor="#ede9fe" />
+          <stop offset="38%"  stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#6d28d9" />
+        </linearGradient>
+      </defs>
+      {/* Main star */}
+      <path
+        d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
+        fill={`url(#${id}-grad)`}
+      />
+      {/* Depth shadow — right quadrant */}
+      <path
+        d="M12 12 L14.5 9.5 L22 12 L14.5 14.5 Z"
+        fill="rgba(4,2,18,0.52)"
+      />
+    </svg>
+  )
 }
 
 export function IaraLogo({ size = 'sm', layout = 'horizontal', className = '' }: IaraLogoProps) {
   const icon = ICON[size]
   const text = TEXT[size]
-  const showSparkle = size !== 'sm'
 
   return (
     <div
       className={`flex ${layout === 'vertical' ? 'flex-col items-center gap-3' : 'items-center gap-2.5'} ${className}`}
     >
-      {/* ── Icon ── */}
+      {/* Icon */}
       <div
-        className="relative flex-shrink-0 flex items-center justify-center rounded-full"
-        style={{ width: icon.wrap, height: icon.wrap }}
+        className="relative flex-shrink-0 flex items-center justify-center"
+        style={{ width: icon.size, height: icon.size }}
       >
-        {/* Glow */}
         <div
-          className="absolute inset-0 rounded-full blur-md"
-          style={{ background: 'rgba(139,92,246,0.22)' }}
+          className="absolute inset-0 rounded-full blur-lg"
+          style={{ background: 'rgba(139,92,246,0.18)' }}
         />
-        {/* Ring */}
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background: '#0d0d20',
-            border: '1px solid rgba(139,92,246,0.35)',
-          }}
-        />
-
-        {/* Star */}
-        <svg
-          width={icon.svg}
-          height={icon.svg}
-          viewBox="0 0 24 24"
-          fill="none"
-          className="relative z-10"
-        >
-          <defs>
-            <linearGradient id="iara-star-grad" x1="40%" y1="0%" x2="60%" y2="100%">
-              <stop offset="0%"   stopColor="#ddd6fe" />
-              <stop offset="45%"  stopColor="#a78bfa" />
-              <stop offset="100%" stopColor="#7c3aed" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
-            fill="url(#iara-star-grad)"
-          />
-        </svg>
-
-        {/* Small sparkle top-right */}
-        {showSparkle && (
-          <svg
-            width={size === 'md' ? 7 : 9}
-            height={size === 'md' ? 7 : 9}
-            viewBox="0 0 24 24"
-            fill="none"
-            className="absolute z-10"
-            style={{ top: size === 'md' ? 3 : 4, right: size === 'md' ? 3 : 4 }}
-          >
-            <path
-              d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
-              fill="#c4b5fd"
-              opacity="0.9"
-            />
-          </svg>
-        )}
+        <IaraStar size={icon.svg} id={`logo-${size}`} />
       </div>
 
-      {/* ── Wordmark ── */}
+      {/* Wordmark */}
       <div
-        className={`flex flex-col leading-none gap-[5px] ${layout === 'vertical' ? 'items-center' : 'items-start'}`}
+        className={`flex flex-col leading-none gap-[4px] ${layout === 'vertical' ? 'items-center' : 'items-start'}`}
       >
         <span
           className={`font-bold text-white ${text.iara}`}
-          style={{ letterSpacing: '0.28em' }}
+          style={{ letterSpacing: '0.30em' }}
         >
           IARA
         </span>
-        <div
-          className={`flex items-center gap-1.5 font-semibold text-[#7a7a9a] ${text.hub}`}
-          style={{ letterSpacing: '0.22em' }}
+        <span
+          className={`font-medium text-white/70 ${text.hub}`}
+          style={{ letterSpacing: '0.28em' }}
         >
-          <span
-            style={{
-              display: 'block',
-              width: text.lineW,
-              height: 1,
-              background: 'rgba(120,80,200,0.5)',
-              borderRadius: 1,
-            }}
-          />
           HUB
-          <span
-            style={{
-              display: 'block',
-              width: text.lineW,
-              height: 1,
-              background: 'rgba(120,80,200,0.5)',
-              borderRadius: 1,
-            }}
-          />
-        </div>
+        </span>
       </div>
     </div>
   )
