@@ -135,10 +135,8 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
         ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
-      {/* Scrim topo */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
-      {/* Scrim base */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 380, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
+      {/* Scrim base — apenas atrás do texto */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 220, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
 
       {/* Eyebrow topo */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -344,14 +342,19 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
 }
 
 // ─── Archetype 6: closing ─────────────────────────────────────────────────────
-function renderClosing(slide: Slide, total: number) {
+function renderClosing(slide: Slide, total: number, imgSrc?: string) {
   const cta  = trunc(slide.cta || 'Salve esse post.', 30)
   const info = trunc(slide.corpo, 80)
   const fs   = cta.length > 20 ? 88 : 116
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
-      {/* Gradiente decorativo único */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(8,8,15,0) 50%)', display: 'flex' }} />
+      {/* Foto de fundo se disponível */}
+      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
+      {/* Overlay leve sobre foto */}
+      {imgSrc
+        ? <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.55)', display: 'flex' }} />
+        : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(8,8,15,0) 50%)', display: 'flex' }} />
+      }
 
       {/* Logo topo */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -772,12 +775,8 @@ function renderWarmOverlay(slide: Slide, imgSrc: string | undefined, total: numb
         ? <Photo src={imgSrc} foco={slide.foto_foco} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #3d1a05 0%, #7c3a12 100%)', display: 'flex' }} />
       }
-      {/* Overlay âmbar quente */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(120, 60, 10, 0.22)', display: 'flex' }} />
-      {/* Scrim base forte */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 400, backgroundImage: 'linear-gradient(0deg, rgba(20,8,0,0.70) 0%, rgba(20,8,0,0) 100%)', display: 'flex' }} />
-      {/* Scrim topo leve */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 160, backgroundImage: 'linear-gradient(180deg, rgba(20,8,0,0.30) 0%, rgba(20,8,0,0) 100%)', display: 'flex' }} />
+      {/* Scrim base — apenas atrás do texto */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 260, backgroundImage: 'linear-gradient(0deg, rgba(10,4,0,0.60) 0%, rgba(10,4,0,0) 100%)', display: 'flex' }} />
 
       {/* Eyebrow */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1318,8 +1317,10 @@ function renderStepCard(slide: Slide, _imgSrc: string | undefined, total: number
 }
 
 // ─── Resolver ─────────────────────────────────────────────────────────────────
-const CYCLE       = ['cover_full','split_v','editorial','cinematic','caption_bar','inset_photo','top_text','side_right','bold_type','full_bleed','warm_overlay','neon_card','quote','minimal_text','gradient_text','photo_top_full','list_card','dark_split','highlight_box','magazine_full','story_arc','dark_card_center','photo_frame','color_block','duo_panel','step_card'] as const
-const CYCLE_NOIMG = ['top_text', 'bold_type', 'quote', 'neon_card', 'minimal_text', 'gradient_text', 'list_card', 'highlight_box', 'dark_card_center', 'color_block', 'step_card'] as const
+// Ciclo para slides COM foto — arquétipos que exibem a foto sem overlay pesado
+const CYCLE_PHOTO = ['split_v','editorial','caption_bar','side_right','cinematic','duo_panel','photo_top_full','story_arc','photo_frame','inset_photo','dark_split','magazine_full'] as const
+// Ciclo para slides SEM foto — arquétipos tipográficos
+const CYCLE_NOIMG = ['top_text','bold_type','list_card','highlight_box','dark_card_center','color_block','step_card','minimal_text','gradient_text','neon_card','quote','gradient_text'] as const
 
 // Arquétipos que sobrepõem texto no centro/base da foto (risco de cobrir rosto)
 const ARCHS_RISCO_ROSTO = new Set(['cover_full', 'full_bleed', 'brand_cover'])
@@ -1330,8 +1331,8 @@ function resolveArq(slide: Slide, hasBg: boolean, modo: string): string {
     if (slide.tipo === 'capa') arq = modo === 'marca' ? 'brand_cover' : 'cover_full'
     else if (slide.tipo === 'encerramento') arq = modo === 'marca' ? 'brand_promo' : 'closing'
     else {
-      const idx = (slide.ordem - 2 + 400) % (hasBg ? CYCLE.length : CYCLE_NOIMG.length)
-      arq = (hasBg ? CYCLE : CYCLE_NOIMG)[idx]
+      const idx = (slide.ordem - 2) % (hasBg ? CYCLE_PHOTO.length : CYCLE_NOIMG.length)
+      arq = (hasBg ? CYCLE_PHOTO : CYCLE_NOIMG)[idx]
     }
   }
   // Fallback de segurança: rosto no centro + arquétipo de risco → split_v (texto à esquerda, foto à direita)
@@ -1365,7 +1366,7 @@ export async function POST(req: NextRequest) {
       case 'top_text':     content = renderTopText(slide, imgSrc, total); break
       case 'full_bleed':   content = renderFullBleed(slide, imgSrc, total); break
       case 'quote':        content = renderQuote(slide, imgSrc, total); break
-      case 'closing':      content = renderClosing(slide, total); break
+      case 'closing':      content = renderClosing(slide, total, imgSrc); break
       case 'brand_cover':  content = renderBrandCover(slide, imgSrc, total); break
       case 'brand_story':  content = renderBrandStory(slide, imgSrc, total); break
       case 'brand_promo':  content = renderBrandPromo(slide, imgSrc, total); break
