@@ -128,7 +128,15 @@ Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use l
   "paleta": { "primaria": "#6366f1", "secundaria": "#a855f7", "texto": "#ffffff" },
   "fonte_sugerida": "Inter",
   "raciocinio": "explique brevemente suas escolhas de design e copy"
-}`
+}
+
+## Qualidade do texto — REGRAS OBRIGATÓRIAS
+- Escreva em português brasileiro fluente e natural — zero erros gramaticais
+- Títulos: máximo 8 palavras, diretos, impactantes, sem clichês
+- Corpo: frases curtas (máximo 20 palavras), concretas, acionáveis
+- NUNCA use: "Descubra", "Incrível", "Transforme sua vida", "Você merece", "Dica poderosa"
+- Use linguagem de quem realmente entende do assunto — específico, concreto, direto
+- Cada slide deve ter UMA ideia central, não três mezcladas`
 }
 
 export async function POST(req: NextRequest) {

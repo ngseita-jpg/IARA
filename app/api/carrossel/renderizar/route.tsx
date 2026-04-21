@@ -136,9 +136,9 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim topo */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 300, backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
       {/* Scrim base */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 520, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 380, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
 
       {/* Eyebrow topo */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -269,7 +269,7 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim base para texto */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 600, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 420, backgroundImage: 'linear-gradient(0deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0) 100%)', display: 'flex' }} />
 
       {/* Chip número */}
       <div style={{ position: 'absolute', top: EDGE, right: EDGE, paddingTop: 10, paddingBottom: 10, paddingLeft: 18, paddingRight: 18, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 999, display: 'flex' }}>
@@ -312,7 +312,7 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }} />
       }
       {/* Overlay escuro */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.75)', display: 'flex' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.45)', display: 'flex' }} />
 
       {/* Aspas — decorativo */}
       <div style={{ position: 'absolute', left: 64, top: 200, fontSize: 240, fontWeight: 900, color: VIOLET, lineHeight: 1.0 }}>
@@ -403,7 +403,7 @@ function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: numbe
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }}>
       {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
       {imgSrc && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.80) 0%, rgba(19,19,31,0) 35%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.90) 100%)', display: 'flex' }} />
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.55) 0%, rgba(19,19,31,0) 35%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.65) 100%)', display: 'flex' }} />
       )}
       {!imgSrc && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
@@ -443,7 +443,7 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.30) 100%)', display: 'flex' }} />
       }
       {/* Scrim esquerdo */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(90deg, rgba(8,8,15,0.92) 0%, rgba(8,8,15,0.70) 42%, rgba(8,8,15,0) 68%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(90deg, rgba(8,8,15,0.75) 0%, rgba(8,8,15,0.55) 42%, rgba(8,8,15,0) 68%)', display: 'flex' }} />
 
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 10 }}>
         <IaraStar size={18} />
@@ -773,11 +773,11 @@ function renderWarmOverlay(slide: Slide, imgSrc: string | undefined, total: numb
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #3d1a05 0%, #7c3a12 100%)', display: 'flex' }} />
       }
       {/* Overlay âmbar quente */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(120, 60, 10, 0.52)', display: 'flex' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(120, 60, 10, 0.22)', display: 'flex' }} />
       {/* Scrim base forte */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 560, backgroundImage: 'linear-gradient(0deg, rgba(20,8,0,0.95) 0%, rgba(20,8,0,0) 100%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 400, backgroundImage: 'linear-gradient(0deg, rgba(20,8,0,0.70) 0%, rgba(20,8,0,0) 100%)', display: 'flex' }} />
       {/* Scrim topo leve */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 200, backgroundImage: 'linear-gradient(180deg, rgba(20,8,0,0.55) 0%, rgba(20,8,0,0) 100%)', display: 'flex' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 160, backgroundImage: 'linear-gradient(180deg, rgba(20,8,0,0.30) 0%, rgba(20,8,0,0) 100%)', display: 'flex' }} />
 
       {/* Eyebrow */}
       <div style={{ position: 'absolute', top: EDGE, left: EDGE, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -825,7 +825,7 @@ function renderBoldType(slide: Slide, imgSrc: string | undefined, total: number)
       {imgSrc && (
         <>
           <Photo src={imgSrc} foco={slide.foto_foco} />
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.72)', display: 'flex' }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex' }} />
         </>
       )}
       {!imgSrc && (
@@ -939,7 +939,7 @@ function renderNeonCard(slide: Slide, imgSrc: string | undefined, total: number)
       {imgSrc && (
         <>
           <Photo src={imgSrc} foco={slide.foto_foco} />
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(2,2,9,0.82)', display: 'flex' }} />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(2,2,9,0.55)', display: 'flex' }} />
         </>
       )}
 
@@ -999,7 +999,7 @@ function resolveArq(slide: Slide, hasBg: boolean, modo: string): string {
     if (slide.tipo === 'capa') arq = modo === 'marca' ? 'brand_cover' : 'cover_full'
     else if (slide.tipo === 'encerramento') arq = modo === 'marca' ? 'brand_promo' : 'closing'
     else {
-      const idx = (slide.ordem - 2 + 400) % 4
+      const idx = (slide.ordem - 2 + 400) % (hasBg ? CYCLE.length : CYCLE_NOIMG.length)
       arq = (hasBg ? CYCLE : CYCLE_NOIMG)[idx]
     }
   }
