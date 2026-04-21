@@ -47,12 +47,20 @@ export default async function DashboardLayout({
   // Redireciona para onboarding se não completou
   const { data: profile } = await supabase
     .from('creator_profiles')
-    .select('onboarding_completo')
+    .select('onboarding_completo, nome_artistico')
     .eq('user_id', user.id)
     .single()
 
   if (!profile?.onboarding_completo) {
-    redirect('/onboarding')
+    // Perfil existe mas flag não foi marcada (usuário legado ou falha anterior)
+    if (profile?.nome_artistico) {
+      await supabase
+        .from('creator_profiles')
+        .update({ onboarding_completo: true })
+        .eq('user_id', user.id)
+    } else {
+      redirect('/onboarding')
+    }
   }
 
   return (
