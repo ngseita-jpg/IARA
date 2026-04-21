@@ -374,6 +374,8 @@ export default function CarrosselPage() {
   // ───────────────────────────────────────────
   // Download
   // ───────────────────────────────────────────
+  const [exportandoZip, setExportandoZip] = useState(false)
+
   function downloadSlide(ordem: number) {
     const url = slidePngs[ordem]
     if (!url) return
@@ -390,6 +392,32 @@ export default function CarrosselPage() {
       a.download = `slide-${ordem}.png`
       a.click()
     })
+  }
+
+  async function exportarParaInstagram() {
+    const pngsValidos = Object.entries(slidePngs).filter(([, url]) => url && !url.startsWith('ERROR:'))
+    if (!pngsValidos.length) return
+    setExportandoZip(true)
+    try {
+      const JSZip = (await import('jszip')).default
+      const zip = new JSZip()
+      const tituloBase = (carrossel?.slides[0]?.titulo ?? 'carrossel')
+        .toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)
+      await Promise.all(
+        pngsValidos.map(async ([ordem, blobUrl]) => {
+          const res = await fetch(blobUrl)
+          const blob = await res.blob()
+          zip.file(`${tituloBase}-slide-${ordem.padStart(2, '0')}.png`, blob)
+        })
+      )
+      const zipBlob = await zip.generateAsync({ type: 'blob' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(zipBlob)
+      a.download = `${tituloBase}-instagram.zip`
+      a.click()
+    } finally {
+      setExportandoZip(false)
+    }
   }
 
   // ───────────────────────────────────────────
@@ -1026,12 +1054,20 @@ export default function CarrosselPage() {
                       </button>
                     )}
                     <button
+                      onClick={exportarParaInstagram}
+                      disabled={exportandoZip || Object.values(slidePngs).filter(p => !p.startsWith('ERROR:')).length === 0}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap shadow-lg"
+                    >
+                      {exportandoZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <InstagramIcon size={16} />}
+                      {exportandoZip ? 'Gerando ZIP...' : 'Exportar para Instagram'}
+                    </button>
+                    <button
                       onClick={downloadTodos}
                       disabled={Object.values(slidePngs).filter(p => !p.startsWith('ERROR:')).length === 0}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a2e] border border-[#2a2a4a] hover:border-iara-700/40 disabled:opacity-40 text-[#9b9bb5] hover:text-white text-sm font-medium transition-all whitespace-nowrap"
                     >
                       <Download className="w-4 h-4" />
-                      Baixar todos
+                      PNG avulsos
                     </button>
                   </div>
                 </div>
