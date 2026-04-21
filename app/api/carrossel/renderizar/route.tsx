@@ -61,26 +61,9 @@ function prepImg(raw: string | undefined): string | undefined {
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)) }
-
-// Hard safety-net: só corta se o texto for absurdamente longo (evita quebrar layout)
 function trunc(s: string | undefined, max: number) {
   const str = s ?? ''
   return str.length > max ? str.slice(0, max) + '…' : str
-}
-
-// Calcula tamanho de fonte adaptativo: quanto maior o texto, menor a fonte (curva suave)
-// idealChars = qtd de caracteres que cabe confortavelmente no tamanho máximo
-function autoFit({ text, maxFont, minFont, idealChars }: {
-  text: string | undefined
-  maxFont: number
-  minFont: number
-  idealChars: number
-}): number {
-  const len = (text ?? '').length
-  if (len === 0) return maxFont
-  const ratio = Math.min(1, idealChars / len)
-  const curved = Math.pow(ratio, 0.58) // curva suave — reduz menos agressivo
-  return Math.max(minFont, Math.round(maxFont * curved))
 }
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -153,10 +136,8 @@ function Photo({ src, foco }: { src: string; foco?: string }) {
 
 // ─── Archetype 1: cover_full ──────────────────────────────────────────────────
 function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number) {
-  const text = trunc(slide.titulo || slide.corpo, 200)
-  const fs = slide.fs_titulo_override ?? autoFit({ text, maxFont: 124, minFont: 58, idealChars: 32 })
-  const OV = slide.overlay_opacity ?? 1
-  const COR = slide.cor_texto_override ?? TEXT
+  const text = trunc(slide.titulo || slide.corpo, 72)
+  const fs = text.length > 50 ? 84 : text.length > 35 ? 104 : 124
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Background */}
@@ -177,7 +158,7 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
 
       {/* Título */}
       <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116 }}>
-        <div style={{ fontSize: fs, fontWeight: 800, color: COR, lineHeight: 1.05, letterSpacing: -1.5 }}>
+        <div style={{ fontSize: fs, fontWeight: 800, color: TEXT, lineHeight: 1.05, letterSpacing: -1.5 }}>
           {text}
         </div>
       </div>
@@ -195,9 +176,9 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
 
 // ─── Archetype 2: split_v ─────────────────────────────────────────────────────
 function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 140)
-  const corpo = trunc(slide.corpo, 260)
-  const fs = autoFit({ text: titulo, maxFont: 66, minFont: 32, idealChars: 32 })
+  const titulo = trunc(slide.titulo, 50)
+  const corpo = trunc(slide.corpo, 110)
+  const fs = titulo.length > 35 ? 50 : 66
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: BG }}>
       {/* Coluna esquerda — texto */}
@@ -242,9 +223,9 @@ function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
 
 // ─── Archetype 3: top_text ────────────────────────────────────────────────────
 function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 160)
-  const corpo  = trunc(slide.corpo, 260)
-  const fs = autoFit({ text: titulo, maxFont: 110, minFont: 52, idealChars: 28 })
+  const titulo = trunc(slide.titulo, 55)
+  const corpo  = trunc(slide.corpo, 110)
+  const fs = titulo.length > 40 ? 78 : titulo.length > 28 ? 94 : 110
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Metade inferior — foto ou gradiente */}
@@ -285,11 +266,9 @@ function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) 
 
 // ─── Archetype 4: full_bleed ──────────────────────────────────────────────────
 function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 150)
-  const corpo  = trunc(slide.corpo, 220)
-  const fs = slide.fs_titulo_override ?? autoFit({ text: titulo, maxFont: 86, minFont: 40, idealChars: 22 })
-  const OV = slide.overlay_opacity ?? 1
-  const COR = slide.cor_texto_override ?? TEXT
+  const titulo = trunc(slide.titulo, 50)
+  const corpo  = trunc(slide.corpo, 90)
+  const fs = titulo.length > 30 ? 58 : titulo.length > 22 ? 72 : 86
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Background */}
@@ -310,7 +289,7 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
       {/* Texto inferior */}
       <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 100, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {titulo && (
-          <div style={{ fontSize: fs, fontWeight: 800, color: COR, lineHeight: 1.05, letterSpacing: -1.5 }}>
+          <div style={{ fontSize: fs, fontWeight: 800, color: TEXT, lineHeight: 1.05, letterSpacing: -1.5 }}>
             {titulo}
           </div>
         )}
@@ -330,11 +309,9 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
 
 // ─── Archetype 5: quote ───────────────────────────────────────────────────────
 function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
-  const quote = trunc(slide.titulo || slide.corpo, 260)
-  const autor = slide.titulo ? trunc(slide.corpo, 180) : ''
-  const fs = slide.fs_titulo_override ?? autoFit({ text: quote, maxFont: 68, minFont: 32, idealChars: 55 })
-  const OV = slide.overlay_opacity ?? 1
-  const COR = slide.cor_texto_override ?? TEXT
+  const quote = trunc(slide.titulo || slide.corpo, 120)
+  const autor = slide.titulo ? trunc(slide.corpo, 80) : ''
+  const fs = quote.length > 80 ? 48 : quote.length > 55 ? 58 : 68
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
       {/* Background */}
@@ -346,7 +323,7 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.45)', display: 'flex' }} />
 
       {/* Aspas — decorativo */}
-      <div style={{ position: 'absolute', left: 64, top: 200, fontSize: 240, fontWeight: 900, color: VIOLET, lineHeight: 1.0, opacity: 0.85 }}>
+      <div style={{ position: 'absolute', left: 64, top: 200, fontSize: 240, fontWeight: 900, color: VIOLET, lineHeight: 1.0 }}>
         "
       </div>
 
@@ -357,7 +334,7 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
 
       {/* Quote */}
       <div style={{ position: 'absolute', left: 100, right: 100, top: 310, display: 'flex', flexDirection: 'column', gap: 32 }}>
-        <div style={{ fontSize: fs, fontWeight: 700, color: COR, lineHeight: 1.15, letterSpacing: -1 }}>
+        <div style={{ fontSize: fs, fontWeight: 700, color: TEXT, lineHeight: 1.15, letterSpacing: -1 }}>
           {quote}
         </div>
         {autor && (
@@ -433,8 +410,8 @@ function renderClosing(slide: Slide, total: number, imgSrc?: string) {
 
 // ─── Archetype 7: brand_cover ─────────────────────────────────────────────────
 function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: number) {
-  const text = trunc(slide.titulo || slide.corpo, 180)
-  const fs   = autoFit({ text, maxFont: 112, minFont: 52, idealChars: 28 })
+  const text = trunc(slide.titulo || slide.corpo, 60)
+  const fs   = text.length > 30 ? 88 : 112
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }}>
       {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
@@ -470,9 +447,8 @@ function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: numbe
 
 // ─── Archetype 8: brand_story ─────────────────────────────────────────────────
 function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 140)
-  const corpo  = trunc(slide.corpo, 260)
-  const fsT = autoFit({ text: titulo, maxFont: 54, minFont: 28, idealChars: 28 })
+  const titulo = trunc(slide.titulo, 45)
+  const corpo  = trunc(slide.corpo, 110)
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
       {imgSrc
@@ -490,7 +466,7 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
       </div>
 
       {titulo && (
-        <div style={{ position: 'absolute', left: EDGE, top: 210, width: 540, fontSize: fsT, fontWeight: 700, color: TEXT, lineHeight: 1.05, letterSpacing: -1 }}>
+        <div style={{ position: 'absolute', left: EDGE, top: 210, width: 540, fontSize: 54, fontWeight: 700, color: TEXT, lineHeight: 1.05, letterSpacing: -1 }}>
           {titulo}
         </div>
       )}
@@ -510,10 +486,10 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
 
 // ─── Archetype 9: brand_promo ─────────────────────────────────────────────────
 function renderBrandPromo(slide: Slide, _imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 150)
-  const corpo  = trunc(slide.corpo, 220)
-  const cta    = slide.cta ? trunc(slide.cta, 80) : null
-  const fs = autoFit({ text: titulo, maxFont: 86, minFont: 40, idealChars: 22 })
+  const titulo = trunc(slide.titulo, 50)
+  const corpo  = trunc(slide.corpo, 90)
+  const cta    = slide.cta ? trunc(slide.cta, 30) : null
+  const fs = titulo.length > 30 ? 58 : titulo.length > 20 ? 72 : 86
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(99,102,241,0.15) 100%)', display: 'flex' }} />
@@ -555,9 +531,9 @@ function renderBrandPromo(slide: Slide, _imgSrc: string | undefined, total: numb
 
 // ─── Fallback — ultra-simples, nunca crasha ───────────────────────────────────
 function renderFallback(slide: Slide, total: number) {
-  const title = trunc(slide.titulo || slide.corpo, 200)
-  const body  = slide.titulo ? trunc(slide.corpo, 260) : ''
-  const fs    = autoFit({ text: title, maxFont: 108, minFont: 50, idealChars: 30 })
+  const title = trunc(slide.titulo || slide.corpo, 72)
+  const body  = slide.titulo ? trunc(slide.corpo, 130) : ''
+  const fs    = title.length > 45 ? 72 : title.length > 28 ? 90 : 108
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: EDGE, paddingBottom: EDGE, paddingLeft: EDGE, paddingRight: EDGE }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(8,8,15,0) 60%)', display: 'flex' }} />
@@ -583,9 +559,9 @@ function renderFallback(slide: Slide, total: number) {
 // ─── Archetype 10: editorial ──────────────────────────────────────────────────
 // Painel branco à esquerda (editorial/magazine), foto à direita — estética clean & luxury
 function renderEditorial(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 140)
-  const corpo  = trunc(slide.corpo, 240)
-  const fs = autoFit({ text: titulo, maxFont: 82, minFont: 38, idealChars: 20 })
+  const titulo = trunc(slide.titulo, 45)
+  const corpo  = trunc(slide.corpo, 100)
+  const fs = titulo.length > 30 ? 54 : titulo.length > 20 ? 68 : 82
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: '#f5f4f0' }}>
       {/* Painel esquerdo — branco/creme */}
@@ -641,10 +617,10 @@ function renderEditorial(slide: Slide, imgSrc: string | undefined, total: number
 // ─── Archetype 11: cinematic ──────────────────────────────────────────────────
 // Letterbox: foto na faixa do meio, barras pretas topo e base com texto — estilo cinema
 function renderCinematic(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 160)
-  const corpo  = trunc(slide.corpo, 220)
+  const titulo = trunc(slide.titulo, 55)
+  const corpo  = trunc(slide.corpo, 90)
   const BAR    = 210
-  const fs = autoFit({ text: titulo, maxFont: 80, minFont: 36, idealChars: 22 })
+  const fs = titulo.length > 35 ? 52 : titulo.length > 22 ? 66 : 80
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', backgroundColor: '#000000' }}>
       {/* Barra topo — preta com texto */}
@@ -698,9 +674,9 @@ function renderCinematic(slide: Slide, imgSrc: string | undefined, total: number
 // ─── Archetype 12: caption_bar ────────────────────────────────────────────────
 // Foto preenche topo (65%), barra sólida na base com texto — estilo feed moderno
 function renderCaptionBar(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 140)
-  const corpo  = trunc(slide.corpo, 200)
-  const fs = autoFit({ text: titulo, maxFont: 76, minFont: 34, idealChars: 20 })
+  const titulo = trunc(slide.titulo, 48)
+  const corpo  = trunc(slide.corpo, 80)
+  const fs = titulo.length > 32 ? 50 : titulo.length > 20 ? 62 : 76
   const BAR_H  = 340
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', backgroundColor: BG }}>
@@ -749,9 +725,9 @@ function renderCaptionBar(slide: Slide, imgSrc: string | undefined, total: numbe
 // ─── Archetype 13: inset_photo ────────────────────────────────────────────────
 // Foto emoldurada/contida no centro — design de card premium com margens visíveis
 function renderInsetPhoto(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 130)
-  const corpo  = trunc(slide.corpo, 200)
-  const fs = autoFit({ text: titulo, maxFont: 76, minFont: 32, idealChars: 18 })
+  const titulo = trunc(slide.titulo, 40)
+  const corpo  = trunc(slide.corpo, 80)
+  const fs = titulo.length > 28 ? 52 : titulo.length > 18 ? 64 : 76
   const MARGIN = 52
   const PHOTO_H = 560
   return (
@@ -800,10 +776,9 @@ function renderInsetPhoto(slide: Slide, imgSrc: string | undefined, total: numbe
 // ─── Archetype 14: warm_overlay ───────────────────────────────────────────────
 // Foto com overlay âmbar/quente — clima lifestyle, orgânico, humano
 function renderWarmOverlay(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 160)
-  const corpo  = trunc(slide.corpo, 220)
-  const fs = slide.fs_titulo_override ?? autoFit({ text: titulo, maxFont: 96, minFont: 42, idealChars: 24 })
-  const OV = slide.overlay_opacity ?? 1
+  const titulo = trunc(slide.titulo, 52)
+  const corpo  = trunc(slide.corpo, 90)
+  const fs = titulo.length > 36 ? 64 : titulo.length > 24 ? 80 : 96
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: '#1a0e05' }}>
       {imgSrc
@@ -850,13 +825,12 @@ function renderWarmOverlay(slide: Slide, imgSrc: string | undefined, total: numb
 // ─── Archetype 15: bold_type ──────────────────────────────────────────────────
 // Tipografia dominante — texto ENORME com foto como fundo sutil, design editorial agressivo
 function renderBoldType(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 120)
-  const corpo  = trunc(slide.corpo, 200)
-  const fs = slide.fs_titulo_override ?? autoFit({ text: titulo, maxFont: 148, minFont: 56, idealChars: 12 })
-  const OV = slide.overlay_opacity ?? 1
+  const titulo = trunc(slide.titulo, 30)
+  const corpo  = trunc(slide.corpo, 80)
+  const fs = titulo.length > 20 ? 96 : titulo.length > 12 ? 120 : 148
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: '#000000' }}>
-      {/* Foto com scrim gradiente — foto visível em cima, escurece embaixo onde fica o texto */}
+      {/* Foto com opacidade reduzida — apenas textura */}
       {imgSrc && (
         <>
           <Photo src={imgSrc} foco={slide.foto_foco} />
@@ -909,9 +883,9 @@ function renderBoldType(slide: Slide, imgSrc: string | undefined, total: number)
 // ─── Archetype 16: side_right ─────────────────────────────────────────────────
 // Inverso do split_v — foto à esquerda (55%), texto à direita com painel escuro
 function renderSideRight(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 140)
-  const corpo  = trunc(slide.corpo, 240)
-  const fs = autoFit({ text: titulo, maxFont: 78, minFont: 34, idealChars: 20 })
+  const titulo = trunc(slide.titulo, 45)
+  const corpo  = trunc(slide.corpo, 100)
+  const fs = titulo.length > 30 ? 52 : titulo.length > 20 ? 64 : 78
   const PHOTO_W = 594
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: BG }}>
@@ -961,17 +935,16 @@ function renderSideRight(slide: Slide, imgSrc: string | undefined, total: number
 // ─── Archetype 17: neon_card ─────────────────────────────────────────────────
 // Card centralizado com borda neon — foto ao fundo desfocada, texto em destaque
 function renderNeonCard(slide: Slide, imgSrc: string | undefined, total: number) {
-  const titulo = trunc(slide.titulo, 130)
-  const corpo  = trunc(slide.corpo, 200)
-  const fs = slide.fs_titulo_override ?? autoFit({ text: titulo, maxFont: 86, minFont: 38, idealChars: 18 })
-  const OV = slide.overlay_opacity ?? 1
+  const titulo = trunc(slide.titulo, 42)
+  const corpo  = trunc(slide.corpo, 80)
+  const fs = titulo.length > 28 ? 56 : titulo.length > 18 ? 70 : 86
   const CARD_W = 900
   const CARD_H = 680
   const CX = (1080 - CARD_W) / 2
   const CY = (1080 - CARD_H) / 2
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: '#020209' }}>
-      {/* Foto de fundo com overlay radial — escurece mais no centro (onde vai o card) deixando as bordas com foto visível */}
+      {/* Foto de fundo com overlay forte */}
       {imgSrc && (
         <>
           <Photo src={imgSrc} foco={slide.foto_foco} />
