@@ -249,6 +249,44 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
       return NextResponse.json({ error: 'Erro ao interpretar resposta da IA. Tente novamente.' }, { status: 500 })
     }
 
+    // ── Revisão automática do texto ──────────────────────────────────────────
+    try {
+      const slidesParaRevisar = carrossel.slides.map(s => ({
+        ordem: s.ordem, titulo: s.titulo, corpo: s.corpo, cta: s.cta, eyebrow: s.eyebrow
+      }))
+      const revisao = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: `Você é um revisor de texto especializado em copy para redes sociais brasileiras. Revise e melhore SOMENTE os textos (titulo, corpo, cta, eyebrow) dos slides abaixo. Mantenha a intenção e o tamanho — apenas corrija erros, melhore fluidez e torne cada frase mais humana e natural de ler em voz alta. Retorne APENAS JSON com o mesmo formato:
+
+${JSON.stringify(slidesParaRevisar)}
+
+Regras:
+- Zero erros gramaticais
+- Português brasileiro natural (como um humano falaria)
+- Títulos: impactantes, diretos, máx 8 palavras
+- Nenhum clichê: sem "Descubra", "Incrível", "Transforme", "Poderoso"
+- Se o texto já estiver bom, mantenha igual
+- Retorne APENAS o JSON array, sem markdown nem explicações`
+        }]
+      })
+      const revisadoRaw = revisao.content[0].type === 'text' ? revisao.content[0].text.trim() : null
+      if (revisadoRaw) {
+        const slidesr: Array<{ordem:number;titulo?:string;corpo?:string;cta?:string;eyebrow?:string}> = JSON.parse(revisadoRaw.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,''))
+        for (const rev of slidesr) {
+          const orig = carrossel.slides.find(s => s.ordem === rev.ordem)
+          if (orig) {
+            if (rev.titulo)  orig.titulo  = rev.titulo
+            if (rev.corpo)   orig.corpo   = rev.corpo
+            if (rev.cta)     orig.cta     = rev.cta
+            if (rev.eyebrow) orig.eyebrow = rev.eyebrow
+          }
+        }
+      }
+    } catch { /* revisão falhou silenciosamente — usa texto original */ }
+
     if (!carrossel?.slides?.length) {
       return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })
     }
