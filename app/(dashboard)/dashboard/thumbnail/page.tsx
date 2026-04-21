@@ -15,13 +15,12 @@ import {
   ChevronRight,
   ChevronLeft,
   Lightbulb,
-  Play,
   FileText,
-  Sliders,
   Images,
   History,
   User,
   Trophy,
+  Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
@@ -31,14 +30,48 @@ import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 type Step = 'info' | 'foto' | 'gerar'
 type MensagemChat = { role: 'user' | 'assistant'; content: string }
 
+type FonteOption = {
+  id: ThumbnailLayout['fonte']
+  label: string
+  desc: string
+  exemplo: string
+}
+
+const FONTES: FonteOption[] = [
+  { id: 'bebas',    label: 'Bebas',    desc: 'YouTube clássico',    exemplo: 'IMPACTO' },
+  { id: 'anton',    label: 'Anton',    desc: 'Ultra-bold drama',    exemplo: 'FORTE' },
+  { id: 'russo',    label: 'Russo',    desc: 'Blocky autoridade',   exemplo: 'PODER' },
+  { id: 'oswald',   label: 'Oswald',   desc: 'Moderno condensado',  exemplo: 'CLEAN' },
+  { id: 'inter',    label: 'Inter',    desc: 'Educativo limpo',     exemplo: 'Claro' },
+  { id: 'playfair', label: 'Playfair', desc: 'Editorial premium',   exemplo: 'Elegante' },
+]
+
+function resizeImage(dataUrl: string, maxDim = 1280, quality = 0.85): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
+}
+
 export default function ThumbnailPage() {
   const [step, setStep] = useState<Step>('info')
 
-  // Step 1: info do vídeo
+  // Step 1
   const [tituloVideo, setTituloVideo] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [fontePref, setFontePref] = useState<ThumbnailLayout['fonte'] | 'ia_decide'>('ia_decide')
 
-  // Step 2: foto
+  // Step 2
   const [imagemBase64, setImagemBase64] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -50,6 +83,11 @@ export default function ThumbnailPage() {
   const [renderizando, setRenderizando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState<string | null>(null)
 
+  // Variações
+  const [gerandoVariacao, setGerandoVariacao] = useState(false)
+  const [variacoes, setVariacoes] = useState<{ layout: ThumbnailLayout; png: string | null }[]>([])
+  const [variacaoAtiva, setVariacaoAtiva] = useState(0)
+
   // Chat
   const [chat, setChat] = useState<MensagemChat[]>([])
   const [msgChat, setMsgChat] = useState('')
@@ -59,16 +97,15 @@ export default function ThumbnailPage() {
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
   const [bancoAberto, setBancoAberto] = useState(false)
 
-  // ───────────────────────────────────────────
-  // Upload de foto
-  // ───────────────────────────────────────────
-  const handleFile = useCallback((file: File | null) => {
+  // ── Upload ──────────────────────────────────────────────
+  const handleFile = useCallback(async (file: File | null) => {
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (e) => {
-      const result = e.target?.result as string
-      setImagemPreview(result)
-      setImagemBase64(result)
+    reader.onload = async (e) => {
+      const raw = e.target?.result as string
+      const resized = await resizeImage(raw)
+      setImagemPreview(resized)
+      setImagemBase64(resized)
     }
     reader.readAsDataURL(file)
   }, [])
@@ -79,14 +116,29 @@ export default function ThumbnailPage() {
     if (file?.type.startsWith('image/')) handleFile(file)
   }
 
-  // ───────────────────────────────────────────
-  // Gerar thumbnail
-  // ───────────────────────────────────────────
+  // ── Renderizar ──────────────────────────────────────────
+  async function renderizar(l: ThumbnailLayout): Promise<string | null> {
+    try {
+      const res = await fetch('/api/thumbnail/renderizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layout: l, imagem_base64: imagemBase64 ?? undefined }),
+      })
+      if (!res.ok) return null
+      const blob = await res.blob()
+      return URL.createObjectURL(blob)
+    } catch { return null }
+  }
+
+  // ── Gerar principal ──────────────────────────────────────
   async function handleGerar() {
     setGerando(true)
     setErroGeracao(null)
     setLayout(null)
     setThumbnailPng(null)
+    setVariacoes([])
+    setChat([])
+    setHistoricoClaude([])
 
     try {
       const res = await fetch('/api/thumbnail/gerar', {
@@ -96,69 +148,44 @@ export default function ThumbnailPage() {
           titulo_video: tituloVideo,
           descricao,
           imagem_base64: imagemBase64,
+          fonte_override: fontePref !== 'ia_decide' ? fontePref : undefined,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.mensagem || data.error || 'Erro ao gerar')
 
-      const layoutGerado: ThumbnailLayout = data.layout
-      setLayout(layoutGerado)
+      const l: ThumbnailLayout = data.layout
+      setLayout(l)
       setHistoricoClaude([
-        { role: 'user', content: `Thumbnail para: ${tituloVideo}` },
+        { role: 'user', content: `Thumbnail: ${tituloVideo}` },
         { role: 'assistant', content: data.assistant_message },
       ])
-      salvarHistorico('thumbnail', tituloVideo, layoutGerado, { descricao: descricao.slice(0, 80) }).then(pts => {
+      salvarHistorico('thumbnail', tituloVideo, l, { descricao: descricao.slice(0, 80) }).then(pts => {
         if (pts > 0) { setPontosNotif(pts); setTimeout(() => setPontosNotif(null), 3500) }
       })
 
-      await renderizarThumbnail(layoutGerado)
+      setRenderizando(true)
+      const png = await renderizar(l)
+      setThumbnailPng(png)
+      setVariacoes([{ layout: l, png }])
+      setVariacaoAtiva(0)
     } catch (e: unknown) {
       setErroGeracao(e instanceof Error ? e.message : 'Erro ao gerar thumbnail')
     } finally {
       setGerando(false)
-    }
-  }
-
-  async function renderizarThumbnail(l: ThumbnailLayout) {
-    setRenderizando(true)
-    try {
-      const res = await fetch('/api/thumbnail/renderizar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          layout: l,
-          imagem_base64: imagemBase64 ?? undefined,
-        }),
-      })
-      if (!res.ok) return
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      setThumbnailPng(url)
-    } catch {
-      // silencioso
-    } finally {
       setRenderizando(false)
     }
   }
 
-  // ───────────────────────────────────────────
-  // Chat de ajustes
-  // ───────────────────────────────────────────
-  async function handleEnviarChat(e: React.FormEvent) {
-    e.preventDefault()
-    if (!msgChat.trim() || enviandoChat) return
-
-    const novaMensagem = msgChat
-    setMsgChat('')
-    setChat((prev) => [...prev, { role: 'user', content: novaMensagem }])
-    setEnviandoChat(true)
-
+  // ── Gerar variação extra ──────────────────────────────────
+  async function handleGerarVariacao() {
+    if (!layout) return
+    setGerandoVariacao(true)
     try {
-      const novoHistorico = [
+      const hist = [
         ...historicoClaude,
-        { role: 'user' as const, content: novaMensagem },
+        { role: 'user' as const, content: 'Crie uma variação completamente diferente — mude fonte, cores, posicionamento e estilo visual. Deve parecer uma thumbnail de outro criador, mas para o mesmo vídeo.' },
       ]
-
       const res = await fetch('/api/thumbnail/gerar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -166,40 +193,71 @@ export default function ThumbnailPage() {
           titulo_video: tituloVideo,
           descricao,
           imagem_base64: imagemBase64,
-          historico: novoHistorico,
+          historico: hist,
+          fonte_override: fontePref !== 'ia_decide' ? fontePref : undefined,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      const layoutAtualizado: ThumbnailLayout = data.layout
-      setLayout(layoutAtualizado)
-      setHistoricoClaude([...novoHistorico, { role: 'assistant', content: data.assistant_message }])
-      setChat((prev) => [...prev, { role: 'assistant', content: layoutAtualizado.raciocinio || 'Thumbnail atualizada!' }])
-
-      setThumbnailPng(null)
-      await renderizarThumbnail(layoutAtualizado)
-    } catch {
-      setChat((prev) => [...prev, { role: 'assistant', content: 'Erro ao ajustar. Tente novamente.' }])
-    } finally {
-      setEnviandoChat(false)
-    }
+      const l: ThumbnailLayout = data.layout
+      const png = await renderizar(l)
+      const novasVar = [...variacoes, { layout: l, png }]
+      setVariacoes(novasVar)
+      const idx = novasVar.length - 1
+      setVariacaoAtiva(idx)
+      setLayout(l)
+      setThumbnailPng(png)
+      setHistoricoClaude([...hist, { role: 'assistant', content: data.assistant_message }])
+    } catch { /* silencioso */ }
+    finally { setGerandoVariacao(false) }
   }
 
-  // ───────────────────────────────────────────
-  // Download
-  // ───────────────────────────────────────────
+  // ── Chat de ajustes ──────────────────────────────────────
+  async function handleEnviarChat(e: React.FormEvent) {
+    e.preventDefault()
+    if (!msgChat.trim() || enviandoChat) return
+    const msg = msgChat
+    setMsgChat('')
+    setChat(prev => [...prev, { role: 'user', content: msg }])
+    setEnviandoChat(true)
+    try {
+      const hist = [...historicoClaude, { role: 'user' as const, content: msg }]
+      const res = await fetch('/api/thumbnail/gerar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo_video: tituloVideo, descricao, imagem_base64: imagemBase64, historico: hist }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const l: ThumbnailLayout = data.layout
+      setLayout(l)
+      setHistoricoClaude([...hist, { role: 'assistant', content: data.assistant_message }])
+      setChat(prev => [...prev, { role: 'assistant', content: l.raciocinio || 'Thumbnail atualizada!' }])
+      setThumbnailPng(null)
+      const png = await renderizar(l)
+      setThumbnailPng(png)
+      // Atualiza variação ativa
+      setVariacoes(prev => {
+        const nova = [...prev]
+        nova[variacaoAtiva] = { layout: l, png }
+        return nova
+      })
+    } catch {
+      setChat(prev => [...prev, { role: 'assistant', content: 'Erro ao ajustar. Tente novamente.' }])
+    } finally { setEnviandoChat(false) }
+  }
+
+  // ── Download ─────────────────────────────────────────────
   function handleDownload() {
     if (!thumbnailPng) return
     const a = document.createElement('a')
     a.href = thumbnailPng
-    a.download = `thumbnail-${tituloVideo.slice(0, 20).replace(/\s+/g, '-') || 'thumb'}.png`
+    a.download = `thumb-${tituloVideo.slice(0, 20).replace(/\s+/g, '-') || 'iara'}.png`
     a.click()
   }
 
-  // ───────────────────────────────────────────
-  // Steps
-  // ───────────────────────────────────────────
+  // ── Steps ─────────────────────────────────────────────────
   const steps: Step[] = ['info', 'foto', 'gerar']
   const stepLabels = ['Vídeo', 'Foto', 'Gerar']
   const stepIcons = [FileText, ImageIcon, Sparkles]
@@ -207,7 +265,6 @@ export default function ThumbnailPage() {
 
   return (
     <div className="min-h-screen bg-[#080810] text-[#f1f1f8]">
-      {/* Notificação de pontos */}
       {pontosNotif && (
         <div className="fixed top-6 right-6 z-50 animate-slide-up iara-card px-5 py-3 border-iara-700/50 shadow-2xl flex items-center gap-3">
           <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" />
@@ -216,7 +273,6 @@ export default function ThumbnailPage() {
       )}
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-
         <HistoricoPanel
           tipo="thumbnail"
           aberto={historicoAberto}
@@ -227,7 +283,8 @@ export default function ThumbnailPage() {
             setTituloVideo(item.titulo)
             if (item.parametros.descricao) setDescricao(item.parametros.descricao as string)
             setStep('gerar')
-            renderizarThumbnail(l)
+            setRenderizando(true)
+            renderizar(l).then(png => { setThumbnailPng(png); setVariacoes([{ layout: l, png }]); setRenderizando(false) })
           }}
         />
 
@@ -243,7 +300,7 @@ export default function ThumbnailPage() {
                 Gerador de <span className="iara-gradient-text">Thumbnail</span>
               </h1>
               <p className="mt-1 text-[#9b9bb5] text-sm">
-                Crie thumbnails de alto CTR para seus vídeos em segundos.
+                Design único de alto CTR — cada thumbnail é criada do zero para o seu conteúdo.
               </p>
             </div>
             <button
@@ -256,40 +313,8 @@ export default function ThumbnailPage() {
           </div>
         </div>
 
-        {/* Step indicator — mobile: numbered circles, desktop: labeled buttons */}
+        {/* Step indicator */}
         <div className="mb-8">
-          {/* Mobile compact */}
-          <div className="flex items-center sm:hidden mb-2">
-            {steps.map((s, i) => {
-              const isActive = s === step
-              const isDone = i < currentStepIdx
-              return (
-                <div key={s} className="flex items-center flex-1 last:flex-none">
-                  <button
-                    onClick={() => isDone && setStep(s)}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 transition-all ${
-                      isActive
-                        ? 'bg-accent-purple text-white ring-2 ring-accent-purple/30'
-                        : isDone
-                        ? 'bg-green-600/30 text-green-400 cursor-pointer'
-                        : 'bg-[#1a1a2e] text-[#4a4a6a]'
-                    }`}
-                  >
-                    {isDone ? '✓' : i + 1}
-                  </button>
-                  {i < steps.length - 1 && (
-                    <div className={`flex-1 h-px mx-1 ${i < currentStepIdx ? 'bg-accent-purple/60' : 'bg-[#2a2a4a]'}`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <p className="text-xs text-[#6b6b8a] sm:hidden">
-            <span className="text-purple-300 font-medium">{stepLabels[currentStepIdx]}</span>
-            <span className="ml-1 text-[#4a4a6a]">· passo {currentStepIdx + 1} de {steps.length}</span>
-          </p>
-
-          {/* Desktop full labels */}
           <div className="hidden sm:flex items-center gap-2">
             {steps.map((s, i) => {
               const Icon = stepIcons[i]
@@ -300,10 +325,8 @@ export default function ThumbnailPage() {
                   <button
                     onClick={() => isDone && setStep(s)}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      isActive
-                        ? 'bg-accent-purple/20 text-purple-300 border border-accent-purple/40'
-                        : isDone
-                        ? 'text-[#9b9bb5] hover:text-purple-300 cursor-pointer'
+                      isActive ? 'bg-accent-purple/20 text-purple-300 border border-accent-purple/40'
+                        : isDone ? 'text-[#9b9bb5] hover:text-purple-300 cursor-pointer'
                         : 'text-[#3a3a5a] cursor-default'
                     }`}
                   >
@@ -318,21 +341,20 @@ export default function ThumbnailPage() {
               )
             })}
           </div>
+          <div className="sm:hidden flex items-center gap-2 text-xs text-[#6b6b8a]">
+            <span className="text-purple-300 font-medium">{stepLabels[currentStepIdx]}</span>
+            <span className="text-[#4a4a6a]">· passo {currentStepIdx + 1}/3</span>
+          </div>
         </div>
 
-        {/* ═══════════════════════════════════ */}
-        {/* STEP 1: INFO DO VÍDEO */}
-        {/* ═══════════════════════════════════ */}
+        {/* ═══════════ STEP 1: INFO ═══════════ */}
         {step === 'info' && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-semibold text-[#f1f1f8] mb-1">Sobre o seu vídeo</h2>
-              <p className="text-sm text-[#6b6b8a]">
-                Quanto mais contexto você der, mais precisa e chamativa será a thumbnail.
-              </p>
+              <p className="text-sm text-[#6b6b8a]">Quanto mais contexto, mais precisa e única será a thumbnail.</p>
             </div>
 
-            {/* Título do vídeo */}
             <div>
               <label className="block text-sm font-medium text-[#c1c1d8] mb-2">
                 Título do vídeo <span className="text-red-400">*</span>
@@ -344,39 +366,70 @@ export default function ThumbnailPage() {
                 placeholder="Ex: Como eu Fiz R$10.000 em 30 dias no Instagram"
                 className="w-full bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-3 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-accent-purple"
               />
-              <p className="text-xs text-[#4a4a6a] mt-1">O título é a base para o texto da thumbnail</p>
             </div>
 
-            {/* Descrição / contexto */}
             <div>
               <label className="block text-sm font-medium text-[#c1c1d8] mb-2">
-                Contexto do vídeo <span className="text-[#4a4a6a] font-normal">(opcional, mas recomendado)</span>
+                Contexto <span className="text-[#4a4a6a] font-normal">(recomendado)</span>
               </label>
               <textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Ex: Vou contar como saí do zero, os erros que cometi, as estratégias que funcionaram. Público: empreendedores iniciantes."
+                placeholder="Descreva o conteúdo, o público-alvo, a emoção que quer transmitir, se tem número/resultado específico..."
                 rows={4}
                 className="w-full bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-3 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-accent-purple resize-none"
               />
             </div>
 
-            {/* Dicas rápidas */}
+            {/* Fonte preferida */}
+            <div>
+              <label className="block text-sm font-medium text-[#c1c1d8] mb-3">
+                Fonte <span className="text-[#4a4a6a] font-normal">(ou deixa a IA escolher)</span>
+              </label>
+              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                <button
+                  onClick={() => setFontePref('ia_decide')}
+                  className={`col-span-1 py-2.5 px-2 rounded-xl border text-center transition-all ${
+                    fontePref === 'ia_decide'
+                      ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                      : 'border-[#1a1a2e] bg-[#0f0f20] text-[#6b6b8a] hover:border-iara-700/40'
+                  }`}
+                >
+                  <p className="text-xs font-semibold">IA</p>
+                  <p className="text-[10px] text-[#4a4a6a] mt-0.5">Decide</p>
+                </button>
+                {FONTES.map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFontePref(f.id)}
+                    className={`py-2.5 px-2 rounded-xl border text-center transition-all ${
+                      fontePref === f.id
+                        ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                        : 'border-[#1a1a2e] bg-[#0f0f20] text-[#6b6b8a] hover:border-iara-700/40'
+                    }`}
+                  >
+                    <p className="text-xs font-semibold">{f.label}</p>
+                    <p className="text-[10px] text-[#4a4a6a] mt-0.5 leading-tight">{f.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dicas */}
             <div className="p-4 rounded-xl bg-[#0a0a14] border border-[#1a1a2e]">
               <div className="flex items-center gap-2 mb-3">
                 <Lightbulb className="w-4 h-4 text-yellow-400" />
-                <span className="text-xs font-medium text-yellow-400">Dicas para thumbnails de alto CTR</span>
+                <span className="text-xs font-medium text-yellow-400">O que faz uma thumbnail explodir em CTR</span>
               </div>
               <ul className="space-y-1.5">
                 {[
-                  'Use números específicos: "7 erros" converte mais que "vários erros"',
-                  'Gere curiosidade sem entregar tudo: "O método que ninguém conta"',
-                  'Palavras de impacto: GRÁTIS, SEGREDO, REVELADO, NUNCA, SEMPRE',
-                  'Seu rosto expressivo na foto aumenta o CTR em até 38%',
-                ].map((dica, i) => (
+                  'Números específicos: "R$47.320" converte mais que "muito dinheiro"',
+                  'Lacuna de informação: o viewer precisa clicar para fechar a curiosidade',
+                  'Rosto expressivo (surpresa/choque) aumenta CTR em 38% em média',
+                  'Contraste extremo — texto legível em 3cm de tela mobile',
+                ].map((d, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-[#6b6b8a]">
-                    <span className="text-iara-400 font-bold mt-0.5">·</span>
-                    {dica}
+                    <span className="text-iara-400 font-bold mt-0.5">·</span>{d}
                   </li>
                 ))}
               </ul>
@@ -388,26 +441,20 @@ export default function ThumbnailPage() {
                 disabled={!tituloVideo.trim()}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-accent-purple hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all"
               >
-                Próximo
-                <ChevronRight className="w-4 h-4" />
+                Próximo <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* ═══════════════════════════════════ */}
-        {/* STEP 2: FOTO */}
-        {/* ═══════════════════════════════════ */}
+        {/* ═══════════ STEP 2: FOTO ═══════════ */}
         {step === 'foto' && (
           <div className="space-y-6">
             <div>
               <h2 className="text-lg font-semibold text-[#f1f1f8] mb-1">Foto de fundo</h2>
-              <p className="text-sm text-[#6b6b8a]">
-                Adicione uma foto sua ou do assunto do vídeo. Sem foto, a Iara cria um fundo com gradiente de cores.
-              </p>
+              <p className="text-sm text-[#6b6b8a]">Opcional — sem foto, a IA cria um design tipográfico impactante.</p>
             </div>
 
-            {/* Upload */}
             {!imagemPreview ? (
               <div className="space-y-3">
                 <div
@@ -417,22 +464,15 @@ export default function ThumbnailPage() {
                   className="border-2 border-dashed border-[#2a2a4a] hover:border-accent-purple/50 rounded-xl p-10 text-center cursor-pointer transition-all group"
                 >
                   <Upload className="w-8 h-8 text-[#3a3a5a] group-hover:text-accent-purple mx-auto mb-3 transition-colors" />
-                  <p className="text-sm text-[#6b6b8a] group-hover:text-[#9b9bb5] transition-colors">
+                  <p className="text-sm text-[#6b6b8a] group-hover:text-[#9b9bb5]">
                     Arraste a foto ou <span className="text-accent-purple">clique para selecionar</span>
                   </p>
-                  <p className="text-xs text-[#3a3a5a] mt-1">JPG ou PNG — 1 foto</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFile(e.target.files?.[0] || null)}
-                  />
+                  <p className="text-xs text-[#3a3a5a] mt-1">JPG ou PNG</p>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => handleFile(e.target.files?.[0] || null)} />
                 </div>
-                <button
-                  onClick={() => setBancoAberto(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-purple-700/40 hover:border-purple-500/60 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 transition-all"
-                >
+                <button onClick={() => setBancoAberto(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-purple-700/40 hover:border-purple-500/60 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 transition-all">
                   <Images className="w-4 h-4" />
                   Usar foto do Banco de Fotos
                 </button>
@@ -440,15 +480,9 @@ export default function ThumbnailPage() {
             ) : (
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imagemPreview}
-                  alt="Foto selecionada"
-                  className="w-full max-h-64 object-cover rounded-xl border border-[#1a1a2e]"
-                />
-                <button
-                  onClick={() => { setImagemPreview(null); setImagemBase64(null) }}
-                  className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 hover:bg-red-600 transition-colors"
-                >
+                <img src={imagemPreview} alt="Foto selecionada" className="w-full max-h-64 object-cover rounded-xl border border-[#1a1a2e]" />
+                <button onClick={() => { setImagemPreview(null); setImagemBase64(null) }}
+                  className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 hover:bg-red-600 transition-colors">
                   <X className="w-4 h-4 text-white" />
                 </button>
                 <div className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-black/60 px-2.5 py-1 rounded-lg">
@@ -458,53 +492,42 @@ export default function ThumbnailPage() {
               </div>
             )}
 
-            {/* Aviso sobre foto com rosto */}
             <div className="p-3 rounded-lg bg-accent-purple/10 border border-accent-purple/20">
               <p className="text-xs text-purple-300">
-                <span className="font-medium">Dica pro:</span> Thumbnails com seu rosto expressivo (surpresa, empolgação, foco)
-                performam melhor do que só texto. Use uma foto de qualidade!
+                <span className="font-medium">Dica pro:</span> Rosto expressivo (surpresa, empolgação)
+                performa melhor que só cenário. A IA posiciona o texto para não cobrir seu rosto.
               </p>
             </div>
 
-            {/* perfil nudge */}
-            <Link
-              href="/dashboard/perfil"
-              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-iara-700/30 bg-iara-900/20 hover:bg-iara-900/30 transition-all duration-200 group"
-            >
+            <Link href="/dashboard/perfil"
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-iara-700/30 bg-iara-900/20 hover:bg-iara-900/30 transition-all group">
               <div className="w-7 h-7 rounded-lg bg-iara-600/20 flex items-center justify-center flex-shrink-0">
                 <User className="w-3.5 h-3.5 text-iara-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-iara-300">A IA usa seu perfil como contexto</p>
-                <p className="text-[10px] text-[#5a5a7a] truncate">Configure seu nicho e tom de voz para resultados mais personalizados →</p>
+                <p className="text-[10px] text-[#5a5a7a]">Configure nicho e tom para designs mais personalizados →</p>
               </div>
             </Link>
 
             <div className="flex justify-between">
-              <button
-                onClick={() => setStep('info')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Voltar
+              <button onClick={() => setStep('info')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all">
+                <ChevronLeft className="w-4 h-4" />Voltar
               </button>
               <button
                 onClick={() => { setStep('gerar'); handleGerar() }}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-accent-purple to-iara-600 hover:opacity-90 text-white text-sm font-medium transition-all shadow-lg"
-              >
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-accent-purple to-iara-600 hover:opacity-90 text-white text-sm font-medium transition-all shadow-lg">
                 <Sparkles className="w-4 h-4" />
-                Gerar thumbnail
+                Criar thumbnail
               </button>
             </div>
           </div>
         )}
 
-        {/* ═══════════════════════════════════ */}
-        {/* STEP 3: RESULTADO */}
-        {/* ═══════════════════════════════════ */}
+        {/* ═══════════ STEP 3: RESULTADO ═══════════ */}
         {step === 'gerar' && (
           <div className="space-y-6">
-
             {/* Gerando */}
             {gerando && (
               <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -516,7 +539,7 @@ export default function ThumbnailPage() {
                     <Loader2 className="w-4 h-4 text-accent-purple animate-spin" />
                   </div>
                 </div>
-                <p className="text-[#9b9bb5] text-sm">Criando sua thumbnail de alto CTR...</p>
+                <p className="text-[#9b9bb5] text-sm">Criando thumbnail única de alto CTR...</p>
               </div>
             )}
 
@@ -529,95 +552,113 @@ export default function ThumbnailPage() {
                   <p className="text-xs mt-0.5 text-red-400/70">
                     {erroGeracao}
                     {erroGeracao.includes('Faça upgrade') && (
-                      <a href="/#planos" className="ml-1 underline text-red-300 hover:text-red-200 transition-colors">Ver planos →</a>
+                      <a href="/#planos" className="ml-1 underline text-red-300 hover:text-red-200">Ver planos →</a>
                     )}
                   </p>
                 </div>
                 {!erroGeracao.includes('Faça upgrade') && (
-                  <button
-                    onClick={handleGerar}
-                    className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-700/30 hover:bg-red-700/50 text-xs font-medium transition-all"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Tentar de novo
+                  <button onClick={handleGerar}
+                    className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-700/30 hover:bg-red-700/50 text-xs font-medium transition-all">
+                    <RefreshCw className="w-3 h-3" />Tentar
                   </button>
                 )}
               </div>
             )}
 
-            {/* Preview da thumbnail */}
             {layout && !gerando && (
               <>
-                {/* Raciocínio */}
+                {/* Estratégia */}
                 <div className="p-4 rounded-xl bg-[#0f0f20] border border-accent-purple/20">
                   <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-1">Estratégia da Iara</p>
                   <p className="text-sm text-[#9b9bb5]">{layout.raciocinio}</p>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-[#5a5a7a]">
+                    <span>Fonte: <span className="text-iara-400 font-medium capitalize">{layout.fonte}</span></span>
+                    <span>·</span>
+                    <span>Título: <span className="text-iara-400 font-medium">{layout.tamanho_titulo}px</span></span>
+                  </div>
                 </div>
 
                 {/* Thumbnail preview */}
                 <div className="relative">
-                  {renderizando || (!thumbnailPng && !erroGeracao) ? (
+                  {(renderizando && !thumbnailPng) ? (
                     <div className="aspect-video rounded-xl bg-[#0f0f20] border border-[#1a1a2e] flex items-center justify-center">
                       <Loader2 className="w-8 h-8 text-accent-purple animate-spin" />
                     </div>
                   ) : thumbnailPng ? (
                     <div className="relative group">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={thumbnailPng}
-                        alt="Thumbnail gerada"
-                        className="w-full rounded-xl border border-[#1a1a2e]"
-                      />
-                      {/* Download overlay */}
+                      <img src={thumbnailPng} alt="Thumbnail" className="w-full rounded-xl border border-[#1a1a2e]" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                        <button
-                          onClick={handleDownload}
-                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-gray-100 transition-colors"
-                        >
-                          <Download className="w-4 h-4" />
-                          Baixar PNG (1280×720)
+                        <button onClick={handleDownload}
+                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-gray-100">
+                          <Download className="w-4 h-4" />Baixar PNG
                         </button>
                       </div>
-                      {/* Badge de resolução */}
-                      <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-lg text-xs text-white">
-                        1280 × 720
-                      </div>
+                      <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-lg text-xs text-white">1280 × 720</div>
                     </div>
                   ) : null}
                 </div>
 
-                {/* Botão download separado */}
+                {/* Variações */}
+                {variacoes.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium text-[#6b6b8a] uppercase tracking-wider">Variações</p>
+                      <button
+                        onClick={handleGerarVariacao}
+                        disabled={gerandoVariacao || variacoes.length >= 4}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-iara-700/40 hover:border-iara-500/60 text-iara-400 hover:text-iara-300 text-xs font-medium transition-all disabled:opacity-40"
+                      >
+                        {gerandoVariacao ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                        {gerandoVariacao ? 'Gerando...' : 'Nova variação'}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {variacoes.map((v, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setVariacaoAtiva(i)
+                            setLayout(v.layout)
+                            setThumbnailPng(v.png)
+                          }}
+                          className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${
+                            variacaoAtiva === i ? 'border-accent-purple' : 'border-[#1a1a2e] hover:border-[#3a3a5a]'
+                          }`}
+                        >
+                          {v.png
+                            ? <img src={v.png} alt={`V${i+1}`} className="w-full h-full object-cover" />
+                            : <div className="w-full h-full bg-[#0f0f20] flex items-center justify-center"><Loader2 className="w-4 h-4 text-accent-purple animate-spin" /></div>
+                          }
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">V{i+1}</div>
+                        </button>
+                      ))}
+                      {/* Slot vazio */}
+                      {variacoes.length < 4 && !gerandoVariacao && (
+                        <button onClick={handleGerarVariacao}
+                          className="aspect-video rounded-lg border-2 border-dashed border-[#2a2a4a] hover:border-iara-700/50 flex items-center justify-center transition-all">
+                          <Zap className="w-4 h-4 text-[#3a3a5a]" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Botão download */}
                 {thumbnailPng && (
-                  <button
-                    onClick={handleDownload}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent-purple hover:opacity-90 text-white font-medium text-sm transition-all"
-                  >
+                  <button onClick={handleDownload}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent-purple hover:opacity-90 text-white font-medium text-sm transition-all">
                     <Download className="w-4 h-4" />
                     Baixar thumbnail (PNG 1280×720)
                   </button>
                 )}
 
-                {/* Info do layout */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: 'Título gerado', value: layout.titulo_principal },
-                    { label: 'Posição do texto', value: layout.posicao_texto },
-                    { label: 'Estilo', value: layout.estilo_titulo },
-                  ].map((item) => (
-                    <div key={item.label} className="p-3 rounded-lg bg-[#0f0f20] border border-[#1a1a2e]">
-                      <p className="text-xs text-[#4a4a6a] mb-1">{item.label}</p>
-                      <p className="text-xs font-medium text-[#c1c1d8] truncate">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Chat de ajustes */}
+                {/* Chat */}
                 <div>
                   <h3 className="text-sm font-semibold text-[#c1c1d8] mb-4 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-accent-purple" />
                     Ajustar com a Iara
                   </h3>
-
                   {chat.length > 0 && (
                     <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
                       {chat.map((msg, i) => (
@@ -626,9 +667,7 @@ export default function ThumbnailPage() {
                             msg.role === 'user'
                               ? 'bg-accent-purple/20 text-purple-100 border border-accent-purple/20'
                               : 'bg-[#0f0f20] text-[#c1c1d8] border border-[#1a1a2e]'
-                          }`}>
-                            {msg.content}
-                          </div>
+                          }`}>{msg.content}</div>
                         </div>
                       ))}
                       {enviandoChat && (
@@ -640,62 +679,33 @@ export default function ThumbnailPage() {
                       )}
                     </div>
                   )}
-
                   {chat.length === 0 && (
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {[
-                        'Deixa o título mais curto e impactante',
-                        'Muda a cor para mais vibrante',
-                        'Coloca um badge de número',
-                        'Testa com texto no topo',
-                      ].map((sugestao) => (
-                        <button
-                          key={sugestao}
-                          onClick={() => setMsgChat(sugestao)}
-                          className="px-3 py-1.5 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-xs text-[#9b9bb5] hover:border-accent-purple/40 hover:text-purple-300 transition-all"
-                        >
-                          {sugestao}
+                      {['Deixa o título mais curto', 'Muda para fonte Bebas', 'Coloca badge de número', 'Testa fundo mais escuro'].map(s => (
+                        <button key={s} onClick={() => setMsgChat(s)}
+                          className="px-3 py-1.5 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-xs text-[#9b9bb5] hover:border-accent-purple/40 hover:text-purple-300 transition-all">
+                          {s}
                         </button>
                       ))}
                     </div>
                   )}
-
                   <form onSubmit={handleEnviarChat} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={msgChat}
-                      onChange={(e) => setMsgChat(e.target.value)}
-                      placeholder="Ex: Coloca a palavra GRATUITO, muda para fundo escuro..."
-                      className="flex-1 bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-accent-purple"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!msgChat.trim() || enviandoChat}
-                      className="px-4 py-2.5 rounded-xl bg-accent-purple hover:opacity-90 disabled:opacity-40 text-white transition-all"
-                    >
+                    <input type="text" value={msgChat} onChange={(e) => setMsgChat(e.target.value)}
+                      placeholder="Ex: Coloca GRATUITO em vermelho, muda para fundo escuro..."
+                      className="flex-1 bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-accent-purple" />
+                    <button type="submit" disabled={!msgChat.trim() || enviandoChat}
+                      className="px-4 py-2.5 rounded-xl bg-accent-purple hover:opacity-90 disabled:opacity-40 text-white">
                       <Send className="w-4 h-4" />
                     </button>
                   </form>
                 </div>
 
-                {/* Criar nova */}
+                {/* Nova thumbnail */}
                 <div className="flex justify-center pt-4 border-t border-[#1a1a2e]">
                   <button
-                    onClick={() => {
-                      setStep('info')
-                      setLayout(null)
-                      setThumbnailPng(null)
-                      setChat([])
-                      setHistoricoClaude([])
-                      setTituloVideo('')
-                      setDescricao('')
-                      setImagemBase64(null)
-                      setImagemPreview(null)
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Criar nova thumbnail
+                    onClick={() => { setStep('info'); setLayout(null); setThumbnailPng(null); setChat([]); setHistoricoClaude([]); setTituloVideo(''); setDescricao(''); setImagemBase64(null); setImagemPreview(null); setVariacoes([]) }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all">
+                    <RefreshCw className="w-4 h-4" />Criar nova thumbnail
                   </button>
                 </div>
               </>
@@ -709,10 +719,7 @@ export default function ThumbnailPage() {
           onClose={() => setBancoAberto(false)}
           onConfirm={(dataUrls) => {
             const url = dataUrls[0]
-            if (url) {
-              setImagemPreview(url)
-              setImagemBase64(url)
-            }
+            if (url) { setImagemPreview(url); setImagemBase64(url) }
             setBancoAberto(false)
           }}
         />
