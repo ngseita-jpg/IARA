@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ImagemAnalise } from '../analisar-imagens/route'
 
@@ -162,7 +162,8 @@ export async function POST(req: NextRequest) {
   const analise_imagens = body.analise_imagens as ImagemAnalise[] | undefined
 
   console.log('[carrossel/gerar] step 4: perfil query')
-  const { data: perfil, error: perfilErr } = await supabase
+  const adminClient = createAdminClient()
+  const { data: perfil, error: perfilErr } = await adminClient
     .from('creator_profiles')
     .select('nome_artistico, nicho, tom_de_voz, sobre, plano')
     .eq('user_id', user.id)
