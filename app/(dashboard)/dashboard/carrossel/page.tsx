@@ -26,7 +26,6 @@ import {
   Trophy,
   Images,
   Pencil,
-  Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { YouTubeIcon, TikTokIcon, InstagramIcon } from '@/components/platform-icons'
@@ -34,6 +33,7 @@ import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
+import { SlideEditorInline } from '@/components/slide-editor-inline'
 
 function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
   return new Promise((resolve) => {
@@ -112,6 +112,7 @@ export default function CarrosselPage() {
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -263,12 +264,9 @@ export default function CarrosselPage() {
   async function renderizarSlide(slide: Slide, c: CarrosselData) {
     setRenderizando((prev) => ({ ...prev, [slide.ordem]: true }))
 
-    // Usa imagem_index da IA; se não veio e temos imagens, distribui round-robin
-    // Só closing e brand_promo não usam foto — todo o resto usa se tiver imagem_index
-    const ARCHS_SEM_IMAGEM = new Set(['closing', 'brand_promo'])
-    const arquetipo = slide.arquetipo ?? ''
-    const usarImagem = imagens.length > 0 && !ARCHS_SEM_IMAGEM.has(arquetipo)
-    const imgIdx = slide.imagem_index !== undefined ? slide.imagem_index : (usarImagem ? (slide.ordem - 1) % imagens.length : -1)
+    // imagem_index indefinido = sem foto (respeita decisão do usuário no editor).
+    // Slides gerados pela IA já vêm com imagem_index definido pelo post-processamento em gerar/route.ts.
+    const imgIdx = typeof slide.imagem_index === 'number' ? slide.imagem_index : -1
     const imgBase64 = imgIdx >= 0 && imagens[imgIdx]
       ? `data:image/jpeg;base64,${imagens[imgIdx]}`
       : undefined
@@ -305,17 +303,23 @@ export default function CarrosselPage() {
   }
 
   // ───────────────────────────────────────────
-  // Edição manual de slide
+  // Edição manual de slide — aplica em tempo real
   // ───────────────────────────────────────────
-  function handleAplicarEdicao() {
-    if (!slideEditando || !carrossel) return
+  function handleEditarSlide(novoSlide: Slide) {
+    if (!carrossel) return
+    // Atualiza o slide no carrossel imediatamente (responsivo)
     const slidesAtualizados = carrossel.slides.map(s =>
-      s.ordem === slideEditando.ordem ? slideEditando : s
+      s.ordem === novoSlide.ordem ? novoSlide : s
     )
     const carrosselAtualizado = { ...carrossel, slides: slidesAtualizados }
     setCarrossel(carrosselAtualizado)
-    renderizarSlide(slideEditando, carrosselAtualizado)
-    setSlideEditando(null)
+    setSlideEditando(novoSlide)
+
+    // Re-render com debounce (evita spam de requisições enquanto digita ou arrasta slider)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      renderizarSlide(novoSlide, carrosselAtualizado)
+    }, 350)
   }
 
   // ───────────────────────────────────────────
@@ -1187,134 +1191,16 @@ export default function CarrosselPage() {
         )}
       </div>
 
-      {/* ── Painel de edição manual ── */}
-      {slideEditando && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setSlideEditando(null)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div
-            className="relative w-full max-w-lg bg-[#0d0d1a] border border-[#1a1a2e] rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1a1a2e]">
-              <div>
-                <p className="text-sm font-semibold text-[#f1f1f8]">Editar slide {slideEditando.ordem}</p>
-                <p className="text-xs text-[#5a5a7a] mt-0.5">Mude o texto e clique em Aplicar — sem gastar créditos</p>
-              </div>
-              <button onClick={() => setSlideEditando(null)} className="p-1.5 rounded-lg hover:bg-[#1a1a2e] text-[#6b6b8a] transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-
-              {/* Título */}
-              <div>
-                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
-                  Título principal
-                  <span className="text-[#4a4a6a] font-normal ml-1">(frase de impacto, curta)</span>
-                </label>
-                <input
-                  value={slideEditando.titulo ?? ''}
-                  onChange={e => setSlideEditando(s => s ? { ...s, titulo: e.target.value } : s)}
-                  placeholder="Ex: 3 hábitos que mudaram minha vida"
-                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
-                />
-              </div>
-
-              {/* Corpo */}
-              <div>
-                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
-                  Texto do slide
-                  <span className="text-[#4a4a6a] font-normal ml-1">(explicação, detalhe)</span>
-                </label>
-                <textarea
-                  value={slideEditando.corpo}
-                  onChange={e => setSlideEditando(s => s ? { ...s, corpo: e.target.value } : s)}
-                  rows={3}
-                  placeholder="Ex: Acordar cedo, ler 10 minutos e tomar água antes do café..."
-                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500 resize-none"
-                />
-              </div>
-
-              {/* CTA */}
-              <div>
-                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
-                  Chamada para ação
-                  <span className="text-[#4a4a6a] font-normal ml-1">(opcional — botão ou link)</span>
-                </label>
-                <input
-                  value={slideEditando.cta ?? ''}
-                  onChange={e => setSlideEditando(s => s ? { ...s, cta: e.target.value } : s)}
-                  placeholder="Ex: Salva esse post!"
-                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
-                />
-              </div>
-
-              {/* Handle */}
-              <div>
-                <label className="block text-xs font-medium text-[#c1c1d8] mb-1.5">
-                  Seu @ nas redes
-                  <span className="text-[#4a4a6a] font-normal ml-1">(aparece no rodapé)</span>
-                </label>
-                <input
-                  value={slideEditando.handle ?? ''}
-                  onChange={e => setSlideEditando(s => s ? { ...s, handle: e.target.value } : s)}
-                  placeholder="Ex: @seunome"
-                  className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-xl px-3.5 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
-                />
-              </div>
-
-              {/* Estilo do slide */}
-              <div>
-                <label className="block text-xs font-medium text-[#c1c1d8] mb-2">
-                  Estilo visual
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'cover_full',  label: 'Foto cheia',        desc: 'Foto preenche tudo' },
-                    { id: 'split_v',     label: 'Lado a lado',       desc: 'Texto + foto' },
-                    { id: 'top_text',    label: 'Texto em cima',     desc: 'Texto acima da foto' },
-                    { id: 'full_bleed',  label: 'Foco na foto',      desc: 'Texto no canto' },
-                    { id: 'quote',       label: 'Citação',           desc: 'Frase em destaque' },
-                    { id: 'closing',     label: 'Encerramento',      desc: 'CTA e assinatura' },
-                  ].map(op => (
-                    <button
-                      key={op.id}
-                      onClick={() => setSlideEditando(s => s ? { ...s, arquetipo: op.id } : s)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        (slideEditando.arquetipo ?? '') === op.id
-                          ? 'border-iara-500 bg-iara-600/20 text-iara-200'
-                          : 'border-[#1a1a2e] bg-[#08080f] text-[#9b9bb5] hover:border-iara-700/40'
-                      }`}
-                    >
-                      <p className="text-[11px] font-semibold leading-tight">{op.label}</p>
-                      <p className="text-[10px] text-[#5a5a7a] mt-0.5 leading-tight">{op.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Footer */}
-            <div className="px-5 pb-5 flex gap-2">
-              <button
-                onClick={() => setSlideEditando(null)}
-                className="flex-1 py-2.5 rounded-xl border border-[#1a1a2e] text-sm text-[#9b9bb5] hover:border-[#2a2a3e] transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAplicarEdicao}
-                className="flex-1 py-2.5 rounded-xl bg-iara-600 hover:bg-iara-500 text-sm font-semibold text-white transition-all flex items-center justify-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                Aplicar mudanças
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── Editor inline do slide ── */}
+      {slideEditando && carrossel && (
+        <SlideEditorInline
+          slide={slideEditando}
+          imagensPreview={imagensPreview}
+          total={carrossel.slides.length}
+          modo={modo}
+          onChange={handleEditarSlide}
+          onClose={() => setSlideEditando(null)}
+        />
       )}
 
       {bancoAberto && (

@@ -25,6 +25,10 @@ export type Slide = {
   // Dados da análise visual — usados pelo renderer para object-position e fallback de arquétipo
   foto_foco?: 'topo' | 'centro' | 'base' | 'esquerda' | 'direita' | 'distribuido'
   foto_tem_rosto?: boolean
+  // Overrides do usuário via editor inline — opcionais, sobrescrevem o comportamento padrão
+  overlay_opacity?: number  // 0 a 1.2 — multiplicador das opacidades dos overlays escuros (default 1)
+  fs_titulo_override?: number  // px — força tamanho de fonte do título
+  cor_texto_override?: string  // hex — força cor do texto
 }
 
 export type CarrosselData = {
@@ -91,11 +95,22 @@ ${isMarca ? `
 `}
 
 ## Regras de arquétipo e foto
-- Slide 1: "${isMarca ? 'brand_cover' : 'cover_full'}" (ou "split_v" como alternativa criativa)
+- Slide 1: "${isMarca ? 'brand_cover' : 'cover_full'}" (ou "split_v"/"editorial"/"cinematic" como alternativa criativa)
 - Último slide: "${isMarca ? 'brand_promo' : 'closing'}"
+
+### DIVERSIDADE OBRIGATÓRIA (regra dura — se violar, retorne outra vez)
+- Em um carrossel de 6+ slides, use no MÍNIMO 4 arquétipos DIFERENTES
+- Nenhum arquétipo pode aparecer mais de 2x no mesmo carrossel
 - Nunca repita o mesmo arquétipo dois slides seguidos
+- Distribua os arquétipos de forma visualmente variada — alterne entre layouts com foto cheia, texto dominante, split, cards e quote
+- ${isMarca
+    ? 'Varie entre brand_cover, brand_story e brand_promo — cada um tem uma energia diferente'
+    : 'Pense em ritmo visual: capa impactante → story → card → quote → cinematic → closing. NUNCA use o mesmo layout em sequência.'}
+
+### Fotos
 - RESPEITE as restrições de cada foto indicadas na análise visual — se a análise diz para evitar um arquétipo, não use
-- Se não tiver imagem disponível: use "quote" ou "${isMarca ? 'brand_cover' : 'closing'}"
+- TODAS as fotos fornecidas DEVEM ser usadas em pelo menos um slide — se tem 6 fotos, 6 slides diferentes precisam ter imagem_index apontando pra elas
+- Se não tiver imagem disponível: use "quote", "bold_type" ou "${isMarca ? 'brand_cover' : 'closing'}"
 
 ## Campos
 - "eyebrow": texto pequeno acima do título (ex: "dica 02 · marketing", "insight · carreira")
@@ -244,7 +259,7 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
       return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })
     }
 
-    // Post-processamento: garantir que todas as imagens sejam usadas
+    // Post-processamento: garantir que TODAS as imagens sejam usadas
     if (num_imagens > 0) {
       const usados = new Set(
         carrossel.slides
@@ -255,18 +270,38 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
       const faltando = Array.from({ length: num_imagens }, (_, i) => i).filter(i => !usados.has(i))
 
       if (faltando.length > 0) {
-        // Candidatos: slides que reutilizam índice OU têm quote no meio do carrossel
-        const candidatos = carrossel.slides.filter(s =>
-          s.tipo !== 'encerramento' &&
-          (s.arquetipo === 'quote' ||
-            (s.imagem_index !== undefined &&
-              carrossel.slides.filter(s2 => s2.imagem_index === s.imagem_index).length > 1))
-        )
+        // Arquétipos de texto puro que podem ser convertidos num arquétipo com foto
+        const ARCHS_TEXTO_PURO = new Set(['quote', 'bold_type', 'neon_card'])
+        // Arquétipos com foto já presente mas reutilizando índice — candidatos a trocar de foto
+        const indiceDuplicado = (s: Slide) =>
+          s.imagem_index !== undefined &&
+          carrossel.slides.filter(s2 => s2.imagem_index === s.imagem_index).length > 1
 
-        for (let i = 0; i < faltando.length && i < candidatos.length; i++) {
-          const slide = candidatos[i]
+        // Ordem de prioridade:
+        // 1. slides de conteúdo sem imagem_index (mais barato alterar)
+        // 2. slides com arquétipo de texto puro (convertem pra full_bleed ou caption_bar)
+        // 3. slides com imagem_index duplicado (roubam a foto pro índice faltante)
+        const candidatos = [
+          ...carrossel.slides.filter(s => s.tipo !== 'encerramento' && s.imagem_index === undefined),
+          ...carrossel.slides.filter(s => s.tipo !== 'encerramento' && s.arquetipo !== undefined && ARCHS_TEXTO_PURO.has(s.arquetipo)),
+          ...carrossel.slides.filter(s => s.tipo !== 'encerramento' && indiceDuplicado(s)),
+        ]
+        // Remove duplicatas preservando ordem
+        const candidatosUnicos = Array.from(new Set(candidatos))
+
+        for (let i = 0; i < faltando.length && i < candidatosUnicos.length; i++) {
+          const slide = candidatosUnicos[i]
           slide.imagem_index = faltando[i]
-          if (slide.arquetipo === 'quote') slide.arquetipo = 'full_bleed'
+          // Se arquétipo é texto puro, converte pra um arquétipo compatível com foto
+          if (slide.arquetipo && ARCHS_TEXTO_PURO.has(slide.arquetipo)) {
+            const vizinhos = carrossel.slides
+              .filter(s => s.ordem !== slide.ordem)
+              .map(s => s.arquetipo)
+              .filter(Boolean)
+            const opcoes = ['full_bleed', 'caption_bar', 'inset_photo', 'split_v', 'cinematic']
+            // escolhe o primeiro que não seja vizinho imediato
+            slide.arquetipo = opcoes.find(o => !vizinhos.includes(o)) ?? 'full_bleed'
+          }
         }
       }
 

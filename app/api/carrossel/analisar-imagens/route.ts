@@ -38,8 +38,13 @@ export async function POST(req: NextRequest) {
 
   if (!imagens.length) return NextResponse.json({ analises: [] })
 
-  const arquetiposCriador = ['cover_full', 'split_v', 'top_text', 'full_bleed', 'quote']
-  const arquetiposMarca   = ['brand_cover', 'brand_story', 'brand_promo']
+  // Apenas arquétipos que USAM foto (closing e brand_promo não usam)
+  const arquetiposCriador = [
+    'cover_full', 'split_v', 'top_text', 'full_bleed', 'quote',
+    'editorial', 'cinematic', 'caption_bar', 'inset_photo',
+    'warm_overlay', 'bold_type', 'side_right', 'neon_card',
+  ]
+  const arquetiposMarca = ['brand_cover', 'brand_story']
   const disponiveis = modo === 'marca' ? arquetiposMarca : arquetiposCriador
 
   const imageBlocks: Anthropic.ImageBlockParam[] = imagens.slice(0, 8).map((b64) => ({
@@ -67,10 +72,15 @@ Analise cada imagem (índices 0 a ${imagens.length - 1}) e retorne um JSON array
 }
 
 Regras para arquetipos_evitar:
-- Rosto no centro ou base → evite "cover_full" e "full_bleed" (texto sobreposto na base cobre o rosto)
-- Rosto no topo → evite "top_text" (texto fica no topo onde está o rosto)
-- "split_v" é seguro: o rosto fica na coluna direita (60%), texto na esquerda
-- "quote" é seguro: tem overlay escuro cobrindo tudo e o texto fica bem centralizado
+- Rosto no centro ou base → evite "cover_full", "full_bleed", "brand_cover" (scrim escuro na base cobre rosto)
+- Rosto no topo → evite "top_text" e "caption_bar" (texto/fade no topo conflita com rosto)
+- Foto muito escura ou com pouco contraste → evite "quote", "bold_type", "neon_card" (já têm overlay escuro)
+- Foto vibrante/colorida que é o foco principal → evite "warm_overlay" (o tom âmbar muda a cor original)
+- Rosto em close-up → PREFIRA "split_v", "side_right", "editorial", "inset_photo", "caption_bar" (foto ganha espaço sem texto sobreposto)
+- Paisagem/ambiente → PREFIRA "cover_full", "full_bleed", "cinematic", "top_text" (dão espaço épico para a imagem)
+- Foto minimalista/clean → PREFIRA "editorial", "inset_photo", "bold_type" (estética premium)
+
+IMPORTANTE: varie as recomendações entre fotos diferentes. Não recomende os mesmos 2-3 arquétipos para todas as fotos — distribua entre as opções conforme o conteúdo de cada uma.
 
 Retorne APENAS o JSON array, sem markdown.`
 
