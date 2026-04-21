@@ -110,6 +110,7 @@ export default function CarrosselPage() {
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
   const [bancoAberto, setBancoAberto] = useState(false)
   const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>('inter')
+  const [incluirEncerramento, setIncluirEncerramento] = useState(true)
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
@@ -224,6 +225,7 @@ export default function CarrosselPage() {
           analise_imagens: analiseImagens.length ? analiseImagens : undefined,
           modo,
           plataforma,
+          incluir_encerramento: incluirEncerramento,
         }),
       })
       let data: Record<string, unknown> = {}
@@ -395,26 +397,38 @@ export default function CarrosselPage() {
   }
 
   async function exportarParaInstagram() {
-    const pngsValidos = Object.entries(slidePngs).filter(([, url]) => url && !url.startsWith('ERROR:'))
+    const pngsValidos = Object.entries(slidePngs)
+      .filter(([, url]) => url && !url.startsWith('ERROR:'))
+      .sort(([a], [b]) => Number(a) - Number(b))
     if (!pngsValidos.length) return
     setExportandoZip(true)
     try {
-      const JSZip = (await import('jszip')).default
-      const zip = new JSZip()
       const tituloBase = (carrossel?.slides[0]?.titulo ?? 'carrossel')
         .toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30)
-      await Promise.all(
+
+      // Busca todos os blobs
+      const files = await Promise.all(
         pngsValidos.map(async ([ordem, blobUrl]) => {
           const res = await fetch(blobUrl)
           const blob = await res.blob()
-          zip.file(`${tituloBase}-slide-${ordem.padStart(2, '0')}.png`, blob)
+          return new File([blob], `${tituloBase}-slide-${ordem.padStart(2, '0')}.png`, { type: 'image/png' })
         })
       )
-      const zipBlob = await zip.generateAsync({ type: 'blob' })
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(zipBlob)
-      a.download = `${tituloBase}-instagram.zip`
-      a.click()
+
+      // Web Share API (funciona no celular — salva na galeria ou abre menu nativo)
+      if (navigator.canShare?.({ files })) {
+        await navigator.share({ files, title: tituloBase })
+        return
+      }
+
+      // Fallback desktop: baixa um por um
+      for (const file of files) {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(file)
+        a.download = file.name
+        a.click()
+        await new Promise(r => setTimeout(r, 200))
+      }
     } finally {
       setExportandoZip(false)
     }
@@ -910,6 +924,20 @@ export default function CarrosselPage() {
               />
             </div>
 
+            {/* Slide de encerramento */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-[#0f0f20] border border-[#1a1a2e]">
+              <div>
+                <p className="text-sm font-medium text-[#c1c1d8]">Slide de encerramento</p>
+                <p className="text-xs text-[#6b6b8a] mt-0.5">Adiciona um slide final com CTA e seu @</p>
+              </div>
+              <button
+                onClick={() => setIncluirEncerramento(v => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${incluirEncerramento ? 'bg-iara-600' : 'bg-[#2a2a4a]'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${incluirEncerramento ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
             {/* perfil nudge */}
             <Link
               href="/dashboard/perfil"
@@ -1059,7 +1087,7 @@ export default function CarrosselPage() {
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap shadow-lg"
                     >
                       {exportandoZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <InstagramIcon size={16} />}
-                      {exportandoZip ? 'Gerando ZIP...' : 'Exportar para Instagram'}
+                      {exportandoZip ? 'Preparando...' : 'Salvar na galeria'}
                     </button>
                     <button
                       onClick={downloadTodos}

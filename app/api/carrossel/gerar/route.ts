@@ -162,8 +162,8 @@ export async function POST(req: NextRequest) {
   const instrucoes = body.instrucoes as string | undefined
   const num_imagens = typeof body.num_imagens === 'number' ? body.num_imagens : 0
   const num_slides_solicitado = typeof body.num_slides === 'number' ? body.num_slides : 6
-  // +1 porque o slide de encerramento (closing/brand_promo) nunca usa foto
-  const num_slides = Math.max(num_slides_solicitado, num_imagens > 0 ? num_imagens + 1 : 0)
+  const incluir_encerramento = body.incluir_encerramento !== false // default true
+  const num_slides = Math.max(num_slides_solicitado, num_imagens > 0 && incluir_encerramento ? num_imagens + 1 : num_imagens > 0 ? num_imagens : 0)
   const historico = body.historico as Anthropic.MessageParam[] | undefined
   const modo = (body.modo as string | undefined) ?? 'criador'
   const plataforma = (body.plataforma as string | undefined) ?? 'instagram'
@@ -210,7 +210,11 @@ REGRA CRÍTICA: Cada imagem DEVE ser usada em pelo menos um slide. Com ${num_sli
 3. Garantir que rostos fiquem visíveis e não cobertos por texto`
   })()
 
-  const userMsg = `Crie um carrossel com exatamente ${num_slides} slides sobre o seguinte conteúdo:
+  const encerramentoInstrucao = incluir_encerramento
+    ? ''
+    : '\n\nIMPORTANTE: NÃO inclua slide de encerramento/closing. Todos os slides devem ser de conteúdo (tipo "conteudo"), exceto o slide 1 que é a capa.'
+
+  const userMsg = `Crie um carrossel com exatamente ${num_slides} slides sobre o seguinte conteúdo:${encerramentoInstrucao}
 
 ${conteudo}
 
