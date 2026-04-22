@@ -101,14 +101,15 @@ export default async function DashboardPage() {
   ])
 
   const limites = LIMITES[planoAtual] ?? LIMITES['free']
+  const isIlimitado = planoAtual === 'profissional'
   const usoMes = [
-    { label: 'Temas IA',   usado: usoTemas ?? 0,     limite: limites.temas!,     cor: 'bg-iara-400' },
-    { label: 'Roteiros',   usado: usoRoteiros ?? 0,  limite: limites.roteiro!,   cor: 'bg-iara-500' },
-    { label: 'Carrosseis', usado: usoCarrossel ?? 0, limite: limites.carrossel!, cor: 'bg-accent-pink' },
-    { label: 'Stories',    usado: usoStories ?? 0,   limite: limites.stories!,   cor: 'bg-accent-purple' },
-    { label: 'Thumbnails', usado: usoThumbnail ?? 0, limite: limites.thumbnail!, cor: 'bg-teal-500' },
-    { label: 'Oratória',   usado: usoOratorio ?? 0,  limite: limites.oratorio!,  cor: 'bg-green-500' },
-    { label: 'Mídia Kit',  usado: usoMidiaKit ?? 0,  limite: limites.midia_kit!, cor: 'bg-amber-500' },
+    { label: 'Temas IA',   usado: usoTemas ?? 0,     limite: limites.temas,     cor: 'bg-iara-400' },
+    { label: 'Roteiros',   usado: usoRoteiros ?? 0,  limite: limites.roteiro,   cor: 'bg-iara-500' },
+    { label: 'Carrosseis', usado: usoCarrossel ?? 0, limite: limites.carrossel, cor: 'bg-accent-pink' },
+    { label: 'Stories',    usado: usoStories ?? 0,   limite: limites.stories,   cor: 'bg-accent-purple' },
+    { label: 'Thumbnails', usado: usoThumbnail ?? 0, limite: limites.thumbnail, cor: 'bg-teal-500' },
+    { label: 'Oratória',   usado: usoOratorio ?? 0,  limite: limites.oratorio,  cor: 'bg-green-500' },
+    { label: 'Mídia Kit',  usado: usoMidiaKit ?? 0,  limite: limites.midia_kit, cor: 'bg-amber-500' },
   ]
 
   const isOwner = user?.email === 'ngseita@gmail.com'
@@ -216,34 +217,50 @@ export default async function DashboardPage() {
             Minha conta →
           </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {usoMes.map((item) => {
-            const pct = Math.min(100, Math.round((item.usado / item.limite) * 100))
-            const esgotado = item.usado >= item.limite
-            return (
-              <div key={item.label} className={`rounded-2xl p-3.5 bg-[#0f0f1e] border ${esgotado ? 'border-red-800/40' : 'border-[#1a1a2e]'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-medium text-[#9b9bb5]">{item.label}</span>
-                  <span className={`text-[11px] font-bold ${esgotado ? 'text-red-400' : 'text-[#6b6b8a]'}`}>
-                    {item.usado}/{item.limite}
-                  </span>
-                </div>
-                <div className="h-1.5 rounded-full bg-[#1a1a2e] overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${esgotado ? 'bg-red-500' : item.cor}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            )
-          })}
-        </div>
 
-        <UpgradeBanners
-          quaseNoLimite={!usoMes.some(i => i.usado >= i.limite) && usoMes.some(i => i.usado / i.limite >= 0.8)}
-          limiteAtingido={usoMes.some(i => i.usado >= i.limite)}
-          plano={planoAtual}
-        />
+        {isIlimitado ? (
+          <div className="rounded-2xl border border-emerald-800/30 bg-gradient-to-r from-emerald-950/30 to-[#0f0f1e] p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-900/30 border border-emerald-800/25 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#f1f1f8]">Acesso ilimitado ativo</p>
+              <p className="text-xs text-[#6b6b8a]">Sem restrições de uso — gere o quanto quiser</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+              {usoMes.map((item) => {
+                const limite = item.limite ?? 0
+                const pct = limite > 0 ? Math.min(100, Math.round((item.usado / limite) * 100)) : 0
+                const esgotado = limite > 0 && item.usado >= limite
+                return (
+                  <div key={item.label} className={`rounded-2xl p-3.5 bg-[#0f0f1e] border ${esgotado ? 'border-red-800/40' : 'border-[#1a1a2e]'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-medium text-[#9b9bb5]">{item.label}</span>
+                      <span className={`text-[11px] font-bold ${esgotado ? 'text-red-400' : 'text-[#6b6b8a]'}`}>
+                        {item.usado}/{item.limite ?? '∞'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[#1a1a2e] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${esgotado ? 'bg-red-500' : item.cor}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <UpgradeBanners
+              quaseNoLimite={!usoMes.some(i => i.limite !== null && i.usado >= i.limite) && usoMes.some(i => i.limite !== null && i.usado / i.limite >= 0.8)}
+              limiteAtingido={usoMes.some(i => i.limite !== null && i.usado >= i.limite)}
+              plano={planoAtual}
+            />
+          </>
+        )}
       </div>
 
       {/* ── Todos os módulos ── */}
