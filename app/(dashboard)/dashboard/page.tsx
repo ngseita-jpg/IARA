@@ -54,11 +54,21 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Criador'
 
-  const { data: profile } = await supabase
-    .from('creator_profiles')
-    .select('pontos, nivel, nicho, voz_score_medio, treinos_voz, nome_artistico, plano')
-    .eq('user_id', user?.id ?? '')
-    .single()
+  // Separamos a query de plano do resto do perfil:
+  // se a coluna plano não existir no banco, só a segunda query falha,
+  // e o perfil (nome, pontos etc.) continua funcionando.
+  const [{ data: profile }, { data: planoRow }] = await Promise.all([
+    supabase
+      .from('creator_profiles')
+      .select('pontos, nivel, nicho, voz_score_medio, treinos_voz, nome_artistico')
+      .eq('user_id', user?.id ?? '')
+      .maybeSingle(),
+    supabase
+      .from('creator_profiles')
+      .select('plano, stripe_customer_id, stripe_subscription_id')
+      .eq('user_id', user?.id ?? '')
+      .maybeSingle(),
+  ])
 
   const pontos = profile?.pontos ?? 0
   const nicho = profile?.nicho ?? undefined
@@ -70,7 +80,7 @@ export default async function DashboardPage() {
 
   const perfilIncompleto = !profile?.nicho || !profile?.nome_artistico
 
-  const planoAtual = (profile?.plano ?? 'free') as import('@/lib/limites').Plano
+  const planoAtual = ((planoRow?.plano ?? 'free') as import('@/lib/limites').Plano)
 
   const PLANO_LABEL: Record<string, string> = {
     free: 'Gratuito',
