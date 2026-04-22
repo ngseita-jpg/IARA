@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  X, Sparkles, Check, ArrowRight, Zap, Lock,
+  X, Sparkles, Check, ArrowRight, Zap, Lock, Loader2,
   FileText, Layers, Image, Smartphone, Mic, BookOpen, Lightbulb,
 } from 'lucide-react'
 
@@ -14,38 +14,40 @@ export type TipoModulo =
   | 'oratorio' | 'midia_kit' | 'temas' | 'fotos' | null
 
 const MODULO_INFO: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  roteiro:   { label: 'Roteiros',       icon: FileText,   color: '#818cf8' },
-  carrossel: { label: 'Carrossel',      icon: Layers,     color: '#ec4899' },
-  thumbnail: { label: 'Thumbnails',     icon: Image,      color: '#2dd4bf' },
-  stories:   { label: 'Stories',        icon: Smartphone, color: '#a855f7' },
-  oratorio:  { label: 'Oratória',       icon: Mic,        color: '#4ade80' },
-  midia_kit: { label: 'Mídia Kit',      icon: BookOpen,   color: '#fbbf24' },
-  temas:     { label: 'Faísca Criativa',icon: Lightbulb,  color: '#818cf8' },
-  fotos:     { label: 'Banco de Fotos', icon: Image,      color: '#818cf8' },
+  roteiro:   { label: 'Roteiros',        icon: FileText,   color: '#818cf8' },
+  carrossel: { label: 'Carrossel',       icon: Layers,     color: '#ec4899' },
+  thumbnail: { label: 'Thumbnails',      icon: Image,      color: '#2dd4bf' },
+  stories:   { label: 'Stories',         icon: Smartphone, color: '#a855f7' },
+  oratorio:  { label: 'Oratória',        icon: Mic,        color: '#4ade80' },
+  midia_kit: { label: 'Mídia Kit',       icon: BookOpen,   color: '#fbbf24' },
+  temas:     { label: 'Faísca Criativa', icon: Lightbulb,  color: '#818cf8' },
+  fotos:     { label: 'Banco de Fotos',  icon: Image,      color: '#818cf8' },
 }
 
 const PLANS = [
   {
+    id: 'plus' as const,
     name: 'Plus',
-    price: 49,
+    price: '49,90',
     color: '#818cf8',
     gradient: 'from-iara-600/20 to-accent-purple/10',
     border: 'border-iara-700/40',
     ring: '',
     items: ['10 roteiros', '7 carrosseis', '7 thumbnails', '7 stories', '3 oratórias', '7 sessões Faísca', '25 fotos'],
-    cta: 'Assinar Plus — R$49/mês',
+    cta: 'Assinar Plus',
     ctaStyle: 'border border-iara-700/50 text-iara-300 hover:bg-iara-900/40',
   },
   {
+    id: 'premium' as const,
     name: 'Premium',
-    price: 79,
+    price: '89,00',
     color: '#a855f7',
     gradient: 'from-iara-600/30 to-accent-purple/20',
     border: 'border-iara-600/60',
     ring: 'ring-1 ring-iara-600/30',
     badge: 'Mais popular',
     items: ['20 roteiros', '18 carrosseis', '18 thumbnails', '18 stories', '8 oratórias', '15 sessões Faísca', '80 fotos', 'Métricas com IA', 'Suporte prioritário'],
-    cta: 'Assinar Premium — R$79/mês',
+    cta: 'Assinar Premium',
     ctaStyle: '',
     ctaGradient: 'linear-gradient(135deg,#6366f1,#a855f7)',
   },
@@ -61,8 +63,8 @@ interface Props {
 
 export function UpgradeModal({ open, modulo, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const [loading, setLoading] = useState<string | null>(null)
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -78,6 +80,21 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
 
   const info = modulo ? MODULO_INFO[modulo] : null
   const Icon = info?.icon ?? Sparkles
+
+  async function handleCheckout(plano: string) {
+    setLoading(plano)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plano }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+    } catch {
+      setLoading(null)
+    }
+  }
 
   return (
     <div
@@ -105,7 +122,6 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
         <div className="relative p-6 sm:p-8">
           {/* Header */}
           <div className="flex flex-col items-center text-center mb-8">
-            {/* Module icon + lock overlay */}
             <div className="relative mb-5">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-xl"
                 style={{ background: info ? `${info.color}22` : 'rgba(99,102,241,0.15)', border: `1px solid ${info ? info.color + '40' : 'rgba(99,102,241,0.3)'}` }}>
@@ -166,32 +182,42 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
                   ))}
                 </ul>
 
-                <Link
-                  href="/register"
-                  onClick={onClose}
-                  className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] ${plan.ctaStyle}`}
+                <button
+                  onClick={() => handleCheckout(plan.id)}
+                  disabled={!!loading}
+                  className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] disabled:opacity-60 disabled:scale-100 cursor-pointer ${plan.ctaStyle}`}
                   style={plan.ctaGradient ? { background: plan.ctaGradient, color: 'white' } : undefined}
                 >
-                  {plan.cta}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                  {loading === plan.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {plan.cta} — R${plan.price}/mês
+                  {!loading && <ArrowRight className="w-4 h-4" />}
+                </button>
               </div>
             ))}
           </div>
 
-          {/* Profissional teaser */}
-          <div className="rounded-2xl p-4 border border-accent-purple/20 bg-accent-purple/5 flex items-center justify-between gap-4 mb-6">
-            <div>
+          {/* Profissional */}
+          <button
+            onClick={() => handleCheckout('profissional')}
+            disabled={!!loading}
+            className="w-full rounded-2xl p-4 border border-accent-purple/20 bg-accent-purple/5 flex items-center justify-between gap-4 mb-6 hover:bg-accent-purple/10 transition-colors cursor-pointer disabled:opacity-60"
+          >
+            <div className="text-left">
               <p className="text-sm font-bold text-[#f1f1f8] mb-0.5">Profissional — Tudo ilimitado</p>
               <p className="text-xs text-[#6b6b8a]">Todos os módulos sem limite, suporte VIP e prioridade com marcas</p>
             </div>
             <div className="flex-shrink-0 text-right">
-              <p className="text-lg font-black text-accent-purple">R$197</p>
-              <p className="text-[10px] text-[#4a4a6a]">/mês</p>
+              {loading === 'profissional'
+                ? <Loader2 className="w-5 h-5 animate-spin text-accent-purple" />
+                : <>
+                    <p className="text-lg font-black text-accent-purple">R$179,90</p>
+                    <p className="text-[10px] text-[#4a4a6a]">/mês</p>
+                  </>
+              }
             </div>
-          </div>
+          </button>
 
-          {/* Footer links */}
+          {/* Footer */}
           <div className="flex items-center justify-center gap-6 text-xs text-[#3a3a5a]">
             <button onClick={onClose} className="hover:text-[#6b6b8a] transition-colors">
               Continuar no gratuito
