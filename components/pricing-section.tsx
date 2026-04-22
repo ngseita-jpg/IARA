@@ -28,8 +28,8 @@ const PLANS = [
   {
     name: 'Plus',
     desc: 'Para criadores em crescimento',
-    monthly: 49,
-    annual: 37,
+    monthly: 49.9,
+    annual: 37.4,
     cta: 'Assinar Plus',
     ctaStyle: 'border border-iara-700/40 text-iara-300 hover:bg-iara-900/30',
     highlight: false,
@@ -48,8 +48,8 @@ const PLANS = [
   {
     name: 'Premium',
     desc: 'Melhor custo-benefício',
-    monthly: 79,
-    annual: 59,
+    monthly: 89,
+    annual: 66.75,
     cta: 'Assinar Premium',
     ctaStyle: 'bg-gradient-to-r from-iara-600 to-accent-purple text-white hover:opacity-90',
     highlight: true,
@@ -71,8 +71,8 @@ const PLANS = [
   {
     name: 'Profissional',
     desc: 'Para quem vive de conteúdo',
-    monthly: 197,
-    annual: 148,
+    monthly: 179.9,
+    annual: 134.9,
     cta: 'Assinar Profissional',
     ctaStyle: 'bg-gradient-to-r from-accent-purple to-accent-pink text-white hover:opacity-90',
     highlight: false,
@@ -168,7 +168,7 @@ export function PricingSection() {
                     ) : (
                       <>
                         <span className="text-3xl font-bold text-[#f1f1f8]">
-                          R${price}
+                          R${price.toFixed(2).replace('.', ',')}
                         </span>
                         <span className="text-[#9b9bb5] text-sm pb-1">/mês</span>
                       </>
@@ -176,7 +176,7 @@ export function PricingSection() {
                   </div>
                   {anual && !isGratis && (
                     <p className="text-xs text-green-400 mt-1">
-                      Cobrado R${price * 12}/ano
+                      Cobrado R${(price * 12).toFixed(2).replace('.', ',')}/ano
                     </p>
                   )}
                 </div>
@@ -213,9 +213,9 @@ export function PricingSection() {
 
         {/* Math highlight */}
         <div className="mt-10 p-4 rounded-2xl bg-[#0a0a14] border border-iara-700/20 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-center">
-          <span className="text-[#9b9bb5]">💡 <strong className="text-[#f1f1f8]">Premium</strong> = 156% mais conteúdo que o Plus por apenas 61% a mais</span>
+          <span className="text-[#9b9bb5]">💡 <strong className="text-[#f1f1f8]">Premium</strong> = 156% mais conteúdo que o Plus por apenas 78% a mais</span>
           <span className="hidden sm:block text-[#2a2a4a]">|</span>
-          <span className="text-[#9b9bb5]"><strong className="text-green-400">R$0,91/geração</strong> no Premium vs <strong className="text-[#f1f1f8]">R$1,44</strong> no Plus</span>
+          <span className="text-[#9b9bb5]"><strong className="text-green-400">R$0,55/geração</strong> no Premium vs <strong className="text-[#f1f1f8]">R$0,85</strong> no Plus</span>
         </div>
       </div>
     </section>
