@@ -11,12 +11,23 @@ async function loadFont(reqUrl: string, fonte: string): Promise<ArrayBuffer | nu
   if (_fontCache[fonte]) return _fontCache[fonte]
 
   const fileMap: Record<string, string> = {
-    bebas:    'bebas-neue.ttf',
-    anton:    'anton.ttf',
-    russo:    'russo-one.ttf',
-    oswald:   'oswald-bold.woff2',
-    inter:    'inter-bold.ttf',
-    playfair: 'playfair-bold.woff2',
+    bebas:             'bebas-neue.ttf',
+    anton:             'anton.ttf',
+    russo:             'russo-one.ttf',
+    oswald:            'oswald-bold.woff2',
+    inter:             'inter-bold.ttf',
+    playfair:          'playfair-bold.woff2',
+    playfair_italic:   'playfair-italic.woff2',
+    cormorant_italic:  'cormorant-italic.woff2',
+    dm_serif:          'dm-serif.woff2',
+    abril:             'abril-fatface.woff2',
+    archivo_black:     'archivo-black.woff2',
+    montserrat_black:  'montserrat-black.woff2',
+    dancing:           'dancing-script.woff2',
+    caveat:            'caveat-bold.woff2',
+    space_grotesk:     'space-grotesk.woff2',
+    poppins_black:     'poppins-black.woff2',
+    syne:              'syne-black.woff2',
   }
   const fileName = fileMap[fonte] ?? 'inter-bold.ttf'
 

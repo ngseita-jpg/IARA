@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Image as ImageIcon,
   Sparkles,
@@ -35,16 +35,58 @@ type FonteOption = {
   label: string
   desc: string
   exemplo: string
+  family: string
+  weight?: number
+  italic?: boolean
+  categoria: 'Impacto' | 'Sans' | 'Serif' | 'Script'
 }
 
 const FONTES: FonteOption[] = [
-  { id: 'bebas',    label: 'Bebas',    desc: 'YouTube clássico',    exemplo: 'IMPACTO' },
-  { id: 'anton',    label: 'Anton',    desc: 'Ultra-bold drama',    exemplo: 'FORTE' },
-  { id: 'russo',    label: 'Russo',    desc: 'Blocky autoridade',   exemplo: 'PODER' },
-  { id: 'oswald',   label: 'Oswald',   desc: 'Moderno condensado',  exemplo: 'CLEAN' },
-  { id: 'inter',    label: 'Inter',    desc: 'Educativo limpo',     exemplo: 'Claro' },
-  { id: 'playfair', label: 'Playfair', desc: 'Editorial premium',   exemplo: 'Elegante' },
+  // ── Impacto (títulos fortes) ──
+  { id: 'bebas',            label: 'Bebas',      desc: 'YouTube clássico',  exemplo: 'IMPACTO',  family: "'Bebas Neue', sans-serif",        weight: 400, categoria: 'Impacto' },
+  { id: 'anton',            label: 'Anton',      desc: 'Drama pesado',      exemplo: 'FORTE',    family: "'Anton', sans-serif",             weight: 400, categoria: 'Impacto' },
+  { id: 'russo',            label: 'Russo',      desc: 'Gaming autoridade', exemplo: 'PODER',    family: "'Russo One', sans-serif",         weight: 400, categoria: 'Impacto' },
+  { id: 'oswald',           label: 'Oswald',     desc: 'Tech moderno',      exemplo: 'CLEAN',    family: "'Oswald', sans-serif",            weight: 700, categoria: 'Impacto' },
+  { id: 'archivo_black',    label: 'Archivo',    desc: 'Statement',         exemplo: 'BOLD',     family: "'Archivo Black', sans-serif",     weight: 400, categoria: 'Impacto' },
+
+  // ── Sans modernas ──
+  { id: 'montserrat_black', label: 'Montserrat', desc: 'Negócio sólido',    exemplo: 'Vender',   family: "'Montserrat', sans-serif",        weight: 900, categoria: 'Sans' },
+  { id: 'poppins_black',    label: 'Poppins',    desc: 'Redondo acolhedor', exemplo: 'Olá',      family: "'Poppins', sans-serif",           weight: 900, categoria: 'Sans' },
+  { id: 'space_grotesk',    label: 'Space',      desc: 'Tech futurista',    exemplo: 'Tech',     family: "'Space Grotesk', sans-serif",     weight: 700, categoria: 'Sans' },
+  { id: 'syne',             label: 'Syne',       desc: 'Design criativo',   exemplo: 'Syne',     family: "'Syne', sans-serif",              weight: 800, categoria: 'Sans' },
+  { id: 'inter',            label: 'Inter',      desc: 'Educativo',         exemplo: 'Claro',    family: "'Inter', sans-serif",             weight: 900, categoria: 'Sans' },
+
+  // ── Serifas (editorial) ──
+  { id: 'playfair',         label: 'Playfair',   desc: 'Premium serifa',    exemplo: 'Elegante', family: "'Playfair Display', serif",       weight: 700, categoria: 'Serif' },
+  { id: 'playfair_italic',  label: 'Playfair It.', desc: 'Feminino chique', exemplo: 'Elegante', family: "'Playfair Display', serif",       weight: 700, italic: true, categoria: 'Serif' },
+  { id: 'cormorant_italic', label: 'Cormorant',  desc: 'Delicada arte',     exemplo: 'Delicada', family: "'Cormorant Garamond', serif",     weight: 700, italic: true, categoria: 'Serif' },
+  { id: 'dm_serif',         label: 'DM Serif',   desc: 'Alto contraste',    exemplo: 'Luxo',     family: "'DM Serif Display', serif",       weight: 400, categoria: 'Serif' },
+  { id: 'abril',            label: 'Abril',      desc: 'Poster vintage',    exemplo: 'Vintage',  family: "'Abril Fatface', serif",          weight: 400, categoria: 'Serif' },
+
+  // ── Script / Manuscrita ──
+  { id: 'dancing',          label: 'Dancing',    desc: 'Script romântico',  exemplo: 'Querida',  family: "'Dancing Script', cursive",       weight: 700, categoria: 'Script' },
+  { id: 'caveat',           label: 'Caveat',     desc: 'Manuscrita casual', exemplo: 'Anota',    family: "'Caveat', cursive",               weight: 700, categoria: 'Script' },
 ]
+
+const GOOGLE_FONTS_HREF =
+  'https://fonts.googleapis.com/css2' +
+  '?family=Bebas+Neue' +
+  '&family=Anton' +
+  '&family=Russo+One' +
+  '&family=Oswald:wght@700' +
+  '&family=Archivo+Black' +
+  '&family=Montserrat:wght@900' +
+  '&family=Poppins:wght@900' +
+  '&family=Space+Grotesk:wght@700' +
+  '&family=Syne:wght@800' +
+  '&family=Inter:wght@900' +
+  '&family=Playfair+Display:ital,wght@0,700;1,700' +
+  '&family=Cormorant+Garamond:ital,wght@1,700' +
+  '&family=DM+Serif+Display' +
+  '&family=Abril+Fatface' +
+  '&family=Dancing+Script:wght@700' +
+  '&family=Caveat:wght@700' +
+  '&display=swap'
 
 function resizeImage(dataUrl: string, maxDim = 1280, quality = 0.85): Promise<string> {
   return new Promise((resolve) => {
@@ -65,6 +107,17 @@ function resizeImage(dataUrl: string, maxDim = 1280, quality = 0.85): Promise<st
 
 export default function ThumbnailPage() {
   const [step, setStep] = useState<Step>('info')
+
+  // Carrega Google Fonts (apenas para preview do seletor, fontes reais do renderer vêm do public/)
+  useEffect(() => {
+    const existing = document.querySelector('link[data-iara-fonts]')
+    if (existing) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = GOOGLE_FONTS_HREF
+    link.setAttribute('data-iara-fonts', '1')
+    document.head.appendChild(link)
+  }, [])
 
   // Step 1
   const [tituloVideo, setTituloVideo] = useState('')
@@ -386,33 +439,53 @@ export default function ThumbnailPage() {
               <label className="block text-sm font-medium text-[#c1c1d8] mb-3">
                 Fonte <span className="text-[#4a4a6a] font-normal">(ou deixa a IA escolher)</span>
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-                <button
-                  onClick={() => setFontePref('ia_decide')}
-                  className={`col-span-1 py-2.5 px-2 rounded-xl border text-center transition-all ${
-                    fontePref === 'ia_decide'
-                      ? 'border-iara-500 bg-iara-600/20 text-iara-200'
-                      : 'border-[#1a1a2e] bg-[#0f0f20] text-[#6b6b8a] hover:border-iara-700/40'
-                  }`}
-                >
-                  <p className="text-xs font-semibold">IA</p>
-                  <p className="text-[10px] text-[#4a4a6a] mt-0.5">Decide</p>
-                </button>
-                {FONTES.map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setFontePref(f.id)}
-                    className={`py-2.5 px-2 rounded-xl border text-center transition-all ${
-                      fontePref === f.id
-                        ? 'border-iara-500 bg-iara-600/20 text-iara-200'
-                        : 'border-[#1a1a2e] bg-[#0f0f20] text-[#6b6b8a] hover:border-iara-700/40'
-                    }`}
-                  >
-                    <p className="text-xs font-semibold">{f.label}</p>
-                    <p className="text-[10px] text-[#4a4a6a] mt-0.5 leading-tight">{f.desc}</p>
-                  </button>
-                ))}
-              </div>
+
+              {/* Botão IA decide */}
+              <button
+                onClick={() => setFontePref('ia_decide')}
+                className={`w-full mb-3 py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all ${
+                  fontePref === 'ia_decide'
+                    ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                    : 'border-[#1a1a2e] bg-[#0f0f20] text-[#6b6b8a] hover:border-iara-700/40'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="text-xs font-semibold">Deixar a IA escolher</span>
+              </button>
+
+              {/* Fontes por categoria */}
+              {(['Impacto', 'Sans', 'Serif', 'Script'] as const).map(cat => (
+                <div key={cat} className="mb-3 last:mb-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#4a4a6a] mb-2">{cat}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                    {FONTES.filter(f => f.categoria === cat).map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setFontePref(f.id)}
+                        className={`py-3 px-3 rounded-xl border text-center transition-all ${
+                          fontePref === f.id
+                            ? 'border-iara-500 bg-iara-600/20 text-iara-200 ring-2 ring-iara-500/20'
+                            : 'border-[#1a1a2e] bg-[#0f0f20] hover:border-iara-700/40'
+                        }`}
+                      >
+                        <p
+                          className="text-lg leading-tight mb-1 truncate"
+                          style={{
+                            fontFamily: f.family,
+                            fontWeight: f.weight,
+                            fontStyle: f.italic ? 'italic' : 'normal',
+                            color: fontePref === f.id ? '#f1f1f8' : '#c1c1d8',
+                          }}
+                        >
+                          {f.exemplo}
+                        </p>
+                        <p className="text-[10px] font-semibold text-[#9b9bb5] truncate">{f.label}</p>
+                        <p className="text-[9px] text-[#4a4a6a] leading-tight truncate">{f.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Dicas */}

@@ -14,7 +14,12 @@ export type ThumbnailLayout = {
   titulo: string              // máx 5 palavras, direto ao ponto
   subtitulo?: string          // complemento curto (máx 8 palavras)
   eyebrow?: string            // label acima do título (ex: "REVELADO", "EP. 7")
-  fonte: 'bebas' | 'anton' | 'russo' | 'oswald' | 'inter' | 'playfair'
+  fonte:
+    | 'bebas' | 'anton' | 'russo' | 'oswald' | 'inter' | 'playfair'
+    | 'playfair_italic' | 'cormorant_italic' | 'dm_serif' | 'abril'
+    | 'archivo_black' | 'montserrat_black'
+    | 'dancing' | 'caveat'
+    | 'space_grotesk' | 'poppins_black' | 'syne'
   tamanho_titulo: number      // 60–180 (px no canvas 1280×720)
 
   // ── Posicionamento do bloco de texto ──
@@ -85,7 +90,18 @@ Sua função é criar thumbnails ÚNICAS, fiéis ao conteúdo e ao criador, usan
 - russo: Blocky espesso. Autoridade. Gaming. Masculino. Robusto.
 - oswald: Condensado limpo. Moderno. Versátil. Tech. Profissional com energia.
 - inter: Sans limpo. Educativo. Confiança. Minimalismo inteligente.
-- playfair: Serifado com serifa. Luxury. Lifestyle. Feminino. Editorial premium.
+- playfair: Serifado bold. Luxury. Lifestyle. Feminino. Editorial premium.
+- playfair_italic: Serifado itálico dramático. Feminilidade sofisticada. Moda. Bem-estar. Citação inspiracional.
+- cormorant_italic: Serifado itálico delicado. Delicadeza refinada. Beleza. Maternidade. Arte.
+- dm_serif: Serifado alto contraste. Editorial chique. Design. Arquitetura. Premium sóbrio.
+- abril: Serifado grosso dramático. Vintage poster. Arte. Moda retrô. Confiança histórica.
+- archivo_black: Sans ultra-forte geométrico. Statement. Arte urbana. Branding marcante.
+- montserrat_black: Sans geométrico pesado. Negócio. Autoajuda. Motivação. Fitness moderno.
+- dancing: Script cursiva elegante. Casamento. Maternidade. Artesanato. Beleza orgânica.
+- caveat: Manuscrita espontânea. Autenticidade. Bastidores. Casual. Humor.
+- space_grotesk: Sans geométrica moderna. Tech. Startup. Web3. Futurista minimalista.
+- poppins_black: Sans redondo pesado. Acolhedor. Educação infantil. Lifestyle positivo.
+- syne: Display quirky contemporâneo. Criativo. Design jovem. Arte contemporânea.
 
 **Regras de contraste obrigatórias:**
 - Texto claro (#ffffff, #f5f5f5) sobre fundos escuros (valor <50% de brilho)
