@@ -63,9 +63,9 @@ const painPoints = [
 ]
 
 const affiliateTiers = [
-  { name: 'Embaixador', commission: '15%', desc: 'A partir de 10 indicações ativas. 15% recorrente enquanto forem assinantes.',                tag: 'text-iara-400' },
-  { name: 'Parceiro',   commission: '20%', desc: '30 indicações ativas. 20% recorrente pra sempre, sem teto.',                                tag: 'text-accent-purple' },
-  { name: 'Elite',      commission: '25%', desc: '50 indicações ativas. O topo: 25% recorrente + bônus trimestral por volume.',              tag: 'text-accent-pink' },
+  { name: 'Primeira venda',    commission: '50%', desc: 'Metade do primeiro mês de todo amigo que você trouxer. Maior comissão do mercado brasileiro.',  tag: 'text-iara-400' },
+  { name: 'Recorrente 12m',    commission: '10%', desc: 'Mais 10% por 12 meses enquanto ele continuar assinando. Renda passiva enquanto dorme.',         tag: 'text-accent-purple' },
+  { name: 'Bônus de volume',   commission: 'R$ 5k', desc: 'Fez 50 indicações em um trimestre? R$ 5.000 de bônus em cima. Embaixador = R$ 500, Parceiro = R$ 1.500.', tag: 'text-accent-pink' },
 ]
 
 const bandItems = ['Roteiros', 'Carrossel', 'Thumbnail', 'Stories', 'Oratória', 'Métricas', 'Metas', 'Calendário', 'Mídia Kit', 'Faísca Criativa', 'Afiliação', 'Persona IA']
@@ -634,7 +634,7 @@ export function LandingPage() {
                 <span className="font-editorial font-normal text-accent-purple/90">Ganhe todo mês.</span>
               </motion.h2>
               <motion.p variants={fadeUp} className="text-[#6b6b8a] text-[16px] max-w-2xl mx-auto">
-                Comissão recorrente enquanto a pessoa for assinante. Não é MLM — é compartilhar algo que funciona e ser pago por isso.
+                Metade do primeiro mês vai direto pra você. Depois, 10% por 12 meses enquanto ele continuar assinando. Paga em PIX todo dia 10.
               </motion.p>
             </motion.div>
 
@@ -655,7 +655,7 @@ export function LandingPage() {
                   className="relative rounded-2xl p-6 border border-white/5 bg-[#0b0a14]/80 cursor-default"
                 >
                   <div className={`font-display font-black text-[42px] ${tier.tag} leading-none mb-1 tracking-display`}>{tier.commission}</div>
-                  <div className="text-[10px] text-[#6b6b8a] mb-4 uppercase tracking-[0.2em] font-semibold">recorrente</div>
+                  <div className="text-[10px] text-[#6b6b8a] mb-4 uppercase tracking-[0.2em] font-semibold">do novo assinante</div>
                   <h3 className="font-display font-bold text-[#f1f1f8] text-[17px] mb-2.5">{tier.name}</h3>
                   <p className="text-[13.5px] text-[#9b9bb5] leading-relaxed">{tier.desc}</p>
                 </motion.div>
