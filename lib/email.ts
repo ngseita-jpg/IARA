@@ -260,6 +260,47 @@ export async function emailPropostaAceita({
   await send(brandEmail, `✅ Acordo fechado com ${creatorNome}!`, base(`${creatorNome} aceitou a proposta para "${vagaTitulo}"`, body))
 }
 
+export async function emailBoasVindasPago({
+  userEmail, userNome, plano,
+}: {
+  userEmail: string
+  userNome: string | null
+  plano: 'plus' | 'premium' | 'profissional'
+}) {
+  const PLANO_INFO: Record<string, { label: string; preco: string; cor: string; destaque: string }> = {
+    plus:         { label: 'Plus',         preco: 'R$ 49,90/mês',  cor: '#6366f1', destaque: '10 roteiros, 7 carrosseis, 7 thumbnails e muito mais por mês' },
+    premium:      { label: 'Premium',      preco: 'R$ 89,00/mês',  cor: '#a855f7', destaque: '20 roteiros, 18 carrosseis, métricas com IA e suporte prioritário' },
+    profissional: { label: 'Profissional', preco: 'R$ 179,90/mês', cor: '#10b981', destaque: 'Tudo ilimitado, acesso antecipado a novos módulos e suporte VIP' },
+  }
+  const info = PLANO_INFO[plano]
+  const nome = userNome?.split(' ')[0] || 'Criador'
+
+  const body = `
+    ${h1(`Bem-vindo ao Iara ${info.label}! 🎉`)}
+    ${p(`Olá, ${strong(nome)}!`)}
+    ${p(`Seu pagamento foi confirmado e seu acesso ao ${strong('Plano ' + info.label)} já está ativo. A partir de agora, você tem ${info.destaque}.`)}
+    <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="margin:20px 0;">
+      <tr>
+        <td style="background:linear-gradient(135deg,${info.cor}15,${info.cor}08);border:1px solid ${info.cor}30;border-radius:12px;padding:20px 24px;text-align:center;">
+          <p style="margin:0 0 6px;font-size:13px;color:${info.cor};font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Plano ativo</p>
+          <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#0d0d1a;">Iara ${info.label}</p>
+          <p style="margin:0;font-size:14px;color:#6b6b8a;">${info.preco}</p>
+        </td>
+      </tr>
+    </table>
+    ${p(strong('Dicas para começar com o pé direito:'))}
+    <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;line-height:1.8;color:#4a4a6a;">
+      <li>Configure sua <strong style="color:#0d0d1a;">Persona IA</strong> para a Iara aprender sua voz e nicho</li>
+      <li>Use a <strong style="color:#0d0d1a;">Faísca Criativa</strong> para destravar as primeiras ideias</li>
+      <li>Gere seu primeiro <strong style="color:#0d0d1a;">roteiro ou carrossel</strong> e sinta a diferença</li>
+      <li>Configure <strong style="color:#0d0d1a;">Metas</strong> e ative a gamificação — consistência vira hábito</li>
+    </ul>
+    ${p('Qualquer dúvida, é só responder este email. Estamos aqui para te ajudar a crescer.')}
+    ${btn('https://iarahubapp.com.br/dashboard', 'Acessar minha conta →')}
+  `
+  await send(userEmail, `🎉 Bem-vindo ao Iara ${info.label}!`, base(`Seu plano ${info.label} está ativo — comece agora`, body))
+}
+
 export async function emailPropostaRecusada({
   brandEmail, brandNome, creatorNome, vagaTitulo,
 }: {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe, priceIdToPlano } from '@/lib/stripe'
 import { createClient } from '@supabase/supabase-js'
+import { emailBoasVindasPago } from '@/lib/email'
 import type Stripe from 'stripe'
 
 // Webhook precisa de body raw — não usar createClient do server (cookies)
@@ -27,6 +28,24 @@ async function setPlano(userId: string, plano: string, subscriptionId: string) {
   } catch { /* coluna pode não existir ainda */ }
 }
 
+async function enviarBoasVindas(userId: string, plano: string) {
+  if (plano === 'free' || !['plus', 'premium', 'profissional'].includes(plano)) return
+  try {
+    const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
+    if (!user?.email) return
+    const { data: perfil } = await supabaseAdmin
+      .from('creator_profiles')
+      .select('nome_artistico, full_name')
+      .eq('user_id', userId)
+      .maybeSingle()
+    await emailBoasVindasPago({
+      userEmail: user.email,
+      userNome: perfil?.nome_artistico ?? perfil?.full_name ?? null,
+      plano: plano as 'plus' | 'premium' | 'profissional',
+    })
+  } catch { /* não bloqueia o webhook */ }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
@@ -45,7 +64,10 @@ export async function POST(req: NextRequest) {
       const userId = session.metadata?.user_id
       const plano = session.metadata?.plano
       const subId = session.subscription as string
-      if (userId && plano && subId) await setPlano(userId, plano, subId)
+      if (userId && plano && subId) {
+        await setPlano(userId, plano, subId)
+        await enviarBoasVindas(userId, plano)
+      }
       break
     }
 
