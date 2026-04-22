@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     subscription_data: { metadata: { user_id: user.id, plano } },
     locale: 'pt-BR',
     allow_promotion_codes: true,
+    payment_method_collection: 'if_required',
   })
 
   return NextResponse.json({ url: session.url })
