@@ -21,30 +21,32 @@ const PLANO_COLOR: Record<string, string> = {
   profissional: 'text-emerald-400',
 }
 
+type Perfil = {
+  email: string | null
+  full_name: string | null
+  plano: string
+  nome_artistico: string | null
+  stripe_customer_id: string | null
+}
+
 export default function ContaPage() {
   const router = useRouter()
-  const [user, setUser] = useState<{ email?: string; full_name?: string } | null>(null)
-  const [perfil, setPerfil] = useState<{ plano?: string; nome_artistico?: string; stripe_customer_id?: string } | null>(null)
+  const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) { router.push('/login'); return }
-      setUser({ email: u.email, full_name: u.user_metadata?.full_name })
-
-      const { data: p } = await supabase
-        .from('creator_profiles')
-        .select('plano, nome_artistico, stripe_customer_id')
-        .eq('user_id', u.id)
-        .maybeSingle()
-      setPerfil(p)
-      setLoading(false)
-    }
-    load()
+    fetch('/api/perfil/conta')
+      .then(r => {
+        if (r.status === 401) { router.push('/login'); return null }
+        return r.json()
+      })
+      .then(data => {
+        if (data) setPerfil(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [router])
 
   async function handlePortal() {
@@ -94,8 +96,8 @@ export default function ContaPage() {
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center mb-3">
             <User className="w-8 h-8 text-white" />
           </div>
-          <p className="text-lg font-bold text-white">{perfil?.nome_artistico || user?.full_name || 'Criador'}</p>
-          <p className="text-sm text-[#6b6b8a]">{user?.email}</p>
+          <p className="text-lg font-bold text-white">{perfil?.nome_artistico || perfil?.full_name || 'Criador'}</p>
+          <p className="text-sm text-[#6b6b8a]">{perfil?.email}</p>
         </div>
 
         {/* Cards */}
@@ -108,7 +110,7 @@ export default function ContaPage() {
             </div>
             <div>
               <p className="text-xs text-[#6b6b8a] mb-0.5">Email cadastrado</p>
-              <p className="text-sm font-semibold text-white">{user?.email}</p>
+              <p className="text-sm font-semibold text-white">{perfil?.email}</p>
             </div>
           </div>
 
