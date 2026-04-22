@@ -56,10 +56,10 @@ const modules = [
 ]
 
 const painPoints = [
-  { icon: Clock,      title: 'Você fica horas em branco',          sub: 'O roteiro não vem. O post fica para amanhã. E amanhã a culpa aparece no lugar da ideia.' },
-  { icon: Brain,      title: 'Bloqueio criativo constante',         sub: 'Você tem expertise — mas transformar isso em conteúdo que engaja paralisa. Todo dia. Todo mês.' },
-  { icon: BarChart3,  title: 'Presença digital que não converte',   sub: 'Você posta, mas não cresce. Não sabe o que muda, nem o que funciona. A concorrência avança.' },
-  { icon: DollarSign, title: 'Oportunidades que passam batido',     sub: 'Cliente pediu seu portfólio digital. Marca pediu seu mídia kit. Você não tinha. Perdeu a chance.' },
+  { icon: Clock,      title: 'Você sabe que precisa — mas nunca começa', sub: '"Vou começar a postar semana que vem." Semanas viram meses. Enquanto isso, outro profissional da sua área ocupa o espaço que poderia ser seu.' },
+  { icon: Brain,      title: 'Transformar expertise em conteúdo trava',  sub: 'Você tem anos de conhecimento. Mas colocar isso em palavras que engajam parece impossível. A página em branco paralisa.' },
+  { icon: BarChart3,  title: 'Posta, mas não cresce',                    sub: 'Quando posta, não sabe se está no caminho certo. Não tem estratégia, não mede resultado. A presença é irregular — e presença irregular não gera confiança.' },
+  { icon: DollarSign, title: 'Oportunidades que passam batido',           sub: 'Cliente pediu seu portfólio. Parceiro pediu referências online. Você não tinha nada preparado. A oportunidade foi para quem estava pronto.' },
 ]
 
 const affiliateTiers = [
@@ -462,6 +462,82 @@ export function LandingPage() {
         </motion.div>
       </section>
 
+      {/* ── REALIDADE DIGITAL ── */}
+      <section className="py-20 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 60%, rgba(99,102,241,0.07) 0%, transparent 60%)' }} />
+        <div className="max-w-5xl mx-auto relative z-10">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
+            <motion.p variants={fadeUp} className="text-iara-400 text-xs font-bold uppercase tracking-widest mb-5 text-center">A nova regra do mercado — 2026</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl md:text-[62px] font-black text-center leading-[1.05] tracking-tight mb-6">
+              Antes de te contratar,<br />
+              <span className="shimmer-text">eles já te pesquisaram.</span>
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-xl text-[#9b9bb5] text-center max-w-2xl mx-auto mb-14 leading-relaxed">
+              Dentista, advogado, coach, arquiteto, consultor — não importa a área. A primeira coisa que qualquer cliente faz hoje é buscar seu nome online. O que eles encontram define se eles te ligam ou procuram outro.
+            </motion.p>
+
+            {/* Contraste: sem vs com presença */}
+            <motion.div variants={stagger} className="grid md:grid-cols-2 gap-5 mb-12">
+              <motion.div variants={fadeUp} custom={0}
+                className="rounded-2xl p-7 border border-red-900/25 relative overflow-hidden"
+                style={{ background: 'rgba(10,4,4,0.8)' }}>
+                <div className="absolute top-4 right-4 text-xs font-bold text-red-900/60 uppercase tracking-widest">hoje</div>
+                <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-5">Sem presença digital ativa</p>
+                <div className="space-y-3.5">
+                  {[
+                    'Tem ótimas indicações — mas ninguém te encontra sozinho',
+                    'Perde clientes para concorrentes com menos experiência, porém mais visíveis',
+                    'Cobra menos porque não construiu autoridade percebida',
+                    'Agenda depende 100% de indicação. Quando para, para tudo.',
+                    'Trabalhou anos para ser bom. Quase ninguém sabe disso.',
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <X className="w-4 h-4 text-red-500/60 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-[#9b9bb5] leading-snug">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              <motion.div variants={fadeUp} custom={1}
+                className="rounded-2xl p-7 border border-green-900/25 relative overflow-hidden"
+                style={{ background: 'rgba(4,10,4,0.8)' }}>
+                <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.05) 0%, transparent 60%)' }} />
+                <div className="absolute top-4 right-4 text-xs font-bold text-green-900/60 uppercase tracking-widest">2026</div>
+                <p className="text-green-400 text-xs font-bold uppercase tracking-widest mb-5 relative z-10">Com presença digital consistente</p>
+                <div className="space-y-3.5 relative z-10">
+                  {[
+                    'Aparece quando pesquisam pelo seu nicho — mesmo sem indicação',
+                    'Constrói autoridade antes mesmo do primeiro contato',
+                    'Cobra mais porque o cliente já chega sabendo quem você é',
+                    'Agenda preenchida por pessoas que já confiam em você',
+                    'Seu conhecimento vira ativo — trabalha por você enquanto você dorme.',
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-[#9b9bb5] leading-snug">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Insight central */}
+            <motion.div variants={scaleIn}
+              className="rounded-2xl p-6 border border-iara-700/30 text-center relative overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.05))' }}>
+              <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.1) 0%, transparent 70%)' }} />
+              <p className="relative z-10 text-lg sm:text-xl font-bold text-[#f1f1f8] mb-2">
+                Não é sobre virar influencer.
+              </p>
+              <p className="relative z-10 text-[#9b9bb5]">
+                É sobre o seu conhecimento ser <span className="text-[#f1f1f8] font-semibold">encontrado pelas pessoas certas</span> — no momento em que elas mais precisam de você.
+              </p>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── DOR ── */}
       <section className="py-16 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(220,38,38,0.04) 0%, transparent 60%)' }} />
@@ -471,11 +547,11 @@ export function LandingPage() {
               <X className="w-3.5 h-3.5" /> Se você se reconhece em algum desses cenários...
             </motion.div>
             <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-4">
-              Não crescer no digital não é<br />
-              <span style={{ color: 'rgba(220,38,38,0.85)' }}>falta de talento. É falta de sistema.</span>
+              O problema não é tempo.<br />
+              <span style={{ color: 'rgba(220,38,38,0.85)' }}>É não ter o sistema certo.</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-[#6b6b8a] text-lg max-w-xl mx-auto">
-              Qualquer pessoa que quer escalar seu nome online enfrenta os mesmos obstáculos. A Iara foi feita para acabar com eles.
+              Todo profissional que quer crescer online passa pelos mesmos obstáculos. A Iara foi feita para acabar com eles de uma vez.
             </motion.p>
           </motion.div>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-40px' }} variants={stagger} className="grid md:grid-cols-2 gap-5">
