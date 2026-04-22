@@ -13,6 +13,7 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [autoLogin, setAutoLogin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
@@ -42,6 +43,13 @@ function LoginForm() {
       setError('E-mail ou senha incorretos. Tente novamente.')
       setLoading(false)
       return
+    }
+
+    // Grava/remove cookie de auto-login baseado na escolha do usuário
+    if (autoLogin) {
+      document.cookie = 'iara_auto_login=1; path=/; max-age=2592000; samesite=lax' // 30 dias
+    } else {
+      document.cookie = 'iara_auto_login=; path=/; max-age=0; samesite=lax'
     }
 
     router.refresh()
@@ -119,6 +127,18 @@ function LoginForm() {
               </button>
             </div>
           </div>
+
+          <label className="flex items-center gap-2.5 pt-1 cursor-pointer select-none group">
+            <input
+              type="checkbox"
+              checked={autoLogin}
+              onChange={e => setAutoLogin(e.target.checked)}
+              className="w-4 h-4 rounded border border-[#2a2a4a] bg-[#0a0a14] accent-iara-500 cursor-pointer"
+            />
+            <span className="text-xs text-[#6b6b8a] group-hover:text-[#9b9bb5] transition-colors">
+              Entrar automaticamente nas próximas visitas neste dispositivo
+            </span>
+          </label>
 
           <button
             type="submit"

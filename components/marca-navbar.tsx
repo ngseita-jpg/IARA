@@ -37,6 +37,7 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
+    document.cookie = 'iara_auto_login=; path=/; max-age=0; samesite=lax'
     router.push('/login')
     router.refresh()
   }
