@@ -30,22 +30,22 @@ import { UsoSidebar } from '@/components/uso-sidebar'
 import { IaraLogo } from '@/components/iara-logo'
 
 const navItems = [
-  { label: 'Dashboard',      href: '/dashboard',             icon: LayoutDashboard },
-  { label: 'Faísca Criativa', href: '/dashboard/temas',     icon: Lightbulb },
-  { label: 'Roteiros',       href: '/dashboard/roteiros',   icon: FileText },
-  { label: 'Carrossel',      href: '/dashboard/carrossel',  icon: Layers },
-  { label: 'Thumbnail',      href: '/dashboard/thumbnail',  icon: Image },
-  { label: 'Banco de Fotos', href: '/dashboard/fotos',      icon: Images },
-  { label: 'Stories',        href: '/dashboard/stories',    icon: Smartphone },
-  { label: 'Mídia Kit',      href: '/dashboard/midia-kit',  icon: BookOpen },
-  { label: 'Métricas',       href: '/dashboard/metricas',   icon: TrendingUp },
-  { label: 'Calendário',     href: '/dashboard/calendario', icon: Calendar },
-  { label: 'Metas',          href: '/dashboard/metas',      icon: Target },
-  { label: 'Oratória',       href: '/dashboard/oratorio',   icon: Mic },
-  { label: 'Oportunidades',   href: '/dashboard/vagas',     icon: Briefcase },
-  { label: 'Afiliados',       href: '/dashboard/afiliados', icon: Tag },
-  { label: 'Meu Perfil',     href: '/dashboard/perfil',    icon: User },
-  { label: 'Histórico',      href: '/dashboard/historico', icon: History },
+  { label: 'Dashboard',       href: '/dashboard',              icon: LayoutDashboard },
+  { label: 'Faísca Criativa', href: '/dashboard/temas',        icon: Lightbulb },
+  { label: 'Roteiros',        href: '/dashboard/roteiros',     icon: FileText },
+  { label: 'Carrossel',       href: '/dashboard/carrossel',    icon: Layers },
+  { label: 'Thumbnail',       href: '/dashboard/thumbnail',    icon: Image },
+  { label: 'Banco de Fotos',  href: '/dashboard/fotos',        icon: Images },
+  { label: 'Stories',         href: '/dashboard/stories',      icon: Smartphone },
+  { label: 'Mídia Kit',       href: '/dashboard/midia-kit',    icon: BookOpen },
+  { label: 'Métricas',        href: '/dashboard/metricas',     icon: TrendingUp },
+  { label: 'Calendário',      href: '/dashboard/calendario',   icon: Calendar },
+  { label: 'Metas',           href: '/dashboard/metas',        icon: Target },
+  { label: 'Oratória',        href: '/dashboard/oratorio',     icon: Mic },
+  { label: 'Persona IA',      href: '/dashboard/persona',      icon: User },
+  { label: 'Oportunidades',   href: '/dashboard/vagas',        icon: Briefcase },
+  { label: 'Afiliados',       href: '/dashboard/afiliados',    icon: Tag },
+  { label: 'Histórico',       href: '/dashboard/historico',    icon: History },
 ]
 
 export function Navbar({ userEmail }: { userEmail?: string }) {
@@ -119,8 +119,15 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
         {/* User + logout */}
         <div className="flex-shrink-0 border-t border-iara-900/30 pt-4 mt-4">
           {userEmail && (
-            <p className="px-3 text-xs text-[#5a5a7a] truncate mb-3">{userEmail}</p>
+            <p className="px-3 text-xs text-[#5a5a7a] truncate mb-2">{userEmail}</p>
           )}
+          <Link
+            href="/conta"
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/25 hover:text-[#f1f1f8] transition-all duration-200 group"
+          >
+            <User className="w-4 h-4 text-[#5a5a7a] group-hover:text-[#9b9bb5]" />
+            Minha Conta
+          </Link>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400 transition-all duration-200 group"

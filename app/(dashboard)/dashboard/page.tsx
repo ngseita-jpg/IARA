@@ -2,10 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import {
-  FileText, Sparkles, TrendingUp, ArrowRight,
+  FileText, TrendingUp, Sparkles, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
   ChevronRight, Smartphone, Lightbulb, Briefcase,
 } from 'lucide-react'
+import { UpgradeBanners } from '@/components/upgrade-banners'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Dashboard',
@@ -26,8 +29,8 @@ const quickAccess = [
   { label: 'Fotos',       href: '/dashboard/fotos',      icon: Images,      color: 'from-iara-600/15 to-teal-600/5',           border: 'border-iara-700/20' },
   { label: 'Metas',       href: '/dashboard/metas',      icon: Target,      color: 'from-green-600/15 to-iara-600/5',          border: 'border-green-700/20' },
   { label: 'Calendário',  href: '/dashboard/calendario', icon: Calendar,    color: 'from-teal-600/15 to-iara-600/5',           border: 'border-teal-700/20' },
-  { label: 'Oportunidades', href: '/dashboard/vagas',    icon: Briefcase,   color: 'from-amber-600/15 to-iara-600/5',          border: 'border-amber-700/20' },
-  { label: 'Perfil',      href: '/dashboard/perfil',     icon: User,        color: 'from-accent-purple/15 to-iara-600/5',      border: 'border-accent-purple/20' },
+  { label: 'Persona IA',    href: '/dashboard/persona',  icon: User,        color: 'from-accent-purple/15 to-iara-600/5',      border: 'border-accent-purple/20' },
+  { label: 'Oportunidades', href: '/dashboard/vagas',   icon: Briefcase,   color: 'from-amber-600/15 to-iara-600/5',          border: 'border-amber-700/20' },
 ]
 
 const modules = [
@@ -42,8 +45,8 @@ const modules = [
   { icon: Images,     label: 'Banco de Fotos',         desc: 'Salve suas fotos para usar nos geradores. Acesso rápido de qualquer módulo.', href: '/dashboard/fotos',   gradient: 'from-iara-600/15 to-teal-900/10',        border: 'border-iara-700/20' },
   { icon: Target,     label: 'Metas de Postagem',      desc: 'Organize sua agenda, crie metas e ganhe pontos que sobem seu nível.',      href: '/dashboard/metas',      gradient: 'from-green-900/20 to-iara-600/10',       border: 'border-green-800/20' },
   { icon: Calendar,   label: 'Calendário Editorial',   desc: 'Grade semanal integrada às suas metas. Marque postagens e acumule pontos.',href: '/dashboard/calendario', gradient: 'from-teal-900/20 to-iara-600/10',        border: 'border-teal-800/20' },
-  { icon: Briefcase,  label: 'Oportunidades',            desc: 'Campanhas abertas por marcas — candidate-se e feche parcerias direto na plataforma.', href: '/dashboard/vagas', gradient: 'from-amber-900/20 to-iara-600/10', border: 'border-amber-800/20' },
-  { icon: User,       label: 'Meu Perfil',             desc: 'Configure seu nicho e tom de voz. A IA usa seu perfil em todos os módulos.', href: '/dashboard/perfil',  gradient: 'from-accent-purple/15 to-iara-600/10',   border: 'border-accent-purple/20' },
+  { icon: User,       label: 'Persona IA',             desc: 'Configure seu nicho, tom de voz e plataformas. A IA usa seu perfil em todos os módulos.', href: '/dashboard/persona', gradient: 'from-accent-purple/15 to-iara-600/10', border: 'border-accent-purple/20' },
+  { icon: Briefcase,  label: 'Oportunidades',          desc: 'Campanhas abertas por marcas — candidate-se e feche parcerias direto na plataforma.', href: '/dashboard/vagas', gradient: 'from-amber-900/20 to-iara-600/10', border: 'border-amber-800/20' },
 ]
 
 export default async function DashboardPage() {
@@ -209,8 +212,8 @@ export default async function DashboardPage() {
             <Zap className="w-3.5 h-3.5 text-iara-400" />
             <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Uso este mês · Plano {PLANO_LABEL[planoAtual] ?? planoAtual}</h2>
           </div>
-          <Link href="/#planos" className="text-[10px] text-iara-400 hover:text-iara-300 transition-colors font-medium">
-            Ver planos →
+          <Link href="/conta" className="text-[10px] text-iara-400 hover:text-iara-300 transition-colors font-medium">
+            Minha conta →
           </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -236,38 +239,11 @@ export default async function DashboardPage() {
           })}
         </div>
 
-        {/* Banner de aviso a 80% */}
-        {!usoMes.some((item) => item.usado >= item.limite) &&
-          usoMes.some((item) => item.usado / item.limite >= 0.8) && (
-          <Link href="/#planos" className="group mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950/30 to-iara-900/20 border border-amber-800/25 hover:border-amber-700/40 transition-all duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-900/30 border border-amber-800/25 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-4 h-4 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#f1f1f8]">Você está quase no limite do mês</p>
-                <p className="text-xs text-[#6b6b8a]">Faça upgrade antes de acabar para não perder ritmo</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-          </Link>
-        )}
-
-        {/* Banner de upgrade quando qualquer limite está atingido */}
-        {usoMes.some((item) => item.usado >= item.limite) && (
-          <Link href="/#planos" className="group mt-3 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-iara-900/40 to-accent-purple/10 border border-iara-700/30 hover:border-iara-600/50 transition-all duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-iara-600/30 to-accent-purple/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-iara-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#f1f1f8]">Você chegou no limite do plano gratuito</p>
-                <p className="text-xs text-[#6b6b8a]">Faça upgrade e gere muito mais a partir de R$49/mês</p>
-              </div>
-            </div>
-            <ArrowRight className="w-4 h-4 text-iara-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-          </Link>
-        )}
+        <UpgradeBanners
+          quaseNoLimite={!usoMes.some(i => i.usado >= i.limite) && usoMes.some(i => i.usado / i.limite >= 0.8)}
+          limiteAtingido={usoMes.some(i => i.usado >= i.limite)}
+          plano={planoAtual}
+        />
       </div>
 
       {/* ── Todos os módulos ── */}
