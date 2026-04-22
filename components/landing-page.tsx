@@ -281,60 +281,84 @@ export function LandingPage() {
         {/* ── VELOCITY MARQUEE ─────────────────────────────────── */}
         <VelocityMarquee items={bandItems} baseVelocity={40} className="bg-[#090910]" />
 
-        {/* ── STATS UNIFICADA (corta ROI duplicado + 4 stats antigas) ── */}
-        <section className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden">
-          <div className="max-w-6xl mx-auto">
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
+        {/* ── BIG NUMBER EDITORIAL (um só número, centerpiece) ── */}
+        <section className="py-28 sm:py-40 px-4 sm:px-6 relative overflow-hidden">
+          <div className="max-w-5xl mx-auto relative">
+            {/* Linha editorial superior */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.6 }}
-              className="text-[11px] tracking-[0.3em] uppercase font-semibold text-iara-400 mb-12 text-center"
+              transition={{ duration: 0.5 }}
+              className="flex items-center gap-4 mb-10 sm:mb-14"
             >
-              — O preço do tempo que você perde hoje
-            </motion.p>
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <span className="text-[11px] tracking-[0.3em] uppercase font-semibold text-iara-400 whitespace-nowrap">
+                O preço do tempo que você perde hoje
+              </span>
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-10 md:gap-6">
-              {/* Stat 1 — dramático */}
-              <div className="text-center md:text-left">
-                <p className="font-display font-black text-[clamp(72px,14vw,160px)] leading-[0.88] tracking-display">
-                  <CountUp to={6} suffix="h" />
-                </p>
-                <p className="font-editorial text-[18px] text-iara-300/90 mt-2">
-                  por semana
-                </p>
-                <p className="text-sm text-[#6b6b8a] mt-3 max-w-[240px] mx-auto md:mx-0">
-                  É o que criadores e profissionais gastam só planejando conteúdo. A Iara devolve quase tudo.
-                </p>
-              </div>
+            {/* Número gigante centerpiece */}
+            <div className="relative text-center">
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="font-display font-black text-[clamp(140px,24vw,320px)] leading-[0.82] tracking-display"
+              >
+                <span className="bg-gradient-to-b from-[#f1f1f8] via-[#d8ccff] to-accent-purple bg-clip-text text-transparent">
+                  <CountUp to={300} suffix="h" />
+                </span>
+              </motion.p>
 
-              {/* Stat 2 — desktop virada (centralizada, maior) */}
-              <div className="text-center">
-                <p className="font-display font-black text-[clamp(88px,16vw,200px)] leading-[0.85] tracking-display">
-                  <span className="bg-gradient-to-b from-iara-300 via-accent-purple to-accent-pink bg-clip-text text-transparent">
-                    <CountUp to={300} suffix="h+" />
-                  </span>
-                </p>
-                <p className="font-editorial text-[20px] text-[#f1f1f8] mt-2">
-                  devolvidas por ano
-                </p>
-                <p className="text-sm text-[#6b6b8a] mt-3 max-w-[240px] mx-auto">
-                  Horas que você usa pra cobrar mais, descansar mais, viver mais — não pra tentar pensar em post.
-                </p>
-              </div>
+              {/* Tag editorial flutuante à direita do número */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="font-editorial italic text-[clamp(22px,3vw,36px)] text-iara-300/90 mt-4"
+              >
+                devolvidas por ano.
+              </motion.p>
 
-              {/* Stat 3 */}
-              <div className="text-center md:text-right">
-                <p className="font-display font-black text-[clamp(72px,14vw,160px)] leading-[0.88] tracking-display">
-                  <CountUp to={10} suffix="+" />
-                </p>
-                <p className="font-editorial text-[18px] text-iara-300/90 mt-2">
-                  módulos integrados
-                </p>
-                <p className="text-sm text-[#6b6b8a] mt-3 max-w-[240px] mx-auto md:ml-auto md:mr-0">
-                  Roteiro, carrossel, thumbnail, oratória, métricas, mídia kit, metas. Uma IA só — que aprende com você.
-                </p>
-              </div>
+              {/* Parágrafo editorial (coluna estreita, tipo revista) */}
+              <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.7, delay: 0.55 }}
+                className="prose-editorial text-[clamp(15px,1.4vw,18px)] text-[#9b9bb5] max-w-[42ch] mx-auto mt-10 leading-[1.65]"
+              >
+                É o que criadores e profissionais gastam{' '}
+                <span className="text-[#f1f1f8] font-semibold">só planejando conteúdo.</span>{' '}
+                A Iara corta essas <span className="font-editorial text-[#f1f1f8]">seis horas semanais</span> para menos de trinta minutos — sem abrir mão da qualidade, sem te fazer soar robótico.
+              </motion.p>
+
+              {/* Meta numbers discretos como footnote editorial */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-30px' }}
+                transition={{ duration: 0.6, delay: 0.7 }}
+                className="flex items-center justify-center gap-8 sm:gap-14 mt-14 pt-8 border-t border-white/5 max-w-md mx-auto"
+              >
+                <div className="text-center">
+                  <p className="font-display font-bold text-[20px] sm:text-[24px] text-[#f1f1f8] tabular leading-none">
+                    <CountUp to={6} suffix="h" />
+                  </p>
+                  <p className="text-[10px] tracking-[0.18em] uppercase text-[#5a5a7a] mt-1.5 font-semibold">por semana</p>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="text-center">
+                  <p className="font-display font-bold text-[20px] sm:text-[24px] text-[#f1f1f8] tabular leading-none">
+                    &lt; 30<span className="text-[14px] text-[#9b9bb5] font-normal">min</span>
+                  </p>
+                  <p className="text-[10px] tracking-[0.18em] uppercase text-[#5a5a7a] mt-1.5 font-semibold">com a iara</p>
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -442,10 +466,9 @@ export function LandingPage() {
                 — Tudo o que você precisa
               </motion.p>
               <motion.h2 variants={fadeUp} className="font-display font-black text-[clamp(36px,6vw,64px)] leading-[1.02] tracking-display mb-4 max-w-3xl">
-                Onze módulos.
-                Uma{' '}
-                <span className="font-editorial font-normal">única</span>{' '}
-                ideia: seu crescimento.
+                Um estúdio de{' '}
+                <span className="font-editorial font-normal">conteúdo</span>{' '}
+                inteiro no seu bolso.
               </motion.h2>
               <motion.p variants={fadeUp} className="text-[#6b6b8a] text-lg max-w-xl">
                 Cada módulo aprende com seu perfil. Os resultados ficam mais precisos a cada uso.
