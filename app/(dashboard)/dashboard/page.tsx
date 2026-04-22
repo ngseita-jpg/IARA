@@ -65,7 +65,7 @@ export default async function DashboardPage() {
       .maybeSingle(),
     supabase
       .from('creator_profiles')
-      .select('plano, stripe_customer_id, stripe_subscription_id')
+      .select('plano')
       .eq('user_id', user?.id ?? '')
       .maybeSingle(),
   ])

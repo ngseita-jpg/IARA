@@ -18,13 +18,13 @@ async function setPlano(userId: string, plano: string, subscriptionId: string) {
     .update({ plano })
     .eq('user_id', userId)
 
-  // Tenta salvar o subscription_id (pode falhar se coluna não existe — não bloqueia o plano)
-  await supabaseAdmin
-    .from('creator_profiles')
-    .update({ stripe_subscription_id: subscriptionId })
-    .eq('user_id', userId)
-    .then(() => null)
-    .catch(() => null)
+  // Tenta salvar o subscription_id (ignora erro se coluna ainda não existe)
+  try {
+    await supabaseAdmin
+      .from('creator_profiles')
+      .update({ stripe_subscription_id: subscriptionId })
+      .eq('user_id', userId)
+  } catch { /* coluna pode não existir ainda */ }
 }
 
 export async function POST(req: NextRequest) {
