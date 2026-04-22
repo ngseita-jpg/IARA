@@ -1,7 +1,23 @@
 import type { Metadata, Viewport } from 'next'
+import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Analytics } from '@/components/analytics'
+
+const interDisplay = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+  axes: ['opsz'],
+})
+
+const editorial = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-editorial',
+  style: 'italic',
+  weight: ['400', '700'],
+})
 
 export const metadata: Metadata = {
   title: {
@@ -106,14 +122,14 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR" className={`dark ${interDisplay.variable} ${editorial.variable}`}>
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-screen bg-[#0a0a14] text-[#f1f1f8] antialiased">
+      <body className="min-h-screen bg-[#08080f] text-[#f1f1f8] antialiased">
         {children}
         <Analytics />
         <CookieConsent />
