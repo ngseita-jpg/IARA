@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     metadata: { user_id: user.id, plano },
     subscription_data: { metadata: { user_id: user.id, plano } },
     locale: 'pt-BR',
+    allow_promotion_codes: true,
   })
 
   return NextResponse.json({ url: session.url })
