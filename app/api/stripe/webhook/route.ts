@@ -12,10 +12,19 @@ const supabaseAdmin = createClient(
 export const runtime = 'nodejs'
 
 async function setPlano(userId: string, plano: string, subscriptionId: string) {
+  // Atualiza plano primeiro — query separada para não falhar se a coluna stripe ainda não existir
   await supabaseAdmin
     .from('creator_profiles')
-    .update({ plano, stripe_subscription_id: subscriptionId })
+    .update({ plano })
     .eq('user_id', userId)
+
+  // Tenta salvar o subscription_id (pode falhar se coluna não existe — não bloqueia o plano)
+  await supabaseAdmin
+    .from('creator_profiles')
+    .update({ stripe_subscription_id: subscriptionId })
+    .eq('user_id', userId)
+    .then(() => null)
+    .catch(() => null)
 }
 
 export async function POST(req: NextRequest) {
