@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iara Dev Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#06060d;font-family:'Inter',sans-serif}
+#root{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+@keyframes panelIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.015)}}
+@keyframes pulseRing{0%,100%{opacity:0.4}50%{opacity:0.9}}
+@keyframes floatPill{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes twinkle{0%,100%{opacity:0.2}50%{opacity:0.9}}
+.npc-breathing{animation:breathe 3.2s ease-in-out infinite}
+.npc-ring{animation:pulseRing 1.6s ease-in-out infinite}
+.pill-float{animation:floatPill 2.2s ease-in-out infinite}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:rgba(168,85,247,0.25);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// Sequential JSX loader
+const JSX_FILES = [
+  'office-tokens.jsx',
+  'office-furniture.jsx',
+  'office-npcs.jsx',
+  'iara-modules.jsx',
+  'module-panel.jsx',
+  'creator-hud.jsx',
+];
+
+async function loadAll() {
+  for (const f of JSX_FILES) {
+    const res  = await fetch(f);
+    const src  = await res.text();
+    const code = Babel.transform(src, { presets: ['react'] }).code;
+    // eslint-disable-next-line no-eval
+    eval(code);
+  }
+  renderApp();
+}
+
+function renderApp() {
+  // ─── Stars ────────────────────────────────────────────────────────────────
+  const STARS = Array.from({ length: 70 }, (_, i) => ({
+    cx: Math.random() * 1600, cy: Math.random() * 900,
+    r: Math.random() * 1.4 + 0.3,
+    opacity: Math.random() * 0.55 + 0.15,
+    dur: 1.8 + Math.random() * 2.5,
+    delay: Math.random() * 3,
+  }));
+
+  // ─── ISO world origin (screen coords) ─────────────────────────────────────
+  const OX = 720, OY = 195;
+
+  // ─── Room floor tiles ─────────────────────────────────────────────────────
+  // Each room: col*4, row*4, size 3×3 tiles
+  function roomTiles(col, row, color) {
+    const gx0 = col * 4, gy0 = row * 4;
+    const tiles = [];
+    for (let dx = 0; dx < 3; dx++) {
+      for (let dy = 0; dy < 3; dy++) {
+        const alt = (dx + dy) % 2 === 0;
+        tiles.push(
+          React.createElement(IsoTile, {
+            key: `t${dx}-${dy}`,
+            gx: gx0 + dx, gy: gy0 + dy,
+            fill: alt ? '#1c1a2e' : '#201e38',
+            stroke: color, strokeOpacity: 0.14,
+          })
+        );
+      }
+    }
+    return tiles;
+  }
+
+  // ─── Corridor tiles ───────────────────────────────────────────────────────
+  function CorridorFloor() {
+    const tiles = [];
+    for (let gx = 0; gx <= 15; gx++) {
+      for (let gy = 0; gy <= 11; gy++) {
+        if ((gx % 4 < 3) && (gy % 4 < 3)) continue; // skip room tiles
+        tiles.push(
+          React.createElement(IsoTile, {
+            key: `c${gx}-${gy}`, gx, gy,
+            fill: '#0d0c1a', stroke: 'rgba(168,85,247,0.04)',
+          })
+        );
+      }
+    }
+    return React.createElement(React.Fragment, null, ...tiles);
+  }
+
+  // ─── Single module room ───────────────────────────────────────────────────
+  function ModuleRoom({ mod, col, row, selected, plano, onClick }) {
+    const gx0 = col * 4, gy0 = row * 4;
+    const lim = mod.limits[plano];
+    const pill = lim === Infinity ? '∞' : `${mod.currentUsage}/${lim}`;
+
+    // painter order: plant → desk → monitor → chair → npc → label
+    return React.createElement(React.Fragment, null,
+      ...roomTiles(col, row, mod.color),
+
+      // room platform tint
+      React.createElement(IsoBox, {
+        gx: gx0, gy: gy0, gz: 0, gw: 3, gd: 3, gh: 0.04,
+        topColor: mod.color, leftColor: 'transparent', rightColor: 'transparent',
+        topOpacity: 0.09,
+      }),
+
+      React.createElement(IsoPlant, { gx: gx0+0.05, gy: gy0+0.05, gz: 0 }),
+      React.createElement(IsoDesk,   { gx: gx0+0.2,  gy: gy0+0.4,  gz: 0,    color: mod.color }),
+      React.createElement(IsoMonitor,{ gx: gx0+0.2,  gy: gy0+0.4,  gz: 0.45, color: mod.color }),
+      React.createElement(IsoChair,  { gx: gx0+0.5,  gy: gy0+1.55, gz: 0  }),
+
+      React.createElement(IsoNPC, {
+        gx: gx0+0.95, gy: gy0+1.4, gz: 0,
+        color: mod.color, name: mod.npc,
+        selected, usagePill: pill,
+        onClick: () => onClick(mod),
+      }),
+
+      React.createElement(RoomLabel, {
+        gx: gx0+1.5, gy: gy0+0.4, gz: 3.2,
+        text: mod.name, color: mod.color,
+      }),
+    );
+  }
+
+  // ─── App ──────────────────────────────────────────────────────────────────
+  function App() {
+    const [selectedMod, setSelectedMod] = React.useState(null);
+    const [plano,  setPlano]  = React.useState('plus');
+    const [nicho,  setNicho]  = React.useState('Lifestyle');
+    const [pontos, setPontos] = React.useState(1200);
+    const [editMode, setEditMode] = React.useState(false);
+    const [scale, setScale]   = React.useState(1);
+
+    React.useEffect(() => {
+      const upd = () => {
+        const sx = window.innerWidth  / 1600;
+        const sy = window.innerHeight / 900;
+        setScale(Math.min(sx, sy, 1));
+      };
+      upd();
+      window.addEventListener('resize', upd);
+      return () => window.removeEventListener('resize', upd);
+    }, []);
+
+    // postMessage bridge for edit mode
+    React.useEffect(() => {
+      const handler = (e) => {
+        if (e.data === '__activate_edit_mode')   setEditMode(true);
+        if (e.data === '__deactivate_edit_mode') setEditMode(false);
+      };
+      window.addEventListener('message', handler);
+      return () => window.removeEventListener('message', handler);
+    }, []);
+
+    // Sorted rooms (painter: back first = small col+row first)
+    const sortedMods = [...IARA_MODULES].map((m, i) => ({ m, pos: IARA_POSITIONS[i], i }))
+      .sort((a, b) => (a.pos[0]+a.pos[1]) - (b.pos[0]+b.pos[1]));
+
+    return React.createElement('div', {
+      style:{ width:1600, height:900, position:'relative',
+              transform:`scale(${scale})`, transformOrigin:'center center' }
+    },
+      // ── SVG scene ──────────────────────────────────────────────────────────
+      React.createElement('svg', {
+        width:1600, height:900, style:{ position:'absolute', top:0, left:0 },
+      },
+        React.createElement('defs', null,
+          React.createElement('radialGradient', { id:'bg1', cx:'25%', cy:'20%', r:'55%' },
+            React.createElement('stop', { offset:'0%',   stopColor:'#1a0a2e', stopOpacity:0.9 }),
+            React.createElement('stop', { offset:'100%', stopColor:'#06060d', stopOpacity:0   }),
+          ),
+          React.createElement('radialGradient', { id:'bg2', cx:'75%', cy:'80%', r:'45%' },
+            React.createElement('stop', { offset:'0%',   stopColor:'#1a0620', stopOpacity:0.7 }),
+            React.createElement('stop', { offset:'100%', stopColor:'#06060d', stopOpacity:0   }),
+          ),
+          React.createElement('radialGradient', { id:'bg3', cx:'50%', cy:'50%', r:'70%' },
+            React.createElement('stop', { offset:'0%',   stopColor:'#0d0824', stopOpacity:0.5 }),
+            React.createElement('stop', { offset:'100%', stopColor:'#06060d', stopOpacity:0   }),
+          ),
+        ),
+
+        // background
+        React.createElement('rect', { width:1600, height:900, fill:'#06060d' }),
+        React.createElement('rect', { width:1600, height:900, fill:'url(#bg1)' }),
+        React.createElement('rect', { width:1600, height:900, fill:'url(#bg2)' }),
+        React.createElement('rect', { width:1600, height:900, fill:'url(#bg3)' }),
+
+        // stars
+        ...STARS.map((s, i) =>
+          React.createElement('circle', {
+            key: i, cx: s.cx, cy: s.cy, r: s.r, fill: 'white', opacity: s.opacity,
+            style: { animation: `twinkle ${s.dur}s ease-in-out infinite`, animationDelay: `${s.delay}s` },
+          })
+        ),
+
+        // iso world group
+        React.createElement('g', { transform: `translate(${OX},${OY})` },
+          React.createElement(CorridorFloor, null),
+          ...sortedMods.map(({ m, pos }) =>
+            React.createElement(ModuleRoom, {
+              key: m.id, mod: m, col: pos[0], row: pos[1],
+              selected: selectedMod?.id === m.id,
+              plano, onClick: setSelectedMod,
+            })
+          ),
+        ),
+      ),
+
+      // ── Header ─────────────────────────────────────────────────────────────
+      React.createElement('div', {
+        style:{
+          position:'absolute', top:0, left:0, right:0, height:52,
+          display:'flex', alignItems:'center', padding:'0 20px', gap:12,
+          background:'rgba(6,6,13,0.8)', backdropFilter:'blur(20px)',
+          borderBottom:'1px solid rgba(168,85,247,0.12)', zIndex:50,
+        }
+      },
+        // logo
+        React.createElement('svg', { width:26, height:26, viewBox:'0 0 26 26' },
+          React.createElement('defs', null,
+            React.createElement('linearGradient', { id:'lg', x1:'0%', y1:'0%', x2:'100%', y2:'100%' },
+              React.createElement('stop', { offset:'0%',   stopColor:'#6366f1' }),
+              React.createElement('stop', { offset:'50%',  stopColor:'#a855f7' }),
+              React.createElement('stop', { offset:'100%', stopColor:'#ec4899' }),
+            ),
+          ),
+          React.createElement('path', {
+            d:'M13 2 L15 11 L24 13 L15 15 L13 24 L11 15 L2 13 L11 11 Z',
+            fill:'url(#lg)',
+          }),
+        ),
+        React.createElement('div', {},
+          React.createElement('div', { style:{ fontSize:13, fontWeight:700, color:'white', lineHeight:1.2 } }, 'Iara Hub'),
+          React.createElement('div', { style:{ fontSize:9, color:'rgba(168,85,247,0.7)', fontFamily:'IBM Plex Mono, monospace' } }, '/ dev-office'),
+        ),
+        React.createElement('div', { style:{ flex:1 } }),
+        // edit toggle
+        React.createElement('button', {
+          onClick: () => setEditMode(!editMode),
+          style:{
+            background: editMode ? 'rgba(168,85,247,0.18)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${editMode ? 'rgba(168,85,247,0.45)' : 'rgba(255,255,255,0.1)'}`,
+            color: editMode ? '#a855f7' : 'rgba(255,255,255,0.4)',
+            borderRadius:8, padding:'5px 13px', cursor:'pointer',
+            fontSize:11, fontFamily:'IBM Plex Mono, monospace', letterSpacing:0.5,
+          }
+        }, editMode ? '⚙ EDIT ON' : '⚙ EDIT'),
+      ),
+
+      // ── Footer ─────────────────────────────────────────────────────────────
+      React.createElement('div', {
+        style:{
+          position:'absolute', bottom:0, left:0, right:0, height:34,
+          display:'flex', alignItems:'center', padding:'0 20px',
+          background:'rgba(6,6,13,0.6)', backdropFilter:'blur(10px)',
+          borderTop:'1px solid rgba(168,85,247,0.07)', zIndex:50,
+          fontSize:10, color:'rgba(168,85,247,0.45)', fontFamily:'IBM Plex Mono, monospace',
+          gap:6,
+        }
+      },
+        `12 módulos ·`,
+        React.createElement('span', { style:{ color:'rgba(168,85,247,0.7)' } },
+          `${IARA_MODULES.filter(m => m.currentUsage > 0).length} ativos este mês`),
+        React.createElement('div', { style:{ flex:1 } }),
+        `plano: ${plano}`,
+        React.createElement('span', { style:{ color:'rgba(255,255,255,0.2)' } }, '·'),
+        `${pontos.toLocaleString('pt-BR')} pts`,
+      ),
+
+      // ── Creator HUD ────────────────────────────────────────────────────────
+      React.createElement(CreatorHUD, { pontos, nicho }),
+
+      // ── Module Panel ───────────────────────────────────────────────────────
+      selectedMod && React.createElement(ModulePanel, {
+        module: selectedMod, plano,
+        onClose: () => setSelectedMod(null),
+      }),
+
+      // ── Tweaks panel (edit mode) ───────────────────────────────────────────
+      editMode && React.createElement('div', {
+        style:{
+          position:'fixed', bottom:44, right: selectedMod ? 452 : 12,
+          background:'rgba(8,7,18,0.95)', borderRadius:14, padding:'16px 18px',
+          border:'1px solid rgba(168,85,247,0.25)', backdropFilter:'blur(20px)',
+          zIndex:300, fontFamily:'Inter, sans-serif', minWidth:240,
+          boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+        }
+      },
+        React.createElement('div', {
+          style:{ fontSize:9, color:'rgba(168,85,247,0.6)', letterSpacing:1.2,
+                  textTransform:'uppercase', fontFamily:'IBM Plex Mono, monospace', marginBottom:14 }
+        }, '⚙ TWEAKS'),
+
+        // plano select
+        React.createElement('div', { style:{ marginBottom:12 } },
+          React.createElement('label', { style:{ fontSize:11, color:'rgba(255,255,255,0.45)', display:'block', marginBottom:5 } }, 'Plano'),
+          React.createElement('select', {
+            value: plano, onChange: e => setPlano(e.target.value),
+            style:{
+              width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(168,85,247,0.2)',
+              borderRadius:7, padding:'6px 10px', color:'white', fontSize:12,
+              fontFamily:'IBM Plex Mono, monospace', cursor:'pointer',
+            }
+          },
+            ...Object.entries(IARA_PLANOS).map(([k, v]) =>
+              React.createElement('option', { key: k, value: k }, `${v.label}`)
+            ),
+          ),
+        ),
+
+        // nicho select
+        React.createElement('div', { style:{ marginBottom:12 } },
+          React.createElement('label', { style:{ fontSize:11, color:'rgba(255,255,255,0.45)', display:'block', marginBottom:5 } }, 'Nicho'),
+          React.createElement('select', {
+            value: nicho, onChange: e => setNicho(e.target.value),
+            style:{
+              width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(168,85,247,0.2)',
+              borderRadius:7, padding:'6px 10px', color:'white', fontSize:12,
+              fontFamily:'IBM Plex Mono, monospace', cursor:'pointer',
+            }
+          },
+            ...Object.keys(NICHO_NIVEIS).map(k =>
+              React.createElement('option', { key: k, value: k }, k)
+            ),
+          ),
+        ),
+
+        // pontos slider
+        React.createElement('div', {},
+          React.createElement('div', { style:{ display:'flex', justifyContent:'space-between', marginBottom:5 } },
+            React.createElement('label', { style:{ fontSize:11, color:'rgba(255,255,255,0.45)' } }, 'Pontos'),
+            React.createElement('span', { style:{ fontSize:10, color:'#a855f7', fontFamily:'IBM Plex Mono, monospace', fontWeight:700 } },
+              pontos.toLocaleString('pt-BR')),
+          ),
+          React.createElement('input', {
+            type:'range', min:0, max:16000, step:50, value: pontos,
+            onChange: e => setPontos(Number(e.target.value)),
+            style:{ width:'100%', accentColor:'#a855f7', cursor:'pointer' },
+          }),
+          React.createElement('div', {
+            style:{ display:'flex', justifyContent:'space-between', marginTop:3,
+                    fontSize:8.5, color:'rgba(255,255,255,0.25)', fontFamily:'IBM Plex Mono, monospace' }
+          }, '0', '16 000'),
+        ),
+      ),
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+}
+
+loadAll().catch(err => {
+  document.body.innerHTML =
+    `<div style="color:#ef4444;padding:40px;font-family:monospace;font-size:13px">
+       <b>Erro ao carregar:</b><br>${err.message}<br><br>
+       Rode via servidor HTTP (npm run dev → localhost:3000/dev-office/)
+     </div>`;
+});
+</script>
+</body>
+</html>

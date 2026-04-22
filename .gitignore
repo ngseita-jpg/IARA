@@ -40,3 +40,15 @@ next-env.d.ts
 
 preview/
 public/*.woff
+
+# internal / tools
+.mcp.json
+.claude/
+supabase/.temp/
+
+# font files na raiz (local)
+*.woff2
+*.woff
+*.ttf
+!public/*.woff2
+!public/*.ttf

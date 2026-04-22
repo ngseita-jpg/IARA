@@ -1,0 +1,104 @@
+[
+  {
+    "module": "Login",
+    "status": "ok",
+    "detail": "Login realizado com sucesso",
+    "url": ""
+  },
+  {
+    "module": "Dashboard",
+    "status": "fail",
+    "detail": "Page.wait_for_selector: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator(\"a[href*='/dashboard/']\") to be visi",
+    "url": ""
+  },
+  {
+    "module": "Roteiros",
+    "status": "warn",
+    "detail": "Timeout aguardando roteiro — API pode estar lenta",
+    "url": ""
+  },
+  {
+    "module": "Temas / Faísca",
+    "status": "warn",
+    "detail": "Timeout — resposta do chat demorou demais",
+    "url": ""
+  },
+  {
+    "module": "Thumbnail",
+    "status": "warn",
+    "detail": "Timeout aguardando thumbnail",
+    "url": ""
+  },
+  {
+    "module": "Carrossel",
+    "status": "warn",
+    "detail": "Timeout aguardando carrossel",
+    "url": ""
+  },
+  {
+    "module": "Stories",
+    "status": "warn",
+    "detail": "Timeout aguardando stories",
+    "url": ""
+  },
+  {
+    "module": "Métricas",
+    "status": "warn",
+    "detail": "Timeout na análise de métricas",
+    "url": ""
+  },
+  {
+    "module": "Mídia Kit",
+    "status": "warn",
+    "detail": "Timeout no mídia kit",
+    "url": ""
+  },
+  {
+    "module": "Oratória",
+    "status": "fail",
+    "detail": "Page.wait_for_selector: Unexpected token \"=\" while parsing css selector \"button, [class*='record'], [class*='mic'], text",
+    "url": ""
+  },
+  {
+    "module": "Metas",
+    "status": "fail",
+    "detail": "Locator.wait_for: Timeout 10000ms exceeded.\nCall log:\n  - waiting for get_by_text(\"Nova meta\").first to be visible\n",
+    "url": ""
+  },
+  {
+    "module": "Histórico",
+    "status": "ok",
+    "detail": "Histórico carregou com itens",
+    "url": ""
+  },
+  {
+    "module": "Perfil",
+    "status": "ok",
+    "detail": "Perfil carregou",
+    "url": ""
+  },
+  {
+    "module": "Banco de Fotos",
+    "status": "ok",
+    "detail": "Banco de fotos carregou",
+    "url": ""
+  },
+  {
+    "module": "Vagas",
+    "status": "ok",
+    "detail": "Vagas carregou",
+    "url": ""
+  },
+  {
+    "module": "Afiliados",
+    "status": "ok",
+    "detail": "Afiliados carregou",
+    "url": ""
+  },
+  {
+    "module": "Calendário",
+    "status": "ok",
+    "detail": "Calendário carregou",
+    "url": ""
+  }
+]
