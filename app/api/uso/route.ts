@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { LIMITES, inicioMesAtual } from '@/lib/limites'
 
@@ -25,11 +25,12 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('creator_profiles')
     .select('plano')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   const plano = (profile?.plano ?? 'free') as keyof typeof LIMITES
   const limites = LIMITES[plano]

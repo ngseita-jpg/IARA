@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import {
@@ -54,16 +54,15 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Criador'
 
-  // Separamos a query de plano do resto do perfil:
-  // se a coluna plano não existir no banco, só a segunda query falha,
-  // e o perfil (nome, pontos etc.) continua funcionando.
+  // Admin client bypassa RLS — seguro pois user_id vem de auth.getUser() verificado
+  const admin = createAdminClient()
   const [{ data: profile }, { data: planoRow }] = await Promise.all([
-    supabase
+    admin
       .from('creator_profiles')
       .select('pontos, nivel, nicho, voz_score_medio, treinos_voz, nome_artistico')
       .eq('user_id', user?.id ?? '')
       .maybeSingle(),
-    supabase
+    admin
       .from('creator_profiles')
       .select('plano')
       .eq('user_id', user?.id ?? '')
