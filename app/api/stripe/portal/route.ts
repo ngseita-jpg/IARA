@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
@@ -7,7 +7,8 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const { data: perfil } = await supabase
+  const admin = createAdminClient()
+  const { data: perfil } = await admin
     .from('creator_profiles')
     .select('stripe_customer_id')
     .eq('user_id', user.id)
