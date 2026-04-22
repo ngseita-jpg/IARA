@@ -53,7 +53,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('creator_profiles')
-    .select('pontos, nivel, nicho, voz_score_medio, treinos_voz, nome_artistico')
+    .select('pontos, nivel, nicho, voz_score_medio, treinos_voz, nome_artistico, plano')
     .eq('user_id', user?.id ?? '')
     .single()
 
@@ -67,7 +67,16 @@ export default async function DashboardPage() {
 
   const perfilIncompleto = !profile?.nicho || !profile?.nome_artistico
 
-  // Uso do mês atual (plano free)
+  const planoAtual = (profile?.plano ?? 'free') as import('@/lib/limites').Plano
+
+  const PLANO_LABEL: Record<string, string> = {
+    free: 'Gratuito',
+    plus: 'Plus',
+    premium: 'Premium',
+    profissional: 'Profissional',
+  }
+
+  // Uso do mês atual
   const mesAtual = inicioMesAtual()
   const uid = user?.id ?? ''
   const [
@@ -88,7 +97,7 @@ export default async function DashboardPage() {
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'temas').gte('created_at', mesAtual),
   ])
 
-  const limites = LIMITES['free']
+  const limites = LIMITES[planoAtual] ?? LIMITES['free']
   const usoMes = [
     { label: 'Temas IA',   usado: usoTemas ?? 0,     limite: limites.temas!,     cor: 'bg-iara-400' },
     { label: 'Roteiros',   usado: usoRoteiros ?? 0,  limite: limites.roteiro!,   cor: 'bg-iara-500' },
@@ -99,8 +108,20 @@ export default async function DashboardPage() {
     { label: 'Mídia Kit',  usado: usoMidiaKit ?? 0,  limite: limites.midia_kit!, cor: 'bg-amber-500' },
   ]
 
+  const isOwner = user?.email === 'ngseita@gmail.com'
+
   return (
     <div className="animate-fade-in">
+
+      {/* ── Banner admin ── */}
+      {isOwner && (
+        <Link href="/admin/cupons" className="block mb-4">
+          <div className="rounded-xl border border-indigo-800/30 bg-indigo-950/20 px-4 py-2.5 hover:border-indigo-600/50 transition-all flex items-center justify-between">
+            <p className="text-xs font-semibold text-indigo-400">Área Admin — Cupons de desconto</p>
+            <ChevronRight className="w-4 h-4 text-indigo-400" />
+          </div>
+        </Link>
+      )}
 
       {/* ── Banner perfil incompleto ── */}
       {perfilIncompleto && (
@@ -186,7 +207,7 @@ export default async function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Zap className="w-3.5 h-3.5 text-iara-400" />
-            <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Uso este mês · Plano Gratuito</h2>
+            <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Uso este mês · Plano {PLANO_LABEL[planoAtual] ?? planoAtual}</h2>
           </div>
           <Link href="/#planos" className="text-[10px] text-iara-400 hover:text-iara-300 transition-colors font-medium">
             Ver planos →
