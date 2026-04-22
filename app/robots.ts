@@ -6,9 +6,22 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard/', '/api/', '/onboarding/', '/auth/'],
+        disallow: [
+          '/dashboard/',
+          '/api/',
+          '/onboarding/',
+          '/auth/',
+          '/marca/dashboard/',
+          '/marca/onboarding/',
+          '/conta',
+          '/redefinir-senha',
+          '/r/',
+          '/preview',
+          '/dev-office/',
+        ],
       },
     ],
     sitemap: 'https://iarahubapp.com.br/sitemap.xml',
+    host: 'https://iarahubapp.com.br',
   }
 }
