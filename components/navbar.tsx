@@ -233,13 +233,23 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
                 </Link>
               )
             })}
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400 mt-2 border-t border-[#1a1a2e] pt-4"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </button>
+            <div className="border-t border-[#1a1a2e] mt-2 pt-4 space-y-1">
+              <Link
+                href="/conta"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/30"
+              >
+                <User className="w-4 h-4" />
+                Minha Conta
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
           </nav>
         </div>
       )}
