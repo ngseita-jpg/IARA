@@ -257,27 +257,48 @@ export async function POST(req: NextRequest) {
             }} />
           )}
 
-          {/* Título principal */}
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              fontSize: fs,
-              fontWeight: 900,
-              fontFamily: fontName,
-              color: layout.titulo_cor,
-              lineHeight: 1.0,
-              letterSpacing: upperCaseFonts.includes(fonte) ? '0.01em' : '-0.03em',
-              textAlign: tAlign,
-              maxWidth: maxTextW,
-              textShadow: finalShadow,
-              backgroundColor: layout.titulo_fundo ?? 'transparent',
-              padding: layout.titulo_fundo ? `10px ${Math.round(fs * 0.2)}px` : '0',
-              borderRadius: layout.titulo_fundo ? (layout.titulo_fundo_raio ?? 8) : 0,
-            }}
-          >
-            {titulo}
-          </div>
+          {/* Título principal — renderizado palavra a palavra para permitir destaques de cor */}
+          {(() => {
+            const palavras = titulo.split(/\s+/).filter(Boolean)
+            const destaquesMap = new Map(
+              (layout.palavras_destaque ?? []).map(d => [d.indice, d.cor])
+            )
+            const wordGapH = Math.round(fs * 0.25)
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: `0 ${wordGapH}px`,
+                  fontSize: fs,
+                  fontWeight: 900,
+                  fontFamily: fontName,
+                  lineHeight: 1.0,
+                  letterSpacing: upperCaseFonts.includes(fonte) ? '0.01em' : '-0.03em',
+                  justifyContent:
+                    tAlign === 'center' ? 'center' :
+                    tAlign === 'right'  ? 'flex-end' : 'flex-start',
+                  maxWidth: maxTextW,
+                  textShadow: finalShadow,
+                  backgroundColor: layout.titulo_fundo ?? 'transparent',
+                  padding: layout.titulo_fundo ? `10px ${Math.round(fs * 0.2)}px` : '0',
+                  borderRadius: layout.titulo_fundo ? (layout.titulo_fundo_raio ?? 8) : 0,
+                }}
+              >
+                {palavras.map((p, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      color: destaquesMap.get(i) ?? layout.titulo_cor,
+                    }}
+                  >
+                    {p}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {/* Linha de acento abaixo do título */}
           {layout.linha_acento && layout.linha_acento_cor && layout.eyebrow && (

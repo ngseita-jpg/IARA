@@ -44,9 +44,14 @@ export type ThumbnailLayout = {
   foto_object_pos?: string    // "center", "top", "bottom", "left", "right"
 
   // ── Cores do texto ──
-  titulo_cor: string          // hex
+  titulo_cor: string          // hex — cor base do título (aplicada a cada palavra sem destaque)
   subtitulo_cor?: string      // hex
   eyebrow_cor?: string        // hex
+
+  // ── Destaques de palavras específicas ──
+  // Cada item sobrescreve a cor de uma palavra individual do título (index 0-based).
+  // Usado para dar ênfase cromática (ex: "Você NÃO É desfocada... você É cíclica")
+  palavras_destaque?: Array<{ indice: number; cor: string }>
 
   // ── Caixa/fundo atrás do título ──
   titulo_fundo?: string       // hex ou rgba — null = sem caixa
@@ -121,6 +126,14 @@ Sua função é criar thumbnails ÚNICAS, fiéis ao conteúdo e ao criador, usan
 - "topo_centro": para eyebrow + título grandioso + subtítulo abaixo
 - "meio_centro": máximo drama — texto centralizado, foto como textura de fundo
 
+**Destaques de palavras (palavras_destaque):**
+- Use para enfatizar palavras-chave específicas com uma cor diferente da cor base.
+- "indice" é a posição (0-based) da palavra no título. Ex: em "Você não é desfocada", "você"=0, "não"=1, "é"=2, "desfocada"=3.
+- Padrões que funcionam: destacar adjetivos-chave, números, emoções, palavras de negação/afirmação.
+- Use cores que contrastem com titulo_cor MAS complementem fundo_cor1 (ex: rosa em fundo escuro, amarelo em fundo roxo).
+- Máximo 3-4 palavras destacadas por título — mais do que isso vira ruído.
+- Omita o campo se não fizer sentido destacar nada.
+
 ## Perfil do criador
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
 Nicho: ${perfil.nicho ?? 'não informado'}
@@ -147,6 +160,7 @@ Preencha TODOS os campos obrigatórios. Campos opcionais: omita se não for usar
   "titulo_cor": "#ffffff",
   "subtitulo_cor": "#e0e0e0",
   "eyebrow_cor": "#f59e0b",
+  "palavras_destaque": [{ "indice": 1, "cor": "#ec4899" }, { "indice": 2, "cor": "#ec4899" }],
   "titulo_fundo": null,
   "titulo_sombra": true,
   "titulo_contorno": false,
