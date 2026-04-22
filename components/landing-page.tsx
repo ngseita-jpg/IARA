@@ -462,74 +462,27 @@ export function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ── CRESCIMENTO DIGITAL ── */}
+      {/* ── VENDER COM CONTEÚDO ── */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 60%, rgba(99,102,241,0.07) 0%, transparent 60%)' }} />
-        <div className="max-w-5xl mx-auto relative z-10">
+        <div className="max-w-4xl mx-auto relative z-10 text-center">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
-            <motion.p variants={fadeUp} className="text-iara-400 text-xs font-bold uppercase tracking-widest mb-5 text-center">O atalho para crescer</motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl md:text-[62px] font-black text-center leading-[1.05] tracking-tight mb-6">
-              Clientes novos,<br />
-              <span className="shimmer-text">sem precisar correr atrás.</span>
+            <motion.p variants={fadeUp} className="text-iara-400 text-xs font-bold uppercase tracking-widest mb-5">A melhor estratégia de vendas de 2026</motion.p>
+            <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl md:text-[62px] font-black leading-[1.05] tracking-tight mb-6">
+              Conteúdo é a forma mais poderosa<br />
+              <span className="shimmer-text">de vender o seu trabalho.</span>
             </motion.h2>
-            <motion.p variants={fadeUp} className="text-xl text-[#9b9bb5] text-center max-w-2xl mx-auto mb-14 leading-relaxed">
-              Quando você aparece com consistência, os clientes chegam até você já convencidos. Menos esforço de venda, mais resultado — e uma reputação que cresce sozinha com o tempo.
+            <motion.p variants={fadeUp} className="text-xl text-[#9b9bb5] max-w-2xl mx-auto mb-10 leading-relaxed">
+              Quem mostra o que sabe, vende mais. Quem aparece com consistência nas redes, escala. Não importa sua área — o conteúdo é o que transforma seguidores em clientes e clientes em fãs.<br />
+              <span className="text-[#f1f1f8] font-semibold">A Iara te ajuda a fazer isso todo dia, sem esforço.</span>
             </motion.p>
-
-            {/* 3 resultados concretos */}
-            <motion.div variants={stagger} className="grid md:grid-cols-3 gap-5 mb-10">
-              {[
-                {
-                  icon: Users,
-                  color: 'text-iara-400',
-                  bg: 'rgba(99,102,241,0.1)',
-                  border: 'border-iara-700/25',
-                  title: 'Mais clientes entrando',
-                  desc: 'Presença ativa atrai pessoas que já entendem o valor do seu trabalho — antes mesmo do primeiro contato. A venda fica muito mais fácil.',
-                },
-                {
-                  icon: TrendingUp,
-                  color: 'text-accent-purple',
-                  bg: 'rgba(168,85,247,0.1)',
-                  border: 'border-accent-purple/25',
-                  title: 'Ticket médio maior',
-                  desc: 'Quem constrói autoridade online cobra mais — e os clientes pagam sem questionar. Reputação visível justifica preço premium.',
-                },
-                {
-                  icon: Calendar,
-                  color: 'text-green-400',
-                  bg: 'rgba(34,197,94,0.08)',
-                  border: 'border-green-800/25',
-                  title: 'Agenda que se preenche',
-                  desc: 'Para de depender só de indicação. Com consistência, você cria um fluxo constante de pessoas interessadas — independente de época ou sorte.',
-                },
-              ].map((card, i) => {
-                const Icon = card.icon
-                return (
-                  <motion.div key={i} variants={fadeUp} custom={i}
-                    whileHover={{ y: -6 }}
-                    transition={{ type: 'spring', stiffness: 280, damping: 20 }}
-                    className={`p-6 rounded-2xl border ${card.border} cursor-default`}
-                    style={{ background: card.bg }}>
-                    <Icon className={`w-5 h-5 ${card.color} mb-4`} />
-                    <h3 className="font-bold text-[#f1f1f8] mb-2">{card.title}</h3>
-                    <p className="text-sm text-[#6b6b8a] leading-relaxed">{card.desc}</p>
-                  </motion.div>
-                )
-              })}
-            </motion.div>
-
-            {/* Insight central */}
-            <motion.div variants={scaleIn}
-              className="rounded-2xl p-6 border border-iara-700/30 text-center relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.05))' }}>
-              <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.1) 0%, transparent 70%)' }} />
-              <p className="relative z-10 text-lg sm:text-xl font-bold text-[#f1f1f8] mb-2">
-                Não é sobre virar influencer.
-              </p>
-              <p className="relative z-10 text-[#9b9bb5]">
-                É sobre usar o que você já sabe para <span className="text-[#f1f1f8] font-semibold">atrair mais clientes, cobrar mais e crescer com consistência</span> — sem depender de agência ou de sorte.
-              </p>
+            <motion.div variants={fadeUp} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="inline-block">
+              <Link href="/register"
+                className="btn-shimmer inline-flex items-center gap-2 px-10 py-4 rounded-2xl text-base font-bold text-white shadow-2xl shadow-iara-900/50"
+                style={{ background: 'linear-gradient(135deg,#6366f1 0%,#a855f7 55%,#ec4899 100%)' }}>
+                Começar agora — é grátis
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </motion.div>
           </motion.div>
         </div>
