@@ -462,64 +462,61 @@ export function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ── REALIDADE DIGITAL ── */}
+      {/* ── CRESCIMENTO DIGITAL ── */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 60%, rgba(99,102,241,0.07) 0%, transparent 60%)' }} />
         <div className="max-w-5xl mx-auto relative z-10">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
-            <motion.p variants={fadeUp} className="text-iara-400 text-xs font-bold uppercase tracking-widest mb-5 text-center">A nova regra do mercado — 2026</motion.p>
+            <motion.p variants={fadeUp} className="text-iara-400 text-xs font-bold uppercase tracking-widest mb-5 text-center">O atalho para crescer</motion.p>
             <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl md:text-[62px] font-black text-center leading-[1.05] tracking-tight mb-6">
-              Antes de te contratar,<br />
-              <span className="shimmer-text">eles já te pesquisaram.</span>
+              Clientes novos,<br />
+              <span className="shimmer-text">sem precisar correr atrás.</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-xl text-[#9b9bb5] text-center max-w-2xl mx-auto mb-14 leading-relaxed">
-              Dentista, advogado, coach, arquiteto, consultor — não importa a área. A primeira coisa que qualquer cliente faz hoje é buscar seu nome online. O que eles encontram define se eles te ligam ou procuram outro.
+              Quando você aparece com consistência, os clientes chegam até você já convencidos. Menos esforço de venda, mais resultado — e uma reputação que cresce sozinha com o tempo.
             </motion.p>
 
-            {/* Contraste: sem vs com presença */}
-            <motion.div variants={stagger} className="grid md:grid-cols-2 gap-5 mb-12">
-              <motion.div variants={fadeUp} custom={0}
-                className="rounded-2xl p-7 border border-red-900/25 relative overflow-hidden"
-                style={{ background: 'rgba(10,4,4,0.8)' }}>
-                <div className="absolute top-4 right-4 text-xs font-bold text-red-900/60 uppercase tracking-widest">hoje</div>
-                <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-5">Sem presença digital ativa</p>
-                <div className="space-y-3.5">
-                  {[
-                    'Tem ótimas indicações — mas ninguém te encontra sozinho',
-                    'Perde clientes para concorrentes com menos experiência, porém mais visíveis',
-                    'Cobra menos porque não construiu autoridade percebida',
-                    'Agenda depende 100% de indicação. Quando para, para tudo.',
-                    'Trabalhou anos para ser bom. Quase ninguém sabe disso.',
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-2.5">
-                      <X className="w-4 h-4 text-red-500/60 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-[#9b9bb5] leading-snug">{item}</p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-
-              <motion.div variants={fadeUp} custom={1}
-                className="rounded-2xl p-7 border border-green-900/25 relative overflow-hidden"
-                style={{ background: 'rgba(4,10,4,0.8)' }}>
-                <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.05) 0%, transparent 60%)' }} />
-                <div className="absolute top-4 right-4 text-xs font-bold text-green-900/60 uppercase tracking-widest">2026</div>
-                <p className="text-green-400 text-xs font-bold uppercase tracking-widest mb-5 relative z-10">Com presença digital consistente</p>
-                <div className="space-y-3.5 relative z-10">
-                  {[
-                    'Aparece quando pesquisam pelo seu nicho — mesmo sem indicação',
-                    'Constrói autoridade antes mesmo do primeiro contato',
-                    'Cobra mais porque o cliente já chega sabendo quem você é',
-                    'Agenda preenchida por pessoas que já confiam em você',
-                    'Seu conhecimento vira ativo — trabalha por você enquanto você dorme.',
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-2.5">
-                      <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-[#9b9bb5] leading-snug">{item}</p>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+            {/* 3 resultados concretos */}
+            <motion.div variants={stagger} className="grid md:grid-cols-3 gap-5 mb-10">
+              {[
+                {
+                  icon: Users,
+                  color: 'text-iara-400',
+                  bg: 'rgba(99,102,241,0.1)',
+                  border: 'border-iara-700/25',
+                  title: 'Mais clientes entrando',
+                  desc: 'Presença ativa atrai pessoas que já entendem o valor do seu trabalho — antes mesmo do primeiro contato. A venda fica muito mais fácil.',
+                },
+                {
+                  icon: TrendingUp,
+                  color: 'text-accent-purple',
+                  bg: 'rgba(168,85,247,0.1)',
+                  border: 'border-accent-purple/25',
+                  title: 'Ticket médio maior',
+                  desc: 'Quem constrói autoridade online cobra mais — e os clientes pagam sem questionar. Reputação visível justifica preço premium.',
+                },
+                {
+                  icon: Calendar,
+                  color: 'text-green-400',
+                  bg: 'rgba(34,197,94,0.08)',
+                  border: 'border-green-800/25',
+                  title: 'Agenda que se preenche',
+                  desc: 'Para de depender só de indicação. Com consistência, você cria um fluxo constante de pessoas interessadas — independente de época ou sorte.',
+                },
+              ].map((card, i) => {
+                const Icon = card.icon
+                return (
+                  <motion.div key={i} variants={fadeUp} custom={i}
+                    whileHover={{ y: -6 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+                    className={`p-6 rounded-2xl border ${card.border} cursor-default`}
+                    style={{ background: card.bg }}>
+                    <Icon className={`w-5 h-5 ${card.color} mb-4`} />
+                    <h3 className="font-bold text-[#f1f1f8] mb-2">{card.title}</h3>
+                    <p className="text-sm text-[#6b6b8a] leading-relaxed">{card.desc}</p>
+                  </motion.div>
+                )
+              })}
             </motion.div>
 
             {/* Insight central */}
@@ -531,7 +528,7 @@ export function LandingPage() {
                 Não é sobre virar influencer.
               </p>
               <p className="relative z-10 text-[#9b9bb5]">
-                É sobre o seu conhecimento ser <span className="text-[#f1f1f8] font-semibold">encontrado pelas pessoas certas</span> — no momento em que elas mais precisam de você.
+                É sobre usar o que você já sabe para <span className="text-[#f1f1f8] font-semibold">atrair mais clientes, cobrar mais e crescer com consistência</span> — sem depender de agência ou de sorte.
               </p>
             </motion.div>
           </motion.div>
