@@ -24,6 +24,7 @@ import {
   History,
   Briefcase,
   Tag,
+  HelpCircle,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
@@ -128,6 +129,13 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
           >
             <User className="w-4 h-4 text-[#5a5a7a] group-hover:text-[#9b9bb5]" />
             Minha Conta
+          </Link>
+          <Link
+            href="/ajuda"
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/25 hover:text-[#f1f1f8] transition-all duration-200 group"
+          >
+            <HelpCircle className="w-4 h-4 text-[#5a5a7a] group-hover:text-[#9b9bb5]" />
+            Ajuda
           </Link>
           <button
             onClick={handleSignOut}
@@ -242,6 +250,14 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
               >
                 <User className="w-4 h-4" />
                 Minha Conta
+              </Link>
+              <Link
+                href="/ajuda"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/30"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Ajuda
               </Link>
               <button
                 onClick={handleSignOut}

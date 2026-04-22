@@ -301,6 +301,62 @@ export async function emailBoasVindasPago({
   await send(userEmail, `🎉 Bem-vindo ao Iara ${info.label}!`, base(`Seu plano ${info.label} está ativo — comece agora`, body))
 }
 
+export async function emailTicketNovoAdmin({
+  ticketId, userEmail, userNome, categoria, assunto, mensagem, userPlano,
+}: {
+  ticketId: number
+  userEmail: string
+  userNome?: string | null
+  categoria: string
+  assunto: string
+  mensagem: string
+  userPlano?: string | null
+}) {
+  const CAT_LABEL: Record<string, string> = {
+    conta: 'Conta', pagamento: 'Pagamento', modulo: 'Módulo / Feature',
+    bug: 'Bug', sugestao: 'Sugestão', outro: 'Outro',
+  }
+  const body = `
+    ${h1(`Novo ticket de suporte · #${ticketId}`)}
+    ${p(`${strong(userNome || userEmail)} abriu um chamado na categoria ${strong(CAT_LABEL[categoria] || categoria)}.`)}
+    <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#9b9bb5;text-transform:uppercase;letter-spacing:0.5px;">Assunto</p>
+    ${p(strong(assunto))}
+    <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#9b9bb5;text-transform:uppercase;letter-spacing:0.5px;">Mensagem</p>
+    ${quote(mensagem)}
+    <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="margin:16px 0;">
+      <tr>
+        <td style="background:#f8f7ff;border-radius:10px;padding:14px 16px;">
+          <p style="margin:0;font-size:13px;color:#4a4a6a;"><strong>Email:</strong> ${userEmail}</p>
+          ${userPlano ? `<p style="margin:6px 0 0;font-size:13px;color:#4a4a6a;"><strong>Plano:</strong> ${userPlano}</p>` : ''}
+          <p style="margin:6px 0 0;font-size:13px;color:#4a4a6a;"><strong>Ticket ID:</strong> #${ticketId}</p>
+        </td>
+      </tr>
+    </table>
+    ${btn('https://supabase.com/dashboard/project/_/editor', 'Abrir Supabase →')}
+  `
+  await send('ngseita@gmail.com', `[SAC] #${ticketId} · ${assunto}`, base(`Novo ticket de ${userNome || userEmail}`, body))
+}
+
+export async function emailTicketRespondidoUsuario({
+  userEmail, userNome, assunto, resposta,
+}: {
+  userEmail: string
+  userNome?: string | null
+  assunto: string
+  resposta: string
+}) {
+  const nome = userNome?.split(' ')[0] || 'Criador'
+  const body = `
+    ${h1('Resposta ao seu ticket ✉️')}
+    ${p(`Olá, ${strong(nome)}!`)}
+    ${p(`Recebemos seu ticket ${strong('"' + assunto + '"')} e aqui está nossa resposta:`)}
+    ${quote(resposta)}
+    ${p('Se ainda tiver dúvidas, é só responder este email ou abrir outro ticket pela área de Ajuda.')}
+    ${btn('https://iarahubapp.com.br/dashboard/ajuda', 'Acessar Ajuda →')}
+  `
+  await send(userEmail, `Resposta ao seu ticket: ${assunto}`, base(`Sua dúvida sobre "${assunto}" foi respondida`, body))
+}
+
 export async function emailPropostaRecusada({
   brandEmail, brandNome, creatorNome, vagaTitulo,
 }: {

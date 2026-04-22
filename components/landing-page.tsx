@@ -725,8 +725,9 @@ export function LandingPage() {
               <span>·</span>
               <span>© {new Date().getFullYear()}</span>
             </div>
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-5 flex-wrap justify-center">
               <Link href="/empresas"     className="hover:text-[#9b9bb5] transition-colors">Empresas</Link>
+              <Link href="/ajuda"        className="hover:text-[#9b9bb5] transition-colors">Ajuda</Link>
               <Link href="/privacidade"  className="hover:text-[#9b9bb5] transition-colors">Privacidade</Link>
               <Link href="/termos"       className="hover:text-[#9b9bb5] transition-colors">Termos</Link>
               <a href="#afiliados"       className="hover:text-[#9b9bb5] transition-colors">Afiliados</a>
