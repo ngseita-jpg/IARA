@@ -147,7 +147,7 @@ ${inspiracao.transcricao.slice(0, 4000)}`
   : 'O criador indicou este vídeo como referência de estilo. Considere isso na geração.'}` : ''}`
 
   const stream = anthropic.messages.stream({
-    model: 'claude-opus-4-6',
+    model: 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: [
       {

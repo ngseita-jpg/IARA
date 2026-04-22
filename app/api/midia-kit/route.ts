@@ -107,9 +107,8 @@ Retorne SOMENTE JSON válido:
 
   try {
     const message = await (anthropic.messages.create as (body: unknown) => Promise<Anthropic.Message>)({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 3000,
-      thinking: { type: 'adaptive' },
       messages: [{ role: 'user', content: prompt }],
     })
 

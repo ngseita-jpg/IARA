@@ -232,9 +232,15 @@ Retorne APENAS o JSON.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1200,
-      system: buildSystemPrompt(perfil as Record<string, unknown> | null),
+      system: [
+        {
+          type: 'text',
+          text: buildSystemPrompt(perfil as Record<string, unknown> | null),
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages,
     })
 

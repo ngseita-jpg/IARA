@@ -233,7 +233,13 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 3000,
-      system: buildSystemPrompt(perfil as Record<string, unknown> | null, modo, plataforma),
+      system: [
+        {
+          type: 'text',
+          text: buildSystemPrompt(perfil as Record<string, unknown> | null, modo, plataforma),
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages,
     })
 
