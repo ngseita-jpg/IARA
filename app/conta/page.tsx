@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft } from 'lucide-react'
+import { UpgradeModal } from '@/components/upgrade-modal'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -26,6 +27,7 @@ export default function ContaPage() {
   const [perfil, setPerfil] = useState<{ plano?: string; nome_artistico?: string; stripe_customer_id?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -133,12 +135,12 @@ export default function ContaPage() {
                 Gerenciar
               </button>
             ) : (
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-400 border border-indigo-800/40 hover:bg-indigo-950/30 transition-colors"
+              <button
+                onClick={() => setUpgradeOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-400 border border-indigo-800/40 hover:bg-indigo-950/30 transition-colors cursor-pointer"
               >
                 Fazer upgrade
-              </Link>
+              </button>
             )}
           </div>
 
@@ -172,6 +174,8 @@ export default function ContaPage() {
 
         </div>
       </div>
+
+      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </div>
   )
 }
