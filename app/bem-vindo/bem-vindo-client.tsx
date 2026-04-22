@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Sparkles, Check, ArrowRight, Zap, Crown, Gem, User, Lightbulb, FileText, Layers, Image as ImageIcon } from 'lucide-react'
 import { IaraLogo } from '@/components/iara-logo'
+import { trackPurchase } from '@/lib/analytics-events'
 
 type Plano = 'plus' | 'premium' | 'profissional'
 
@@ -98,7 +99,17 @@ export function BemVindoClient({
   useEffect(() => {
     // Guarda flag local para outras telas saberem que acabou de pagar
     try { localStorage.setItem('iara_acabou_de_pagar', '1') } catch { /* ignore */ }
-  }, [])
+
+    // Dispara evento de conversão — uma vez por sessão
+    const valores: Record<Plano, number> = { plus: 49.90, premium: 89.00, profissional: 179.90 }
+    const flag = `iara_purchase_tracked_${plano}`
+    try {
+      if (!sessionStorage.getItem(flag)) {
+        trackPurchase(plano, valores[plano])
+        sessionStorage.setItem(flag, '1')
+      }
+    } catch { /* ignore */ }
+  }, [plano])
 
   return (
     <div className="min-h-screen bg-[#07070f] flex flex-col items-center justify-center px-4 py-10 relative overflow-hidden">

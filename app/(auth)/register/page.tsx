@@ -66,6 +66,13 @@ function RegisterForm() {
       return
     }
 
+    // Tracking de conversão (signup)
+    try {
+      const { trackSignup, trackLead } = await import('@/lib/analytics-events')
+      trackSignup('email')
+      trackLead(tipoConta as 'criador' | 'marca')
+    } catch { /* ignore */ }
+
     setSuccess(true)
     setLoading(false)
   }

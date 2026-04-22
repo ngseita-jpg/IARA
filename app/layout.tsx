@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { CookieConsent } from '@/components/cookie-consent'
+import { Analytics } from '@/components/analytics'
 
 export const metadata: Metadata = {
   title: {
@@ -114,6 +115,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[#0a0a14] text-[#f1f1f8] antialiased">
         {children}
+        <Analytics />
         <CookieConsent />
       </body>
     </html>

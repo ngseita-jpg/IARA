@@ -127,6 +127,13 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
   async function handleCheckout(plano: string) {
     setLoading(plano)
     try {
+      // Tracking de início de checkout
+      const precos: Record<string, number> = { plus: 49.90, premium: 89.00, profissional: 179.90 }
+      try {
+        const { trackStartCheckout } = await import('@/lib/analytics-events')
+        trackStartCheckout(plano, precos[plano] ?? 0)
+      } catch { /* ignore */ }
+
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
