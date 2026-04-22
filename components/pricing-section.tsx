@@ -6,31 +6,11 @@ import { Check, ChevronRight, Zap } from 'lucide-react'
 
 const PLANS = [
   {
-    name: 'Free',
-    desc: 'Para conhecer a Iara',
-    monthly: 0,
-    annual: 0,
-    cta: 'Começar grátis',
-    ctaStyle: 'border border-[#2a2a4a] text-[#9b9bb5] hover:border-iara-700/40 hover:text-[#f1f1f8]',
-    highlight: false,
-    items: [
-      '3 roteiros por mês',
-      '2 carrosseis por mês',
-      '2 thumbnails por mês',
-      '2 stories por mês',
-      '1 análise de oratória',
-      '5 fotos no banco',
-      'Calendário editorial',
-      'Metas básicas',
-    ],
-    locked: ['Histórico de gerações', 'Mídia Kit PDF', 'Métricas com IA'],
-  },
-  {
     name: 'Plus',
-    desc: 'Para criadores em crescimento',
-    monthly: 49.9,
-    annual: 37.4,
-    cta: 'Assinar Plus',
+    desc: 'Pra criadores em crescimento',
+    monthly: 59.9,
+    annual: 44.9,
+    cta: 'Começar 3 dias grátis',
     ctaStyle: 'border border-iara-700/40 text-iara-300 hover:bg-iara-900/30',
     highlight: false,
     items: [
@@ -40,17 +20,17 @@ const PLANS = [
       '7 stories por mês',
       '3 análises de oratória',
       '25 fotos no banco',
-      'Histórico 30 dias',
       'Mídia Kit PDF',
+      'Histórico de gerações',
     ],
     locked: ['Métricas com IA'],
   },
   {
     name: 'Premium',
     desc: 'Melhor custo-benefício',
-    monthly: 89,
-    annual: 66.75,
-    cta: 'Assinar Premium',
+    monthly: 129,
+    annual: 96.75,
+    cta: 'Começar 3 dias grátis',
     ctaStyle: 'bg-gradient-to-r from-iara-600 to-accent-purple text-white hover:opacity-90',
     highlight: true,
     badge: 'Mais popular',
@@ -61,8 +41,7 @@ const PLANS = [
       '18 stories por mês',
       '8 análises de oratória',
       '80 fotos no banco',
-      'Histórico 90 dias',
-      'Mídia Kit PDF',
+      'Mídia Kit PDF ilimitado',
       'Métricas com IA',
       'Suporte prioritário',
     ],
@@ -70,10 +49,10 @@ const PLANS = [
   },
   {
     name: 'Profissional',
-    desc: 'Para quem vive de conteúdo',
-    monthly: 179.9,
-    annual: 134.9,
-    cta: 'Assinar Profissional',
+    desc: 'Pra quem vive de conteúdo',
+    monthly: 249,
+    annual: 186.75,
+    cta: 'Começar 3 dias grátis',
     ctaStyle: 'bg-gradient-to-r from-accent-purple to-accent-pink text-white hover:opacity-90',
     highlight: false,
     badge: 'Ilimitado',
@@ -84,12 +63,32 @@ const PLANS = [
       'Stories ilimitados',
       'Oratória ilimitada',
       'Banco de fotos ilimitado',
-      'Histórico ilimitado',
-      'Mídia Kit PDF',
+      'Mídia Kit PDF ilimitado',
       'Métricas com IA',
       'Acesso antecipado a novos módulos',
       'Prioridade no match com marcas',
       'Suporte VIP',
+    ],
+    locked: [],
+  },
+  {
+    name: 'Agência',
+    desc: 'Pra quem gerencia vários clientes',
+    monthly: 499,
+    annual: 374.25,
+    cta: 'Falar com vendas',
+    ctaStyle: 'bg-gradient-to-r from-accent-pink to-iara-600 text-white hover:opacity-90',
+    highlight: false,
+    badge: 'Novo',
+    items: [
+      'Até 5 perfis gerenciáveis',
+      'Tudo do Profissional × 5',
+      'Dashboard de clientes',
+      'Relatórios white-label',
+      'Match prioritário com marcas',
+      'API de integração (em breve)',
+      'Onboarding assistido',
+      'Suporte dedicado',
     ],
     locked: [],
   },
@@ -104,10 +103,10 @@ export function PricingSection() {
         <div className="text-center mb-12">
           <p className="text-iara-400 text-sm font-semibold uppercase tracking-wider mb-3">Preços</p>
           <h2 className="text-3xl sm:text-4xl font-bold text-[#f1f1f8] mb-4">
-            Comece de graça.{' '}
-            <span className="iara-gradient-text">Cresça quando quiser.</span>
+            3 dias grátis.{' '}
+            <span className="iara-gradient-text">Cancele quando quiser.</span>
           </h2>
-          <p className="text-[#9b9bb5] mb-2">Todos os planos incluem acesso imediato. Cancele quando quiser.</p>
+          <p className="text-[#9b9bb5] mb-2">Teste qualquer plano por 3 dias sem pagar nada. Cancela antes do fim, zero cobrança.</p>
           <p className="text-xs text-[#4a4a6a] mb-8">Pagamento via Cartão de Crédito, Débito ou Boleto</p>
 
           {/* Toggle mensal/anual */}

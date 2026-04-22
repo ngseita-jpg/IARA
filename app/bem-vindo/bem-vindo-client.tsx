@@ -7,7 +7,7 @@ import { Sparkles, Check, ArrowRight, Zap, Crown, Gem, User, Lightbulb, FileText
 import { IaraLogo } from '@/components/iara-logo'
 import { trackPurchase } from '@/lib/analytics-events'
 
-type Plano = 'plus' | 'premium' | 'profissional'
+type Plano = 'plus' | 'premium' | 'profissional' | 'agencia'
 
 const PLANO_INFO: Record<Plano, {
   label: string
@@ -18,7 +18,7 @@ const PLANO_INFO: Record<Plano, {
 }> = {
   plus: {
     label: 'Plus',
-    preco: 'R$ 49,90/mês',
+    preco: 'R$ 59,90/mês',
     cor: '#6366f1',
     icon: Zap,
     destaques: [
@@ -31,7 +31,7 @@ const PLANO_INFO: Record<Plano, {
   },
   premium: {
     label: 'Premium',
-    preco: 'R$ 89,00/mês',
+    preco: 'R$ 129,00/mês',
     cor: '#a855f7',
     icon: Crown,
     destaques: [
@@ -45,7 +45,7 @@ const PLANO_INFO: Record<Plano, {
   },
   profissional: {
     label: 'Profissional',
-    preco: 'R$ 179,90/mês',
+    preco: 'R$ 249,00/mês',
     cor: '#10b981',
     icon: Gem,
     destaques: [
@@ -55,6 +55,20 @@ const PLANO_INFO: Record<Plano, {
       'Acesso antecipado a novos módulos',
       'Prioridade no match com marcas',
       'Suporte VIP',
+    ],
+  },
+  agencia: {
+    label: 'Agência',
+    preco: 'R$ 499,00/mês',
+    cor: '#ec4899',
+    icon: Gem,
+    destaques: [
+      'Até 5 perfis gerenciáveis',
+      'Tudo ilimitado por perfil',
+      'Dashboard de clientes',
+      'Relatórios white-label',
+      'Onboarding assistido',
+      'Suporte dedicado',
     ],
   },
 }
@@ -101,7 +115,7 @@ export function BemVindoClient({
     try { localStorage.setItem('iara_acabou_de_pagar', '1') } catch { /* ignore */ }
 
     // Dispara evento de conversão — uma vez por sessão
-    const valores: Record<Plano, number> = { plus: 49.90, premium: 89.00, profissional: 179.90 }
+    const valores: Record<Plano, number> = { plus: 59.90, premium: 129.00, profissional: 249.00, agencia: 499.00 }
     const flag = `iara_purchase_tracked_${plano}`
     try {
       if (!sessionStorage.getItem(flag)) {

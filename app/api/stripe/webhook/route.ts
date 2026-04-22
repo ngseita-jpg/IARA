@@ -29,7 +29,7 @@ async function setPlano(userId: string, plano: string, subscriptionId: string) {
 }
 
 async function enviarBoasVindas(userId: string, plano: string) {
-  if (plano === 'free' || !['plus', 'premium', 'profissional'].includes(plano)) return
+  if (plano === 'free' || !['plus', 'premium', 'profissional', 'agencia'].includes(plano)) return
   try {
     const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId)
     if (!user?.email) return
@@ -41,7 +41,7 @@ async function enviarBoasVindas(userId: string, plano: string) {
     await emailBoasVindasPago({
       userEmail: user.email,
       userNome: perfil?.nome_artistico ?? perfil?.full_name ?? null,
-      plano: plano as 'plus' | 'premium' | 'profissional',
+      plano: plano as 'plus' | 'premium' | 'profissional' | 'agencia',
     })
   } catch { /* não bloqueia o webhook */ }
 }
@@ -62,11 +62,16 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
       const userId = session.metadata?.user_id
-      const plano = session.metadata?.plano
+      const planoEscolhido = session.metadata?.plano
       const subId = session.subscription as string
-      if (userId && plano && subId) {
-        await setPlano(userId, plano, subId)
-        await enviarBoasVindas(userId, plano)
+      if (userId && planoEscolhido && subId) {
+        // Busca a subscription pra saber se está em trial
+        const sub = await stripe.subscriptions.retrieve(subId)
+        const emTrial = sub.status === 'trialing'
+        // Durante trial, plano = 'trial' (limites reduzidos). Ao ativar, plano real.
+        await setPlano(userId, emTrial ? 'trial' : planoEscolhido, subId)
+        // Email de boas-vindas só quando já paga (não no trial)
+        if (!emTrial) await enviarBoasVindas(userId, planoEscolhido)
       }
       break
     }
@@ -74,9 +79,36 @@ export async function POST(req: NextRequest) {
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription
       const userId = sub.metadata?.user_id
+      const planoMeta = sub.metadata?.plano
       const priceId = sub.items.data[0]?.price.id
-      const plano = priceId ? priceIdToPlano(priceId) : null
-      if (userId && plano) await setPlano(userId, plano, sub.id)
+      const planoByPrice = priceId ? priceIdToPlano(priceId) : null
+      const planoEscolhido = planoMeta ?? planoByPrice
+      if (!userId || !planoEscolhido) break
+
+      const emTrial = sub.status === 'trialing'
+      const ativo = sub.status === 'active'
+      const cancelado = ['canceled', 'unpaid', 'incomplete_expired'].includes(sub.status)
+
+      if (cancelado) {
+        await supabaseAdmin
+          .from('creator_profiles')
+          .update({ plano: 'free', stripe_subscription_id: null })
+          .eq('user_id', userId)
+      } else if (emTrial) {
+        await setPlano(userId, 'trial', sub.id)
+      } else if (ativo) {
+        // Detecta transição trial → active (cobrança aprovada, primeira vez)
+        const { data: atual } = await supabaseAdmin
+          .from('creator_profiles')
+          .select('plano')
+          .eq('user_id', userId)
+          .maybeSingle()
+        await setPlano(userId, planoEscolhido, sub.id)
+        if (atual?.plano === 'trial') {
+          // Saiu de trial pra active → envia welcome agora
+          await enviarBoasVindas(userId, planoEscolhido)
+        }
+      }
       break
     }
 

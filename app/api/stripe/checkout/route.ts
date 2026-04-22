@@ -41,11 +41,17 @@ export async function POST(req: NextRequest) {
     success_url: `${origin}/bem-vindo?plano=${plano}`,
     cancel_url: `${origin}/dashboard`,
     metadata: { user_id: user.id, plano },
-    subscription_data: { metadata: { user_id: user.id, plano } },
+    subscription_data: {
+      metadata: { user_id: user.id, plano },
+      trial_period_days: 3, // Estratégia 5: trial Netflix-style
+      trial_settings: {
+        end_behavior: { missing_payment_method: 'cancel' },
+      },
+    },
     locale: 'pt-BR',
     allow_promotion_codes: true,
-    payment_method_collection: 'if_required',
-    payment_method_types: ['card', 'boleto'],
+    payment_method_collection: 'always', // Sempre pede cartão, mesmo em trial
+    payment_method_types: ['card'],
   })
 
   return NextResponse.json({ url: session.url })

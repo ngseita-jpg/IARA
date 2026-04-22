@@ -24,8 +24,8 @@ const PLANS = [
   {
     id: 'plus' as const,
     name: 'Plus',
-    price: '49,90',
-    tagline: 'Para quem está crescendo',
+    price: '59,90',
+    tagline: 'Pra quem está começando',
     accentColor: '#818cf8',
     cardBg: 'bg-[#0f0f1e]',
     border: 'border-iara-700/30',
@@ -36,10 +36,10 @@ const PLANS = [
       '7 thumbnails/mês',
       '7 stories/mês',
       '3 análises de oratória',
-      '7 sessões Faísca IA',
       '25 fotos no banco',
+      'Mídia Kit PDF',
     ],
-    cta: 'Assinar Plus',
+    cta: 'Começar 3 dias grátis',
     ctaBg: 'bg-iara-900/60 hover:bg-iara-800/60 border border-iara-700/50',
     ctaText: 'text-iara-300',
     featured: false,
@@ -47,8 +47,8 @@ const PLANS = [
   {
     id: 'premium' as const,
     name: 'Premium',
-    price: '89,00',
-    tagline: 'O favorito dos criadores',
+    price: '129,00',
+    tagline: 'O favorito dos profissionais',
     accentColor: '#a855f7',
     cardBg: 'bg-[#0f0f1e]',
     border: 'border-violet-600/50',
@@ -59,12 +59,11 @@ const PLANS = [
       '18 thumbnails/mês',
       '18 stories/mês',
       '8 análises de oratória',
-      '15 sessões Faísca IA',
       '80 fotos no banco',
       'Métricas com IA',
       'Suporte prioritário',
     ],
-    cta: 'Assinar Premium',
+    cta: 'Começar 3 dias grátis',
     ctaBg: '',
     ctaGradient: 'linear-gradient(135deg,#6366f1,#a855f7)',
     ctaText: 'text-white',
@@ -73,8 +72,8 @@ const PLANS = [
   {
     id: 'profissional' as const,
     name: 'Profissional',
-    price: '179,90',
-    tagline: 'Para quem vive de criação',
+    price: '249,00',
+    tagline: 'Pra quem vive de criação',
     accentColor: '#10b981',
     cardBg: 'bg-[#0a1a12]',
     border: 'border-emerald-600/40',
@@ -84,17 +83,41 @@ const PLANS = [
       'Roteiros, carrosseis, stories ∞',
       'Thumbnails e Faísca IA ∞',
       'Banco de fotos ilimitado',
-      'Oratória ilimitada',
+      'Métricas com IA ilimitadas',
       'Suporte VIP direto',
       'Prioridade com marcas parceiras',
       'Acesso antecipado a novidades',
     ],
-    cta: 'Assinar Profissional',
+    cta: 'Começar 3 dias grátis',
     ctaBg: '',
     ctaGradient: 'linear-gradient(135deg,#059669,#10b981)',
     ctaText: 'text-white',
     featured: false,
     elite: true,
+  },
+  {
+    id: 'agencia' as const,
+    name: 'Agência',
+    price: '499,00',
+    tagline: 'Pra quem gerencia vários clientes',
+    accentColor: '#ec4899',
+    cardBg: 'bg-[#1a0a14]',
+    border: 'border-pink-600/40',
+    badgeText: 'Novo',
+    items: [
+      'Até 5 perfis gerenciáveis',
+      'Tudo do Profissional × 5',
+      'Dashboard de clientes',
+      'Relatórios white-label',
+      'Match prioritário com marcas',
+      'Onboarding assistido',
+      'Suporte dedicado',
+    ],
+    cta: 'Falar com vendas',
+    ctaBg: '',
+    ctaGradient: 'linear-gradient(135deg,#ec4899,#a855f7)',
+    ctaText: 'text-white',
+    featured: false,
   },
 ]
 
@@ -128,7 +151,7 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
     setLoading(plano)
     try {
       // Tracking de início de checkout
-      const precos: Record<string, number> = { plus: 49.90, premium: 89.00, profissional: 179.90 }
+      const precos: Record<string, number> = { plus: 59.90, premium: 129.00, profissional: 249.00, agencia: 499.00 }
       try {
         const { trackStartCheckout } = await import('@/lib/analytics-events')
         trackStartCheckout(plano, precos[plano] ?? 0)

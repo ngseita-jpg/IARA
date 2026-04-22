@@ -273,7 +273,7 @@ export function LandingPage() {
               transition={{ delay: 0.95 }}
               className="text-[11px] tracking-[0.18em] uppercase text-[#3a3a5a] font-semibold"
             >
-              Sem cartão · Plano grátis pra sempre · Cancele quando quiser
+              3 dias grátis em qualquer plano · Cancele antes e zero é cobrado
             </motion.p>
           </motion.div>
         </section>
@@ -707,7 +707,7 @@ export function LandingPage() {
             </motion.div>
             <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[11px] tracking-[0.15em] uppercase text-[#3a3a5a]">
               <span className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> LGPD</span>
-              <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> Sem cartão</span>
+              <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-green-500" /> 3 dias grátis</span>
               <span className="flex items-center gap-1.5"><Zap className="w-3 h-3 text-iara-400" /> Acesso imediato</span>
             </motion.div>
           </motion.div>

@@ -2,7 +2,7 @@
 // Sem Stripe ainda: todos os usuários são 'free' por padrão.
 // Quando Stripe for integrado, basta ler o campo `plano` do creator_profiles.
 
-export type Plano = 'free' | 'plus' | 'premium' | 'profissional'
+export type Plano = 'free' | 'trial' | 'plus' | 'premium' | 'profissional' | 'agencia'
 
 export type TipoUso =
   | 'roteiro'
@@ -15,14 +15,26 @@ export type TipoUso =
   | 'temas'
 
 // null = ilimitado
+// Free: demo mínima pós-registro (1 de cada/mês) — força conversão pro trial/pago
+// Trial: 3 dias pagos (Netflix-style) — limite de aprendizado
 export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
   free: {
-    roteiro:    3,
-    carrossel:  2,
+    roteiro:    1,
+    carrossel:  1,
+    thumbnail:  1,
+    stories:    1,
+    oratorio:   0,
+    midia_kit:  0,
+    fotos:      3,
+    temas:      1,
+  },
+  trial: {
+    roteiro:    2,
+    carrossel:  1,
     thumbnail:  2,
     stories:    2,
-    oratorio:   1,
-    midia_kit:  1,
+    oratorio:   2,
+    midia_kit:  2,
     fotos:      5,
     temas:      2,
   },
@@ -56,13 +68,26 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      null,
     temas:      null,
   },
+  agencia: {
+    // Igual profissional (ilimitado) — diferencial é multi-contas (até 5 perfis), tratado em código separado
+    roteiro:    null,
+    carrossel:  null,
+    thumbnail:  null,
+    stories:    null,
+    oratorio:   null,
+    midia_kit:  null,
+    fotos:      null,
+    temas:      null,
+  },
 }
 
 export const NOME_PLANO: Record<Plano, string> = {
-  free: 'Gratuito',
-  plus: 'Plus',
-  premium: 'Premium',
+  free:         'Gratuito',
+  trial:        'Trial (3 dias)',
+  plus:         'Plus',
+  premium:      'Premium',
   profissional: 'Profissional',
+  agencia:      'Agência',
 }
 
 export function getLimite(plano: Plano, tipo: TipoUso): number | null {

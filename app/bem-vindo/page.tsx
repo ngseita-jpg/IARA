@@ -4,9 +4,9 @@ import { BemVindoClient } from './bem-vindo-client'
 
 export const dynamic = 'force-dynamic'
 
-type PlanoPago = 'plus' | 'premium' | 'profissional'
+type PlanoPago = 'plus' | 'premium' | 'profissional' | 'agencia'
 
-const PLANOS_VALIDOS: PlanoPago[] = ['plus', 'premium', 'profissional']
+const PLANOS_VALIDOS: PlanoPago[] = ['plus', 'premium', 'profissional', 'agencia']
 
 export default async function BemVindoPage({
   searchParams,

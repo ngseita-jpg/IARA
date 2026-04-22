@@ -8,17 +8,21 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 const PLANO_LABEL: Record<string, string> = {
-  free: 'Gratuito',
-  plus: 'Plus — R$49,90/mês',
-  premium: 'Premium — R$89,00/mês',
-  profissional: 'Profissional — R$179,90/mês',
+  free:         'Gratuito',
+  trial:        'Trial (3 dias)',
+  plus:         'Plus — R$ 59,90/mês',
+  premium:      'Premium — R$ 129,00/mês',
+  profissional: 'Profissional — R$ 249,00/mês',
+  agencia:      'Agência — R$ 499,00/mês',
 }
 
 const PLANO_COLOR: Record<string, string> = {
-  free: 'text-[#6b6b8a]',
-  plus: 'text-indigo-400',
-  premium: 'text-violet-400',
+  free:         'text-[#6b6b8a]',
+  trial:        'text-amber-400',
+  plus:         'text-indigo-400',
+  premium:      'text-violet-400',
   profissional: 'text-emerald-400',
+  agencia:      'text-pink-400',
 }
 
 type Perfil = {

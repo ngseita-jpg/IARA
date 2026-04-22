@@ -265,12 +265,13 @@ export async function emailBoasVindasPago({
 }: {
   userEmail: string
   userNome: string | null
-  plano: 'plus' | 'premium' | 'profissional'
+  plano: 'plus' | 'premium' | 'profissional' | 'agencia'
 }) {
   const PLANO_INFO: Record<string, { label: string; preco: string; cor: string; destaque: string }> = {
-    plus:         { label: 'Plus',         preco: 'R$ 49,90/mês',  cor: '#6366f1', destaque: '10 roteiros, 7 carrosseis, 7 thumbnails e muito mais por mês' },
-    premium:      { label: 'Premium',      preco: 'R$ 89,00/mês',  cor: '#a855f7', destaque: '20 roteiros, 18 carrosseis, métricas com IA e suporte prioritário' },
-    profissional: { label: 'Profissional', preco: 'R$ 179,90/mês', cor: '#10b981', destaque: 'Tudo ilimitado, acesso antecipado a novos módulos e suporte VIP' },
+    plus:         { label: 'Plus',         preco: 'R$ 59,90/mês',  cor: '#6366f1', destaque: '10 roteiros, 7 carrosseis, 7 thumbnails e muito mais por mês' },
+    premium:      { label: 'Premium',      preco: 'R$ 129,00/mês', cor: '#a855f7', destaque: '20 roteiros, 18 carrosseis, métricas com IA e suporte prioritário' },
+    profissional: { label: 'Profissional', preco: 'R$ 249,00/mês', cor: '#10b981', destaque: 'Tudo ilimitado, acesso antecipado a novos módulos e suporte VIP' },
+    agencia:      { label: 'Agência',      preco: 'R$ 499,00/mês', cor: '#ec4899', destaque: 'Até 5 perfis gerenciáveis, dashboard de clientes e suporte dedicado' },
   }
   const info = PLANO_INFO[plano]
   const nome = userNome?.split(' ')[0] || 'Criador'
