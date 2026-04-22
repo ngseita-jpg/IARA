@@ -56,10 +56,10 @@ const modules = [
 ]
 
 const painPoints = [
-  { icon: Clock,      title: 'Você fica horas em branco',       sub: 'O roteiro não vem. O carrossel fica para amanhã. E amanhã a culpa aparece no lugar da ideia.' },
-  { icon: Brain,      title: 'Bloqueio criativo constante',      sub: 'Você sabe que tem algo a dizer — mas a página em branco paralisa. Todo dia. Todo mês.' },
-  { icon: BarChart3,  title: 'Métricas espalhadas em 4 apps',   sub: 'Instagram numa aba, YouTube em outra, TikTok em outra. Nenhum diz o que fazer com os dados.' },
-  { icon: DollarSign, title: 'Parcerias que passam batido',      sub: 'Seu mídia kit está desatualizado. A marca pediu. Você perdeu a oportunidade.' },
+  { icon: Clock,      title: 'Você fica horas em branco',          sub: 'O roteiro não vem. O post fica para amanhã. E amanhã a culpa aparece no lugar da ideia.' },
+  { icon: Brain,      title: 'Bloqueio criativo constante',         sub: 'Você tem expertise — mas transformar isso em conteúdo que engaja paralisa. Todo dia. Todo mês.' },
+  { icon: BarChart3,  title: 'Presença digital que não converte',   sub: 'Você posta, mas não cresce. Não sabe o que muda, nem o que funciona. A concorrência avança.' },
+  { icon: DollarSign, title: 'Oportunidades que passam batido',     sub: 'Cliente pediu seu portfólio digital. Marca pediu seu mídia kit. Você não tinha. Perdeu a chance.' },
 ]
 
 const affiliateTiers = [
@@ -260,15 +260,15 @@ export function LandingPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-iara-700/40 bg-iara-950/60 text-iara-300 text-xs font-medium mb-10"
           >
             <Flame className="w-3.5 h-3.5 text-iara-400 animate-glow-pulse" />
-            A plataforma que une criadores e marcas · Feito no Brasil
+            Escale seu nome no digital · Feito no Brasil
           </motion.div>
 
           {/* Headline — staggered lines */}
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[82px] font-black leading-[1.02] tracking-tight mb-6">
             {[
-              { text: 'Pare de desperdiçar', delay: 0.2 },
-              { text: 'horas tentando',       delay: 0.35 },
-              { text: 'achar o que criar.',   delay: 0.5, shimmer: true },
+              { text: 'Pare de perder tempo',  delay: 0.2 },
+              { text: 'tentando criar',         delay: 0.35 },
+              { text: 'conteúdo do zero.',      delay: 0.5, shimmer: true },
             ].map((line, i) => (
               <motion.span
                 key={i}
@@ -288,8 +288,8 @@ export function LandingPage() {
             transition={{ duration: 0.7, delay: 0.65 }}
             className="text-lg sm:text-xl md:text-2xl text-[#9b9bb5] max-w-2xl mx-auto mb-8 leading-relaxed"
           >
-            A Iara é sua assessora de comunicação com IA. Aprende seu estilo, fala na sua voz e entrega roteiro, carrossel, thumbnail e calendário —{' '}
-            <span className="text-[#f1f1f8] font-semibold">em minutos, não horas.</span>
+            A Iara é sua assessora digital com IA. Aprende seu estilo, fala na sua voz e te ajuda a construir autoridade online com consistência —{' '}
+            <span className="text-[#f1f1f8] font-semibold">em minutos por dia, não horas.</span>
           </motion.p>
 
           <motion.div
@@ -471,11 +471,11 @@ export function LandingPage() {
               <X className="w-3.5 h-3.5" /> Se você se reconhece em algum desses cenários...
             </motion.div>
             <motion.h2 variants={fadeUp} className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-4">
-              Bloqueio criativo não é falta<br />
-              <span style={{ color: 'rgba(220,38,38,0.85)' }}>de talento. É falta de sistema.</span>
+              Não crescer no digital não é<br />
+              <span style={{ color: 'rgba(220,38,38,0.85)' }}>falta de talento. É falta de sistema.</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-[#6b6b8a] text-lg max-w-xl mx-auto">
-              E nenhum sistema foi feito especificamente para criadores brasileiros. Até agora.
+              Qualquer pessoa que quer escalar seu nome online enfrenta os mesmos obstáculos. A Iara foi feita para acabar com eles.
             </motion.p>
           </motion.div>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-40px' }} variants={stagger} className="grid md:grid-cols-2 gap-5">
@@ -517,13 +517,13 @@ export function LandingPage() {
             <span className="shimmer-text">Fala por você. Trabalha por você.</span>
           </motion.h2>
           <motion.p variants={fadeUp} className="text-xl text-[#9b9bb5] max-w-2xl mx-auto mb-10 leading-relaxed">
-            Não é uma IA genérica que gera texto sem alma. A Iara absorve o seu nicho, o seu tom, os seus formatos — e entrega conteúdo que parece que saiu da sua cabeça, não de uma máquina.
+            Não é uma IA genérica que gera texto sem alma. A Iara absorve o seu nicho, o seu tom de voz e o seu estilo — e entrega conteúdo que parece que saiu da sua cabeça. Você foca na sua área. A Iara cuida da sua presença digital.
           </motion.p>
           <motion.div variants={stagger} className="grid sm:grid-cols-3 gap-4 text-left">
             {[
               { icon: Zap,        color: 'text-iara-400',     bg: 'rgba(99,102,241,0.1)',  border: 'border-iara-700/25',     title: 'Rápido de verdade', sub: 'Roteiro, carrossel e thumbnails em menos de 2 minutos. Sem exagero.' },
               { icon: Brain,      color: 'text-accent-purple',bg: 'rgba(168,85,247,0.1)',  border: 'border-accent-purple/25',title: 'Personalizado',     sub: 'Cada output usa o seu perfil vocal, nicho e estilo. Nada genérico.' },
-              { icon: TrendingUp, color: 'text-accent-pink',  bg: 'rgba(236,72,153,0.1)',  border: 'border-accent-pink/25',  title: 'Tudo integrado',    sub: '10 módulos que se falam. Calendário, metas, métricas, mídia kit.' },
+              { icon: TrendingUp, color: 'text-accent-pink',  bg: 'rgba(236,72,153,0.1)',  border: 'border-accent-pink/25',  title: 'Autoridade que escala', sub: '10 módulos que se falam. Calendário, metas, métricas, mídia kit.' },
             ].map((f, i) => {
               const FIcon = f.icon
               return (
@@ -553,7 +553,7 @@ export function LandingPage() {
                 <span className="shimmer-text">tentando pensar no que criar?</span>
               </motion.h2>
               <motion.p variants={fadeUp} className="text-[#6b6b8a] max-w-xl mx-auto">
-                Criadores gastam mais de 6 horas por semana só com planejamento. Com a Iara, esse tempo cai para menos de 30 minutos.
+                Criadores e profissionais gastam mais de 6 horas por semana só com planejamento de conteúdo. Com a Iara, esse tempo cai para menos de 30 minutos.
               </motion.p>
             </motion.div>
             <div className="grid md:grid-cols-2 gap-6 mb-12">
@@ -610,7 +610,7 @@ export function LandingPage() {
       <section className="py-20 px-4 sm:px-6 border-y border-white/5" style={{ background: 'linear-gradient(180deg, #08080f 0%, #0c0c1c 100%)' }}>
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }} variants={stagger}
           className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
-          <AnimatedCounter value={11}  suffix="+"  label="Módulos integrados" />
+          <AnimatedCounter value={10}  suffix="+"  label="Módulos integrados" />
           <AnimatedCounter value={6}   suffix="h+" label="Economizadas por semana" />
           <AnimatedCounter value={300} suffix="h+" label="Economizadas por ano" />
           <AnimatedCounter value={10}  suffix="B"  label="Mercado de influência (R$/ano)" />
@@ -967,11 +967,11 @@ export function LandingPage() {
                 <Sparkles className="w-8 h-8 text-white" />
               </motion.div>
               <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl md:text-6xl font-black leading-[1.05] mb-6">
-                Sua próxima fase como criador{' '}
+                Sua próxima fase online{' '}
                 <span className="shimmer-text">começa agora.</span>
               </motion.h2>
               <motion.p variants={fadeUp} className="text-[#9b9bb5] text-xl mb-12 max-w-lg mx-auto leading-relaxed">
-                Cada módulo foi construído para o criador brasileiro — do roteiro à oratória. Você ainda vai ficar em branco amanhã?
+                Cada módulo foi construído para quem quer escalar seu nome no digital com consistência — sem depender de agência, sem abrir mão do próprio estilo. Você ainda vai ficar em branco amanhã?
               </motion.p>
               <motion.div variants={stagger} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
                 <motion.div variants={fadeUp} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
@@ -1008,7 +1008,7 @@ export function LandingPage() {
             <span className="font-bold shimmer-text">Iara</span>
           </div>
           <p className="text-xs text-[#3a3a5a] text-center">
-            © {new Date().getFullYear()} Iara Hub. Feito no Brasil para criadores brasileiros.
+            © {new Date().getFullYear()} Iara Hub. Feito no Brasil para quem quer crescer no digital.
           </p>
           <div className="flex items-center gap-5 text-xs text-[#3a3a5a]">
             <Link href="/empresas" className="hover:text-[#9b9bb5] transition-colors">Para Empresas</Link>

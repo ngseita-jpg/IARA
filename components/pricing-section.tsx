@@ -107,7 +107,8 @@ export function PricingSection() {
             Comece de graça.{' '}
             <span className="iara-gradient-text">Cresça quando quiser.</span>
           </h2>
-          <p className="text-[#9b9bb5] mb-8">Todos os planos incluem acesso imediato. Cancele quando quiser.</p>
+          <p className="text-[#9b9bb5] mb-2">Todos os planos incluem acesso imediato. Cancele quando quiser.</p>
+          <p className="text-xs text-[#4a4a6a] mb-8">Pagamento via Cartão de Crédito, Débito ou Boleto</p>
 
           {/* Toggle mensal/anual */}
           <div className="inline-flex items-center gap-3 p-1 rounded-xl bg-[#0a0a14] border border-[#1a1a2e]">
