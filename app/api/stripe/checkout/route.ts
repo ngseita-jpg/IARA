@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     locale: 'pt-BR',
     allow_promotion_codes: true,
     payment_method_collection: 'if_required',
+    payment_method_types: ['card', 'boleto'],
   })
 
   return NextResponse.json({ url: session.url })
