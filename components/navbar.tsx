@@ -26,6 +26,7 @@ import {
   Tag,
   HelpCircle,
   Gift,
+  Megaphone,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
@@ -49,6 +50,10 @@ const navItems = [
   { label: 'Afiliados',       href: '/dashboard/afiliados',    icon: Tag },
   { label: 'Indique e Ganhe', href: '/dashboard/indicacoes',   icon: Gift },
   { label: 'Histórico',       href: '/dashboard/historico',    icon: History },
+]
+
+const ADMIN_NAV_ITEMS = [
+  { label: 'Marketing Squad', href: '/dashboard/marketing',    icon: Megaphone, adminEmails: ['ngseita@gmail.com'] },
 ]
 
 export function Navbar({ userEmail }: { userEmail?: string }) {
@@ -110,6 +115,27 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
                 {isActive && (item.href !== '/dashboard/vagas' || unread === 0) && (
                   <ChevronRight className="w-3 h-3 ml-auto text-iara-500/70" />
                 )}
+              </Link>
+            )
+          })}
+
+          {/* Itens admin-only (acesso restrito ao fundador) */}
+          {ADMIN_NAV_ITEMS.filter(i => userEmail && i.adminEmails.includes(userEmail)).map(item => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                  isActive
+                    ? 'active-nav-item bg-accent-purple/15 text-accent-purple border border-accent-purple/25 shadow-sm shadow-purple-900/40'
+                    : 'text-[#9b9bb5] hover:bg-accent-purple/10 hover:text-accent-purple border border-transparent'
+                }`}
+              >
+                <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-accent-purple' : 'text-[#5a5a7a] group-hover:text-accent-purple'}`} />
+                {item.label}
+                <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-md bg-accent-purple/20 text-accent-purple tracking-widest">ADM</span>
               </Link>
             )
           })}
@@ -241,6 +267,27 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
                 >
                   <Icon className="w-4 h-4" />
                   {item.label}
+                </Link>
+              )
+            })}
+            {/* Itens admin no overlay mobile */}
+            {ADMIN_NAV_ITEMS.filter(i => userEmail && i.adminEmails.includes(userEmail)).map(item => {
+              const isActive = pathname === item.href
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/30'
+                      : 'text-[#9b9bb5] hover:bg-accent-purple/10 hover:text-accent-purple'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-accent-purple/20 text-accent-purple tracking-widest">ADM</span>
                 </Link>
               )
             })}
