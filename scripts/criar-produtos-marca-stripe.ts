@@ -50,8 +50,8 @@ const PRODUTOS: ProdutoDef[] = [
     description: 'Pra marca testando influência digital. 1 campanha ativa, afiliação de até 5 produtos, catálogo de criadores com filtros, 50 cupons, ROI dashboard simples.',
     envVarMensal: 'STRIPE_PRICE_MARCA_START',
     envVarAnual:  'STRIPE_PRICE_MARCA_START_ANUAL',
-    precoMensalCents: 29700,
-    precoAnualCents:  267300,  // 297 × 12 × 0,75
+    precoMensalCents: 19700,
+    precoAnualCents:  177300,  // 197 × 12 × 0,75
   },
   {
     key: 'marca_pro',
@@ -59,8 +59,8 @@ const PRODUTOS: ProdutoDef[] = [
     description: 'Pra marca com programa de afiliação ativo. 5 campanhas ativas, afiliação ilimitada, Chat Estratégico com IA, ROI completo, match prioritário com criadores.',
     envVarMensal: 'STRIPE_PRICE_MARCA_PRO',
     envVarAnual:  'STRIPE_PRICE_MARCA_PRO_ANUAL',
-    precoMensalCents: 69700,
-    precoAnualCents:  627300,  // 697 × 12 × 0,75
+    precoMensalCents: 49700,
+    precoAnualCents:  447300,  // 497 × 12 × 0,75
   },
   {
     key: 'marca_scale',
@@ -68,8 +68,8 @@ const PRODUTOS: ProdutoDef[] = [
     description: 'Pra grandes marcas, agências e grupos. Campanhas ilimitadas, 20 perfis de time, API, relatórios white-label, dashboard multi-produto, onboarding assistido, auditoria mensal com a Iara, SLA 4h.',
     envVarMensal: 'STRIPE_PRICE_MARCA_SCALE',
     envVarAnual:  'STRIPE_PRICE_MARCA_SCALE_ANUAL',
-    precoMensalCents: 149700,
-    precoAnualCents:  1347300, // 1497 × 12 × 0,75
+    precoMensalCents: 99700,
+    precoAnualCents:  897300, // 997 × 12 × 0,75
   },
 ]
 

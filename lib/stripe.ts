@@ -42,15 +42,15 @@ export const PRECOS_ANUAL_BRL = {
 } as const
 
 export const PRECOS_MARCA_BRL = {
-  start:  297.00,
-  pro:    697.00,
-  scale:  1497.00,
+  start:  197.00,
+  pro:    497.00,
+  scale:  997.00,
 } as const
 
 export const PRECOS_MARCA_ANUAL_BRL = {
-  start:  2673.00,   // 297 × 12 × 0,75 = R$ 222,75/mês equivalente
-  pro:    6273.00,   // 697 × 12 × 0,75 = R$ 522,75/mês
-  scale:  13473.00,  // 1497 × 12 × 0,75 = R$ 1.122,75/mês
+  start:  1773.00,   // 197 × 12 × 0,75 = R$ 147,75/mês equivalente
+  pro:    4473.00,   // 497 × 12 × 0,75 = R$ 372,75/mês
+  scale:  8973.00,   // 997 × 12 × 0,75 = R$ 747,75/mês
 } as const
 
 export function formatarPrecoMensal(plano: string): string {

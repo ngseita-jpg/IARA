@@ -188,9 +188,9 @@ function PricingMarcas() {
     {
       id: 'start' as const,
       name: 'Start',
-      mensal: 297,
-      anual: 2673,
-      anualMes: 222.75,
+      mensal: 197,
+      anual: 1773,
+      anualMes: 147.75,
       desc: 'Pra marca testando influência digital',
       badge: null,
       accent: '#818cf8',
@@ -207,9 +207,9 @@ function PricingMarcas() {
     {
       id: 'pro' as const,
       name: 'Pro',
-      mensal: 697,
-      anual: 6273,
-      anualMes: 522.75,
+      mensal: 497,
+      anual: 4473,
+      anualMes: 372.75,
       desc: 'Pra marca com programa de afiliação ativo',
       badge: 'Mais escolhido',
       featured: true,
@@ -229,9 +229,9 @@ function PricingMarcas() {
     {
       id: 'scale' as const,
       name: 'Scale',
-      mensal: 1497,
-      anual: 13473,
-      anualMes: 1122.75,
+      mensal: 997,
+      anual: 8973,
+      anualMes: 747.75,
       desc: 'Pra grandes marcas, agências e grupos',
       badge: 'Premium',
       accent: '#C9A84C',
@@ -496,9 +496,9 @@ function FormContatoEmpresas() {
               <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">Plano de interesse</label>
               <select value={plano} onChange={e => setPlano(e.target.value)}
                 className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] focus:border-accent-purple/60 focus:outline-none">
-                <option value="Starter">Starter — R$ 199/mês</option>
-                <option value="Pro">Pro — R$ 499/mês</option>
-                <option value="Enterprise">Enterprise — sob consulta</option>
+                <option value="Start">Start — R$ 197/mês</option>
+                <option value="Pro">Pro — R$ 497/mês</option>
+                <option value="Scale">Scale — R$ 997/mês</option>
                 <option value="Nao sei">Ainda não sei, preciso conversar</option>
               </select>
             </div>
