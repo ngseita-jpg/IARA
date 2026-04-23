@@ -65,7 +65,6 @@ const painPoints = [
 const affiliateTiers = [
   { name: 'Primeira venda',    commission: '50%', desc: 'Metade do primeiro mês de todo amigo que você trouxer. Maior comissão do mercado brasileiro.',  tag: 'text-iara-400' },
   { name: 'Recorrente 12m',    commission: '10%', desc: 'Mais 10% por 12 meses enquanto ele continuar assinando. Renda passiva enquanto dorme.',         tag: 'text-accent-purple' },
-  { name: 'Bônus de volume',   commission: 'R$ 5k', desc: 'Fez 50 indicações em um trimestre? R$ 5.000 de bônus em cima. Embaixador = R$ 500, Parceiro = R$ 1.500.', tag: 'text-accent-pink' },
 ]
 
 const bandItems = ['Roteiros', 'Carrossel', 'Thumbnail', 'Stories', 'Oratória', 'Métricas', 'Metas', 'Calendário', 'Mídia Kit', 'Faísca Criativa', 'Afiliação', 'Persona IA']
@@ -643,7 +642,7 @@ export function LandingPage() {
               whileInView="visible"
               viewport={{ once: true, margin: '-40px' }}
               variants={stagger}
-              className="grid md:grid-cols-3 gap-4"
+              className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto"
             >
               {affiliateTiers.map((tier, i) => (
                 <motion.div
