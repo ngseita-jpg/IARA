@@ -139,8 +139,15 @@ async function uploadFileToStripe(buffer: Buffer, purpose: 'business_icon' | 'bu
 }
 
 async function main() {
-  // 1. Verifica account atual
-  const account = await stripe.accounts.retrieve()
+  // 1. Verifica account atual (via endpoint singular /v1/account)
+  const accRes = await fetch('https://api.stripe.com/v1/account', {
+    headers: { 'Authorization': `Bearer ${SECRET}` },
+  })
+  const account = await accRes.json() as {
+    id: string
+    email?: string
+    settings?: { branding?: Record<string, string> }
+  }
   console.log(`📋 Conta: ${account.email ?? account.id}`)
   console.log(`   Status atual do branding:`)
   console.log(`   - primary_color:   ${account.settings?.branding?.primary_color ?? '(não definido)'}`)
