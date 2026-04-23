@@ -1,4 +1,4 @@
--- =============================================================
+﻿-- =============================================================
 -- IARA HUB — Schema Completo para Supabase
 -- Seguro para rodar mesmo que tabelas já existam (idempotente)
 -- Execute no SQL Editor do Supabase
@@ -672,3 +672,4 @@ CREATE INDEX IF NOT EXISTS afiliados_creator_idx ON afiliados(creator_id);
 -- Após rodar, verifique no Table Editor que todas as tabelas
 -- aparecem com as colunas corretas e RLS ativado (ícone de cadeado)
 -- =============================================================
+1
