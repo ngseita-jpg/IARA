@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, LogOut, ChevronRight,
   Menu, X, Users, Building2, Briefcase, Zap, Tag,
-  FileText, Layers, Sparkles, MessageSquare, TrendingUp,
+  FileText, Layers, Sparkles, MessageSquare, TrendingUp, Scissors,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { IaraLogo } from '@/components/iara-logo'
@@ -17,6 +17,7 @@ const navItems: { label: string; href: string; icon: React.ElementType; soon?: b
   { label: 'Briefing IA',       href: '/marca/dashboard/briefing',  icon: FileText,  badge: 'Novo' },
   { label: 'Match Inteligente', href: '/marca/dashboard/match',     icon: Sparkles,  badge: 'Novo' },
   { label: 'Carrossel',         href: '/marca/dashboard/carrossel', icon: Layers,    badge: 'Novo' },
+  { label: 'Cortes YouTube',    href: '/marca/dashboard/cortes',    icon: Scissors,  badge: 'Novo' },
   { label: 'Chat Estratégico',  href: '/marca/dashboard/chat',      icon: MessageSquare },
   { label: 'ROI & Métricas',    href: '/marca/dashboard/roi',       icon: TrendingUp },
   { label: 'Campanha IA',       href: '/marca/dashboard/campanha',  icon: Zap },

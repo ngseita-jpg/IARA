@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -27,17 +28,19 @@ import {
   HelpCircle,
   Gift,
   Megaphone,
+  Scissors,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
 import { IaraLogo } from '@/components/iara-logo'
 
-const navItems = [
+const navItems: { label: string; href: string; icon: React.ElementType; badge?: string }[] = [
   { label: 'Dashboard',       href: '/dashboard',              icon: LayoutDashboard },
   { label: 'Faísca Criativa', href: '/dashboard/temas',        icon: Lightbulb },
   { label: 'Roteiros',        href: '/dashboard/roteiros',     icon: FileText },
   { label: 'Carrossel',       href: '/dashboard/carrossel',    icon: Layers },
   { label: 'Thumbnail',       href: '/dashboard/thumbnail',    icon: Image },
+  { label: 'Cortes YouTube',  href: '/dashboard/cortes',       icon: Scissors, badge: 'Novo' },
   { label: 'Banco de Fotos',  href: '/dashboard/fotos',        icon: Images },
   { label: 'Stories',         href: '/dashboard/stories',      icon: Smartphone },
   { label: 'Mídia Kit',       href: '/dashboard/midia-kit',    icon: BookOpen },
@@ -108,14 +111,20 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
                 }`}
               >
                 <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-iara-400' : 'text-[#5a5a7a] group-hover:text-[#9b9bb5]'}`} />
-                {item.label}
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.badge && (
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-md tracking-widest uppercase"
+                    style={{ background: 'linear-gradient(135deg,#E2C068,#a855f7)', color: '#0a0a14' }}>
+                    {item.badge}
+                  </span>
+                )}
                 {item.href === '/dashboard/vagas' && unread > 0 && (
-                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-iara-500 text-white">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-iara-500 text-white">
                     {unread > 9 ? '9+' : unread}
                   </span>
                 )}
-                {isActive && (item.href !== '/dashboard/vagas' || unread === 0) && (
-                  <ChevronRight className="w-3 h-3 ml-auto text-iara-500/70" />
+                {isActive && !item.badge && (item.href !== '/dashboard/vagas' || unread === 0) && (
+                  <ChevronRight className="w-3 h-3 text-iara-500/70" />
                 )}
               </Link>
             )
@@ -268,7 +277,13 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-md tracking-widest uppercase"
+                      style={{ background: 'linear-gradient(135deg,#E2C068,#a855f7)', color: '#0a0a14' }}>
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}

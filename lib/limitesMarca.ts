@@ -19,6 +19,7 @@ export type TipoRecursoMarca =
   | 'carrossel_mes'         // carrosseis gerados pela IA por mês
   | 'briefing_mes'          // briefings de campanha gerados com IA por mês
   | 'match_mes'             // buscas de Match Inteligente com IA por mês
+  | 'corte_mes'             // vídeos do YouTube analisados em cortes por mês
 
 export type FeatureMarca =
   | 'chat_ia'               // acesso ao Chat Estratégico com IA
@@ -33,23 +34,23 @@ export type FeatureMarca =
 export const LIMITES_MARCA: Record<PlanoMarca, Record<TipoRecursoMarca, number | null>> = {
   free: {
     campanha_ativa: 0, produto_afiliacao: 0, cupom_ativo: 0, criador_salvo: 5,
-    chat_msg_mes: 5, roi_analise_mes: 0, carrossel_mes: 1, briefing_mes: 1, match_mes: 1,
+    chat_msg_mes: 5, roi_analise_mes: 0, carrossel_mes: 1, briefing_mes: 1, match_mes: 1, corte_mes: 0,
   },
   start: {
     campanha_ativa: 1, produto_afiliacao: 5, cupom_ativo: 50, criador_salvo: 50,
-    chat_msg_mes: 30, roi_analise_mes: 3, carrossel_mes: 10, briefing_mes: 5, match_mes: 10,
+    chat_msg_mes: 30, roi_analise_mes: 3, carrossel_mes: 10, briefing_mes: 5, match_mes: 10, corte_mes: 3,
   },
   pro: {
     campanha_ativa: 5, produto_afiliacao: null, cupom_ativo: null, criador_salvo: null,
-    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: 40, briefing_mes: 20, match_mes: null,
+    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: 40, briefing_mes: 20, match_mes: null, corte_mes: 15,
   },
   scale: {
     campanha_ativa: null, produto_afiliacao: null, cupom_ativo: null, criador_salvo: null,
-    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: null, briefing_mes: null, match_mes: null,
+    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: null, briefing_mes: null, match_mes: null, corte_mes: null,
   },
   enterprise: {
     campanha_ativa: null, produto_afiliacao: null, cupom_ativo: null, criador_salvo: null,
-    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: null, briefing_mes: null, match_mes: null,
+    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: null, briefing_mes: null, match_mes: null, corte_mes: null,
   },
 }
 

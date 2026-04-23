@@ -202,6 +202,17 @@ async function contarUsoMarca(
       return count ?? 0
     }
 
+    case 'corte_mes': {
+      // Contamos por user_id direto — tabela própria tem tipo_conta='marca'
+      const { count } = await admin
+        .from('cortes_videos')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('tipo_conta', 'marca')
+        .gte('created_at', inicioMesAtual())
+      return count ?? 0
+    }
+
     default:
       return 0
   }

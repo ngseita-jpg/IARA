@@ -13,6 +13,7 @@ export type TipoUso =
   | 'midia_kit'
   | 'fotos'
   | 'temas'
+  | 'corte'      // vídeos do YouTube analisados pra virar cortes
 
 // null = ilimitado
 // Free: demo mínima pós-registro (1 de cada/mês) — força conversão pro trial/pago
@@ -27,6 +28,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     midia_kit:  0,
     fotos:      3,
     temas:      1,
+    corte:      0,   // gratuito não tem — gancho de conversão
   },
   trial: {
     roteiro:    2,
@@ -37,6 +39,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     midia_kit:  2,
     fotos:      5,
     temas:      2,
+    corte:      1,
   },
   plus: {
     roteiro:    10,
@@ -47,6 +50,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     midia_kit:  5,
     fotos:      25,
     temas:      7,
+    corte:      3,
   },
   premium: {
     roteiro:    20,
@@ -57,6 +61,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     midia_kit:  null,
     fotos:      80,
     temas:      15,
+    corte:      10,
   },
   profissional: {
     roteiro:    null,
@@ -67,6 +72,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     midia_kit:  null,
     fotos:      null,
     temas:      null,
+    corte:      null,
   },
   agencia: {
     // Igual profissional (ilimitado) — diferencial é multi-contas (até 5 perfis), tratado em código separado
@@ -78,6 +84,7 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     midia_kit:  null,
     fotos:      null,
     temas:      null,
+    corte:      null,
   },
 }
 
