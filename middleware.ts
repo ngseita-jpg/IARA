@@ -31,6 +31,19 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Captura código de afiliado via ?ref=CODIGO (válido por 30 dias)
+  const refCode = request.nextUrl.searchParams.get('ref')
+  if (refCode && /^[a-z0-9]{4,16}$/.test(refCode)) {
+    const existingRef = request.cookies.get('iara_ref')?.value
+    if (!existingRef) {
+      supabaseResponse.cookies.set('iara_ref', refCode, {
+        maxAge: 60 * 60 * 24 * 30, // 30 dias
+        sameSite: 'lax',
+        path: '/',
+      })
+    }
+  }
+
   // Modo preview de desenvolvimento — bypassa auth
   const isPreviewMode = request.cookies.get('iara_preview')?.value === '1'
 

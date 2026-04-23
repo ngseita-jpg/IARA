@@ -25,6 +25,7 @@ import {
   Briefcase,
   Tag,
   HelpCircle,
+  Gift,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
@@ -46,6 +47,7 @@ const navItems = [
   { label: 'Persona IA',      href: '/dashboard/persona',      icon: User },
   { label: 'Oportunidades',   href: '/dashboard/vagas',        icon: Briefcase },
   { label: 'Afiliados',       href: '/dashboard/afiliados',    icon: Tag },
+  { label: 'Indique e Ganhe', href: '/dashboard/indicacoes',   icon: Gift },
   { label: 'Histórico',       href: '/dashboard/historico',    icon: History },
 ]
 

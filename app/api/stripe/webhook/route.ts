@@ -28,6 +28,121 @@ async function setPlano(userId: string, plano: string, subscriptionId: string) {
   } catch { /* coluna pode não existir ainda */ }
 }
 
+// Ativa indicação de afiliado na primeira fatura paga após o trial
+async function ativarIndicacao(indicadoUserId: string, valorPago: number, subscriptionId: string, plano: string) {
+  const { data: indicacao } = await supabaseAdmin
+    .from('iara_indicacoes')
+    .select('id, status')
+    .eq('indicado_user_id', indicadoUserId)
+    .maybeSingle()
+
+  if (!indicacao || indicacao.status !== 'pendente') return
+
+  const comissaoPrimeira = Math.round(valorPago * 0.5 * 100) / 100
+  const recorrenteMensal = Math.round(valorPago * 0.10 * 100) / 100
+
+  await supabaseAdmin
+    .from('iara_indicacoes')
+    .update({
+      status: 'ativada',
+      plano,
+      stripe_subscription_id: subscriptionId,
+      valor_primeira_venda: valorPago,
+      valor_recorrente_mensal: recorrenteMensal,
+      valor_total_apurado: comissaoPrimeira,
+      ativada_at: new Date().toISOString(),
+    })
+    .eq('id', indicacao.id)
+
+  await supabaseAdmin
+    .from('iara_indicacoes_eventos')
+    .insert({
+      indicacao_id: indicacao.id,
+      tipo: 'primeira_venda',
+      valor_pagamento: valorPago,
+      pct_comissao: 50,
+      valor_comissao: comissaoPrimeira,
+    })
+}
+
+// Registra comissão recorrente a cada fatura paga (até 12 meses)
+async function registrarRecorrencia(subscriptionId: string, valorPago: number, invoiceId: string) {
+  const { data: indicacao } = await supabaseAdmin
+    .from('iara_indicacoes')
+    .select('id, meses_recorrencia_pagos, meses_recorrencia_total, status')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle()
+
+  if (!indicacao || indicacao.status !== 'ativada') return
+  if (indicacao.meses_recorrencia_pagos >= indicacao.meses_recorrencia_total) return
+
+  const comissao = Math.round(valorPago * 0.10 * 100) / 100
+
+  await supabaseAdmin
+    .from('iara_indicacoes_eventos')
+    .insert({
+      indicacao_id: indicacao.id,
+      tipo: 'recorrencia',
+      valor_pagamento: valorPago,
+      pct_comissao: 10,
+      valor_comissao: comissao,
+      stripe_invoice_id: invoiceId,
+    })
+
+  await supabaseAdmin
+    .from('iara_indicacoes')
+    .update({
+      meses_recorrencia_pagos: indicacao.meses_recorrencia_pagos + 1,
+    })
+    .eq('id', indicacao.id)
+
+  // Recalcula total_apurado do zero (mais confiável que increment)
+  const { data: totais } = await supabaseAdmin
+    .from('iara_indicacoes_eventos')
+    .select('valor_comissao, tipo')
+    .eq('indicacao_id', indicacao.id)
+
+  const total = (totais ?? [])
+    .filter(e => e.tipo !== 'estorno')
+    .reduce((sum, e) => sum + Number(e.valor_comissao), 0)
+
+  await supabaseAdmin
+    .from('iara_indicacoes')
+    .update({ valor_total_apurado: total })
+    .eq('id', indicacao.id)
+}
+
+// Estorna comissões quando assinatura é cancelada com reembolso
+async function estornarIndicacao(subscriptionId: string, motivo: string) {
+  const { data: indicacao } = await supabaseAdmin
+    .from('iara_indicacoes')
+    .select('id, valor_total_apurado, status')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle()
+
+  if (!indicacao) return
+
+  await supabaseAdmin
+    .from('iara_indicacoes_eventos')
+    .insert({
+      indicacao_id: indicacao.id,
+      tipo: 'estorno',
+      valor_pagamento: 0,
+      pct_comissao: 0,
+      valor_comissao: -Number(indicacao.valor_total_apurado ?? 0),
+    })
+
+  await supabaseAdmin
+    .from('iara_indicacoes')
+    .update({
+      status: 'cancelada',
+      cancelada_at: new Date().toISOString(),
+    })
+    .eq('id', indicacao.id)
+
+  console.log(`[indicacao] estornada: ${indicacao.id} — ${motivo}`)
+}
+
 async function enviarBoasVindas(userId: string, plano: string) {
   if (plano === 'free' || !['plus', 'premium', 'profissional', 'agencia'].includes(plano)) return
   try {
@@ -94,6 +209,7 @@ export async function POST(req: NextRequest) {
           .from('creator_profiles')
           .update({ plano: 'free', stripe_subscription_id: null })
           .eq('user_id', userId)
+        await estornarIndicacao(sub.id, `status=${sub.status}`)
       } else if (emTrial) {
         await setPlano(userId, 'trial', sub.id)
       } else if (ativo) {
@@ -107,8 +223,36 @@ export async function POST(req: NextRequest) {
         if (atual?.plano === 'trial') {
           // Saiu de trial pra active → envia welcome agora
           await enviarBoasVindas(userId, planoEscolhido)
+          // Ativa comissão de afiliado (se houver indicação pendente)
+          const valorPlano = sub.items.data[0]?.price.unit_amount
+          if (valorPlano) {
+            await ativarIndicacao(userId, valorPlano / 100, sub.id, planoEscolhido)
+          }
         }
       }
+      break
+    }
+
+    case 'invoice.paid': {
+      // Fatura recorrente paga → pode gerar comissão de afiliado
+      const invoice = event.data.object as Stripe.Invoice & { subscription?: string; billing_reason?: string }
+      const subId = invoice.subscription
+      if (!subId) break
+      // Só conta recorrências (pula a primeira, que já foi tratada em subscription.updated)
+      if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
+        if (invoice.billing_reason === 'subscription_cycle') {
+          const valorPago = (invoice.amount_paid ?? 0) / 100
+          await registrarRecorrencia(subId as string, valorPago, invoice.id ?? '')
+        }
+      }
+      break
+    }
+
+    case 'charge.refunded':
+    case 'invoice.payment_failed': {
+      const obj = event.data.object as Stripe.Charge | Stripe.Invoice
+      const subId = 'subscription' in obj ? (obj.subscription as string | null) : null
+      if (subId) await estornarIndicacao(subId, event.type)
       break
     }
 
@@ -121,6 +265,7 @@ export async function POST(req: NextRequest) {
           .update({ plano: 'free', stripe_subscription_id: null })
           .eq('user_id', userId)
       }
+      await estornarIndicacao(sub.id, 'subscription_deleted')
       break
     }
   }
