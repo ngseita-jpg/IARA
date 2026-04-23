@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { verificarLimiteMarca, verificarFeatureMarca, respostaLimiteAtingidoMarca } from '@/lib/checkLimiteMarca'
 
 export const maxDuration = 60
 
@@ -11,15 +12,24 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+  // 1. Feature flag (plano libera Chat IA?)
+  const feat = await verificarFeatureMarca(user.id, 'chat_ia')
+  if (!feat.ok) return NextResponse.json({ error: feat.error, plano_atual: feat.plano, upgrade_url: '/empresas#planos' }, { status: feat.status })
+
+  // 2. Limite quantitativo (mensagens no mês)
+  const lim = await verificarLimiteMarca(user.id, 'chat_msg_mes')
+  if (!lim.ok) return respostaLimiteAtingidoMarca(lim)
+
   const body = await req.json()
   const mensagem = body.mensagem as string
   const historico = (body.historico ?? []) as Anthropic.MessageParam[]
 
   if (!mensagem?.trim()) return NextResponse.json({ error: 'Mensagem vazia' }, { status: 400 })
 
-  const { data: brand } = await supabase
+  const admin = createAdminClient()
+  const { data: brand } = await admin
     .from('brand_profiles')
-    .select('nome_empresa, segmento, porte, descricao')
+    .select('nome_empresa, segmento, porte, sobre')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -31,7 +41,7 @@ Marca atual:
 - Nome: ${brand?.nome_empresa ?? 'não informado'}
 - Segmento: ${brand?.segmento ?? 'não informado'}
 - Porte: ${brand?.porte ?? 'não informado'}
-- Descrição: ${brand?.descricao ?? 'não informado'}
+- Descrição: ${brand?.sobre ?? 'não informado'}
 
 Diretrizes:
 - Seja direta e prática — responda com estratégias acionáveis
@@ -58,7 +68,16 @@ Diretrizes:
       .map(b => (b as { type: 'text'; text: string }).text)
       .join('')
 
-    return NextResponse.json({ resposta: texto })
+    // Persiste mensagens pra contar uso no próximo request
+    await admin.from('marca_chat_mensagens').insert([
+      { user_id: user.id, role: 'user', content: mensagem },
+      { user_id: user.id, role: 'assistant', content: texto },
+    ])
+
+    return NextResponse.json({
+      resposta: texto,
+      uso: { atual: lim.usoAtual + 1, limite: lim.limite },
+    })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: `Erro ao consultar IA: ${msg}` }, { status: 500 })

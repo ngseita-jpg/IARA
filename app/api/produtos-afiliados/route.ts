@@ -52,7 +52,14 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: brand } = await supabase
+  // Verifica limite de produtos de afiliação ativos (Start = 5, Pro+ = ∞)
+  const { verificarLimiteMarca, respostaLimiteAtingidoMarca } = await import('@/lib/checkLimiteMarca')
+  const lim = await verificarLimiteMarca(user.id, 'produto_afiliacao')
+  if (!lim.ok) return respostaLimiteAtingidoMarca(lim)
+
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const admin = createAdminClient()
+  const { data: brand } = await admin
     .from('brand_profiles')
     .select('id')
     .eq('user_id', user.id)
@@ -66,7 +73,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Campos obrigatórios: titulo, url_produto, comissao_pct, desconto_pct' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('produtos_afiliados')
     .insert({ brand_id: brand.id, titulo, descricao, url_produto, preco, imagem_url, comissao_pct, desconto_pct })
     .select()

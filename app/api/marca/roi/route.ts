@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { verificarFeatureMarca, verificarLimiteMarca } from '@/lib/checkLimiteMarca'
 
 export const maxDuration = 60
 
@@ -106,12 +107,21 @@ PRODUTOS:
 ${produtosStats.map(p => `- ${p.titulo}: ${p.totalVendas} vendas, ${p.totalCliques} cliques, R$ ${p.faturamentoBruto.toFixed(2)} faturamento`).join('\n')}
 `
 
+  // Verifica se plano libera ROI com IA + limite mensal de análises
   let analise = ''
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      system: `Você é a Iara, analista de ROI de marketing de influência para marcas brasileiras.
+  const featRoi = await verificarFeatureMarca(user.id, 'roi_ia')
+  const limRoi = featRoi.ok ? await verificarLimiteMarca(user.id, 'roi_analise_mes') : null
+
+  if (!featRoi.ok) {
+    analise = '🔒 Análise de ROI com IA está disponível no plano Start ou superior. Faça upgrade em /empresas#planos.'
+  } else if (limRoi && !limRoi.ok) {
+    analise = `🔒 Você atingiu o limite mensal de análises do plano (${('usoAtual' in limRoi ? limRoi.usoAtual : 0)}/${('limite' in limRoi ? limRoi.limite : 0)}). Faça upgrade para Pro e libere análises ilimitadas.`
+  } else {
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        system: `Você é a Iara, analista de ROI de marketing de influência para marcas brasileiras.
 Analise os dados fornecidos e entregue:
 1. **Resumo executivo** (2-3 frases): situação atual da marca na plataforma
 2. **Pontos fortes** (máx 2 bullets): o que está funcionando bem
@@ -119,14 +129,19 @@ Analise os dados fornecidos e entregue:
 4. **Próximo passo prioritário** (1 frase direta): o que fazer agora
 
 Seja direto, use dados reais, foque em ações práticas. Responda em português.`,
-      messages: [{ role: 'user', content: contexto }],
-    })
-    analise = response.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
-      .join('')
-  } catch {
-    analise = 'Análise temporariamente indisponível.'
+        messages: [{ role: 'user', content: contexto }],
+      })
+      analise = response.content
+        .filter(b => b.type === 'text')
+        .map(b => (b as { type: 'text'; text: string }).text)
+        .join('')
+
+      // Registra análise pra contagem do limite mensal
+      const admin = createAdminClient()
+      await admin.from('marca_roi_analises').insert({ user_id: user.id, resumo: analise.slice(0, 500) })
+    } catch {
+      analise = 'Análise temporariamente indisponível.'
+    }
   }
 
   return NextResponse.json({
