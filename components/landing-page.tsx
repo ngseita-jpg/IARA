@@ -72,7 +72,9 @@ const bandItems = ['Roteiros', 'Carrossel', 'Thumbnail', 'Stories', 'Oratória',
 /* ─────────────────────────────────────────────────────────────
    LANDING PAGE
    ───────────────────────────────────────────────────────────── */
-export function LandingPage() {
+export function LandingPage({ tipoConta = null }: { tipoConta?: 'criador' | 'marca' | null } = {}) {
+  const logado = tipoConta !== null
+  const dashboardHref = tipoConta === 'marca' ? '/marca/dashboard' : '/dashboard'
   const shouldReduce = useReducedMotion()
   const { scrollY, scrollYProgress } = useScroll()
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 400, damping: 40 })
@@ -157,16 +159,30 @@ export function LandingPage() {
               </Link>
             </nav>
             <div className="flex items-center gap-3">
-              <Link href="/login" className="hidden sm:block text-sm text-[#9b9bb5] hover:text-[#f1f1f8] transition-colors">Entrar</Link>
-              <Magnetic strength={0.3}>
-                <Link
-                  href="/register"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7,#ec4899)' }}
-                >
-                  Começar grátis
-                </Link>
-              </Magnetic>
+              {logado ? (
+                <Magnetic strength={0.3}>
+                  <Link
+                    href={dashboardHref}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7,#ec4899)' }}
+                  >
+                    Ir pro Dashboard
+                  </Link>
+                </Magnetic>
+              ) : (
+                <>
+                  <Link href="/login" className="hidden sm:block text-sm text-[#9b9bb5] hover:text-[#f1f1f8] transition-colors">Entrar</Link>
+                  <Magnetic strength={0.3}>
+                    <Link
+                      href="/register"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                      style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7,#ec4899)' }}
+                    >
+                      Começar grátis
+                    </Link>
+                  </Magnetic>
+                </>
+              )}
             </div>
           </div>
         </header>
@@ -250,11 +266,11 @@ export function LandingPage() {
             >
               <Magnetic strength={0.22}>
                 <Link
-                  href="/register"
+                  href={logado ? dashboardHref : '/register'}
                   className="group flex items-center justify-center gap-2 px-9 py-4 rounded-2xl text-[15px] font-bold text-white shadow-2xl shadow-iara-900/50"
                   style={{ background: 'linear-gradient(135deg,#6366f1 0%,#a855f7 55%,#ec4899 100%)' }}
                 >
-                  Começar grátis agora
+                  {logado ? 'Ir pro Dashboard' : 'Começar grátis agora'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Magnetic>
@@ -387,11 +403,11 @@ export function LandingPage() {
             <motion.div variants={fadeUp}>
               <Magnetic strength={0.2}>
                 <Link
-                  href="/register"
+                  href={logado ? dashboardHref : '/register'}
                   className="inline-flex items-center gap-2 px-9 py-4 rounded-2xl text-[15px] font-bold text-white shadow-2xl shadow-iara-900/50"
                   style={{ background: 'linear-gradient(135deg,#6366f1 0%,#a855f7 55%,#ec4899 100%)' }}
                 >
-                  Começar agora — é grátis
+                  {logado ? 'Ir pro Dashboard' : 'Começar agora — é grátis'}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Magnetic>
@@ -692,17 +708,19 @@ export function LandingPage() {
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
               <Magnetic strength={0.22}>
                 <Link
-                  href="/register"
+                  href={logado ? dashboardHref : '/register'}
                   className="flex items-center gap-2 px-11 py-5 rounded-2xl text-base font-black text-white shadow-2xl shadow-iara-900/60"
                   style={{ background: 'linear-gradient(135deg,#6366f1 0%,#a855f7 55%,#ec4899 100%)' }}
                 >
-                  Criar conta grátis
+                  {logado ? 'Ir pro Dashboard' : 'Criar conta grátis'}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Magnetic>
-              <Link href="/login" className="text-sm text-[#9b9bb5] hover:text-[#f1f1f8] transition-colors">
-                Já tenho conta →
-              </Link>
+              {!logado && (
+                <Link href="/login" className="text-sm text-[#9b9bb5] hover:text-[#f1f1f8] transition-colors">
+                  Já tenho conta →
+                </Link>
+              )}
             </motion.div>
             <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[11px] tracking-[0.15em] uppercase text-[#3a3a5a]">
               <span className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> LGPD</span>
