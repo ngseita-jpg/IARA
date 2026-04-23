@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import {
   Sparkles, Send, Loader2, ChevronDown, ChevronUp,
   History, Zap,
 } from 'lucide-react'
+
+const ADMIN_EMAILS = ['ngseita@gmail.com']
 
 type Agente = {
   id: string
@@ -46,8 +50,23 @@ type Sessao = {
 type Resposta = { agente: string; resposta: string }
 
 export default function MarketingPage() {
+  const router = useRouter()
+  const [autorizado, setAutorizado] = useState<boolean | null>(null)
   const [objetivo, setObjetivo] = useState('')
   const [tipoPedido, setTipoPedido] = useState('livre')
+
+  // Verifica se o user logado é admin — se não for, volta pro dashboard
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      const email = data.user?.email
+      if (email && ADMIN_EMAILS.includes(email)) {
+        setAutorizado(true)
+      } else {
+        router.replace('/dashboard')
+      }
+    })
+  }, [router])
   const [gerando, setGerando] = useState(false)
   const [sessaoAtiva, setSessaoAtiva] = useState<number | null>(null)
   const [respostasAtivas, setRespostasAtivas] = useState<Resposta[]>([])
@@ -117,6 +136,15 @@ export default function MarketingPage() {
   function selecionarAcaoRapida(acao: typeof ACOES_RAPIDAS[0]) {
     setTipoPedido(acao.id)
     setObjetivo(acao.exemplo)
+  }
+
+  // Bloqueia render enquanto verifica ou se não autorizado (enquanto redireciona)
+  if (!autorizado) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-iara-500" />
+      </div>
+    )
   }
 
   return (
