@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 
 export async function GET() {
@@ -9,11 +9,13 @@ export async function GET() {
     return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
   }
 
-  const { data, error } = await supabase
+  // Admin client bypassa RLS — user_id vem de auth.getUser() já verificado, é seguro
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('creator_profiles')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (error && error.code !== 'PGRST116') {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
@@ -34,7 +36,9 @@ export async function PUT(req: NextRequest) {
 
   const body = await req.json()
 
-  const { data, error } = await supabase
+  // Admin client bypassa RLS — user_id é fixado abaixo a partir do auth verificado
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('creator_profiles')
     .upsert(
       {

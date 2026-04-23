@@ -278,7 +278,7 @@ export default function PerfilPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  async function saveProfile() {
+  async function saveProfile(): Promise<boolean> {
     setSaving(true)
     // tom_de_voz internamente é CSV ("Descontraído, Educativo") mas é salvo como JSON
     // pra manter compatibilidade com o onboarding novo e os consumers que usam parseArr
@@ -287,12 +287,24 @@ export default function PerfilPage() {
       ...profile,
       tom_de_voz: tomArr.length ? JSON.stringify(tomArr) : '',
     }
-    await fetch('/api/perfil', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    setSaving(false)
+    try {
+      const res = await fetch('/api/perfil', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
+        showToast(`Erro ao salvar: ${erro.error ?? res.statusText}`)
+        return false
+      }
+      return true
+    } catch (e) {
+      showToast(`Erro de conexão ao salvar: ${e instanceof Error ? e.message : 'desconhecido'}`)
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleNext() {
