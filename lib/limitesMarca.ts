@@ -16,6 +16,9 @@ export type TipoRecursoMarca =
   | 'criador_salvo'         // quantos criadores salvos em favoritos
   | 'chat_msg_mes'          // mensagens no Chat Estratégico IA por mês
   | 'roi_analise_mes'       // análises de ROI geradas por IA por mês
+  | 'carrossel_mes'         // carrosseis gerados pela IA por mês
+  | 'briefing_mes'          // briefings de campanha gerados com IA por mês
+  | 'match_mes'             // buscas de Match Inteligente com IA por mês
 
 export type FeatureMarca =
   | 'chat_ia'               // acesso ao Chat Estratégico com IA
@@ -29,44 +32,24 @@ export type FeatureMarca =
 // null = ilimitado; 0 = não permitido; número = limite
 export const LIMITES_MARCA: Record<PlanoMarca, Record<TipoRecursoMarca, number | null>> = {
   free: {
-    campanha_ativa: 0,       // não pode publicar campanha
-    produto_afiliacao: 0,
-    cupom_ativo: 0,
-    criador_salvo: 5,        // pode explorar catálogo e salvar 5 favoritos
-    chat_msg_mes: 5,         // 5 mensagens grátis pra provar o valor
-    roi_analise_mes: 0,
+    campanha_ativa: 0, produto_afiliacao: 0, cupom_ativo: 0, criador_salvo: 5,
+    chat_msg_mes: 5, roi_analise_mes: 0, carrossel_mes: 1, briefing_mes: 1, match_mes: 1,
   },
   start: {
-    campanha_ativa: 1,
-    produto_afiliacao: 5,
-    cupom_ativo: 50,
-    criador_salvo: 50,
-    chat_msg_mes: 30,        // limitado — força upgrade pra Pro se usar muito
-    roi_analise_mes: 3,
+    campanha_ativa: 1, produto_afiliacao: 5, cupom_ativo: 50, criador_salvo: 50,
+    chat_msg_mes: 30, roi_analise_mes: 3, carrossel_mes: 10, briefing_mes: 5, match_mes: 10,
   },
   pro: {
-    campanha_ativa: 5,
-    produto_afiliacao: null,
-    cupom_ativo: null,
-    criador_salvo: null,
-    chat_msg_mes: null,      // ilimitado
-    roi_analise_mes: null,
+    campanha_ativa: 5, produto_afiliacao: null, cupom_ativo: null, criador_salvo: null,
+    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: 40, briefing_mes: 20, match_mes: null,
   },
   scale: {
-    campanha_ativa: null,
-    produto_afiliacao: null,
-    cupom_ativo: null,
-    criador_salvo: null,
-    chat_msg_mes: null,
-    roi_analise_mes: null,
+    campanha_ativa: null, produto_afiliacao: null, cupom_ativo: null, criador_salvo: null,
+    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: null, briefing_mes: null, match_mes: null,
   },
   enterprise: {
-    campanha_ativa: null,
-    produto_afiliacao: null,
-    cupom_ativo: null,
-    criador_salvo: null,
-    chat_msg_mes: null,
-    roi_analise_mes: null,
+    campanha_ativa: null, produto_afiliacao: null, cupom_ativo: null, criador_salvo: null,
+    chat_msg_mes: null, roi_analise_mes: null, carrossel_mes: null, briefing_mes: null, match_mes: null,
   },
 }
 

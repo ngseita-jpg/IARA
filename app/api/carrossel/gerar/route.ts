@@ -169,23 +169,48 @@ export async function POST(req: NextRequest) {
   const plataforma = (body.plataforma as string | undefined) ?? 'instagram'
   const analise_imagens = body.analise_imagens as ImagemAnalise[] | undefined
 
-  console.log('[carrossel/gerar] step 4: perfil query')
+  console.log('[carrossel/gerar] step 4: perfil query (modo=' + modo + ')')
   const adminClient = createAdminClient()
-  const { data: perfil, error: perfilErr } = await adminClient
-    .from('creator_profiles')
-    .select('nome_artistico, nicho, tom_de_voz, sobre, plano')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (perfilErr) console.error('[carrossel/gerar] perfil error:', perfilErr.message)
-  console.log('[carrossel/gerar] plano:', perfil?.plano ?? 'null')
 
-  // Só conta como nova geração (não como ajuste via chat)
-  if (!historico?.length) {
-    console.log('[carrossel/gerar] step 5: verificarLimite')
-    const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
-    const plano = ((perfil?.plano as string) ?? 'free') as import('@/lib/limites').Plano
-    const check = await verificarLimite(supabase, user.id, 'carrossel', plano)
-    if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+  let perfil: Record<string, unknown> | null = null
+  if (modo === 'marca') {
+    // Fluxo MARCA — busca brand_profiles + verifica limite de marca
+    const { data: brand } = await adminClient
+      .from('brand_profiles')
+      .select('nome_empresa, segmento, porte, sobre, plano')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!brand) return NextResponse.json({ error: 'Perfil de marca não encontrado' }, { status: 403 })
+    perfil = {
+      nome_artistico: brand.nome_empresa,
+      nicho: brand.segmento,
+      tom_de_voz: 'Profissional, institucional, confiável',
+      sobre: brand.sobre,
+      plano: brand.plano,
+    }
+
+    if (!historico?.length) {
+      const { verificarLimiteMarca, respostaLimiteAtingidoMarca } = await import('@/lib/checkLimiteMarca')
+      const check = await verificarLimiteMarca(user.id, 'carrossel_mes')
+      if (!check.ok) return respostaLimiteAtingidoMarca(check)
+    }
+  } else {
+    // Fluxo CRIADOR — original
+    const { data: perfilRow } = await adminClient
+      .from('creator_profiles')
+      .select('nome_artistico, nicho, tom_de_voz, sobre, plano')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    perfil = perfilRow
+    console.log('[carrossel/gerar] plano:', perfilRow?.plano ?? 'null')
+
+    if (!historico?.length) {
+      console.log('[carrossel/gerar] step 5: verificarLimite')
+      const { verificarLimite, respostaLimiteAtingido } = await import('@/lib/checkLimite')
+      const plano = ((perfilRow?.plano as string) ?? 'free') as import('@/lib/limites').Plano
+      const check = await verificarLimite(supabase, user.id, 'carrossel', plano)
+      if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
+    }
   }
   console.log('[carrossel/gerar] step 6: calling Anthropic')
 

@@ -7,17 +7,23 @@ import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, LogOut, ChevronRight,
   Menu, X, Users, Building2, Briefcase, Zap, Tag,
+  FileText, Layers, Sparkles, MessageSquare, TrendingUp,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { IaraLogo } from '@/components/iara-logo'
 
-const navItems: { label: string; href: string; icon: React.ElementType; soon?: boolean }[] = [
-  { label: 'Painel',           href: '/marca/dashboard',           icon: LayoutDashboard },
-  { label: 'Campanha IA',      href: '/marca/dashboard/campanha',  icon: Zap },
-  { label: 'Buscar Criadores', href: '/marca/dashboard/criadores', icon: Users },
-  { label: 'Minha Empresa',    href: '/marca/dashboard/perfil',    icon: Building2 },
-  { label: 'Vagas',            href: '/marca/dashboard/vagas',     icon: Briefcase },
-  { label: 'Afiliados',        href: '/marca/dashboard/afiliados', icon: Tag },
+const navItems: { label: string; href: string; icon: React.ElementType; soon?: boolean; badge?: string }[] = [
+  { label: 'Painel',            href: '/marca/dashboard',           icon: LayoutDashboard },
+  { label: 'Briefing IA',       href: '/marca/dashboard/briefing',  icon: FileText,  badge: 'Novo' },
+  { label: 'Match Inteligente', href: '/marca/dashboard/match',     icon: Sparkles,  badge: 'Novo' },
+  { label: 'Carrossel',         href: '/marca/dashboard/carrossel', icon: Layers,    badge: 'Novo' },
+  { label: 'Chat Estratégico',  href: '/marca/dashboard/chat',      icon: MessageSquare },
+  { label: 'ROI & Métricas',    href: '/marca/dashboard/roi',       icon: TrendingUp },
+  { label: 'Campanha IA',       href: '/marca/dashboard/campanha',  icon: Zap },
+  { label: 'Buscar Criadores',  href: '/marca/dashboard/criadores', icon: Users },
+  { label: 'Vagas',             href: '/marca/dashboard/vagas',     icon: Briefcase },
+  { label: 'Afiliados',         href: '/marca/dashboard/afiliados', icon: Tag },
+  { label: 'Minha Empresa',     href: '/marca/dashboard/perfil',    icon: Building2 },
 ]
 
 export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
@@ -81,13 +87,19 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? 'text-marca-400' : 'text-[#5a5a7a] group-hover:text-[#9b9bb5]'}`} />
-                    {item.label}
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge && (
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-md tracking-widest uppercase"
+                        style={{ background: 'linear-gradient(135deg,#E2C068,#a855f7)', color: '#0a0a14' }}>
+                        {item.badge}
+                      </span>
+                    )}
                     {item.href === '/marca/dashboard/vagas' && unread > 0 && (
-                      <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#0a0a14]">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#C9A84C] text-[#0a0a14]">
                         {unread > 9 ? '9+' : unread}
                       </span>
                     )}
-                    {isActive && unread === 0 && <ChevronRight className="w-3 h-3 ml-auto text-marca-500" />}
+                    {isActive && unread === 0 && !item.badge && <ChevronRight className="w-3 h-3 text-marca-500" />}
                   </Link>
                 )}
               </div>

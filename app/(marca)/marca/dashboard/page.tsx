@@ -3,6 +3,7 @@ import Link from 'next/link'
 import {
   Users, Building2, Sparkles, ArrowRight, Zap,
   TrendingUp, Search, Briefcase, ChevronRight, MessageSquare,
+  FileText, Layers,
 } from 'lucide-react'
 
 // Desativa cache — sempre busca plano atualizado (importante após upgrade via Stripe)
@@ -47,20 +48,47 @@ export default async function MarcaDashboardPage() {
 
   const novosModulos = [
     {
+      label: 'Briefing IA de Campanha',
+      desc: 'Responde 5 perguntas, recebe briefing profissional completo com KPIs, perfil ideal do criador e range de valor pro mercado BR',
+      href: '/marca/dashboard/briefing',
+      icon: FileText,
+      gradient: 'from-[#C9A84C]/15 to-[#a855f7]/8',
+      border: 'border-[#C9A84C]/30',
+      novo: true,
+    },
+    {
+      label: 'Match Inteligente',
+      desc: 'Descreve a campanha, IA lê o catálogo inteiro e te devolve os top criadores alinhados com racional por quê',
+      href: '/marca/dashboard/match',
+      icon: Sparkles,
+      gradient: 'from-[#a855f7]/15 to-[#ec4899]/8',
+      border: 'border-[#a855f7]/30',
+      novo: true,
+    },
+    {
+      label: 'Carrossel B2B',
+      desc: 'Gera carrossel institucional pronto pra postar com o tom da sua marca. Perfeito pra educar, anunciar, mostrar cases',
+      href: '/marca/dashboard/carrossel',
+      icon: Layers,
+      gradient: 'from-[#ec4899]/15 to-[#6366f1]/8',
+      border: 'border-[#ec4899]/30',
+      novo: true,
+    },
+    {
       label: 'Chat Estratégico',
       desc: 'Consultoria de marketing em tempo real com a IA Iara',
       href: '/marca/dashboard/chat',
       icon: MessageSquare,
-      gradient: 'from-[#C9A84C]/12 to-[#a855f7]/8',
-      border: 'border-[#C9A84C]/25',
+      gradient: 'from-[#C9A84C]/10 to-[#a855f7]/6',
+      border: 'border-[#C9A84C]/20',
     },
     {
       label: 'Relatório de ROI',
       desc: 'Métricas reais das suas campanhas com análise de IA',
       href: '/marca/dashboard/roi',
-      icon: Sparkles,
-      gradient: 'from-[#a855f7]/12 to-[#ec4899]/8',
-      border: 'border-[#a855f7]/25',
+      icon: TrendingUp,
+      gradient: 'from-[#a855f7]/10 to-[#ec4899]/6',
+      border: 'border-[#a855f7]/20',
     },
   ]
 
@@ -198,18 +226,25 @@ export default async function MarcaDashboardPage() {
           <Sparkles className="w-3.5 h-3.5 text-[#E2C068]" />
           <h2 className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Ferramentas IA</h2>
         </div>
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {novosModulos.map(mod => {
             const Icon = mod.icon
+            const eNovo = 'novo' in mod && mod.novo
             return (
               <Link key={mod.href} href={mod.href} className="block group">
-                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150`}>
+                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150 relative`}>
+                  {eNovo && (
+                    <span className="absolute top-3 right-3 text-[8px] font-bold px-2 py-0.5 rounded-md tracking-widest uppercase"
+                      style={{ background: 'linear-gradient(135deg,#E2C068,#a855f7)', color: '#0a0a14' }}>
+                      Novo
+                    </span>
+                  )}
                   <div className="flex items-start justify-between mb-3">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center"
                       style={{ background: 'linear-gradient(135deg, #C9A84C, #a855f7)' }}>
                       <Icon className="w-4 h-4 text-white" />
                     </div>
-                    <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-[#E2C068] group-hover:translate-x-0.5 transition-all" />
+                    {!eNovo && <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-[#E2C068] group-hover:translate-x-0.5 transition-all" />}
                   </div>
                   <h3 className="font-semibold text-[#f1f1f8] text-sm mb-1">{mod.label}</h3>
                   <p className="text-xs text-[#5a5a7a] leading-relaxed">{mod.desc}</p>

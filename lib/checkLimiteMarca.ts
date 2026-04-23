@@ -172,6 +172,36 @@ async function contarUsoMarca(
       return count ?? 0
     }
 
+    case 'carrossel_mes': {
+      const { count } = await admin
+        .from('marca_content_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('tipo', 'carrossel')
+        .gte('created_at', inicioMesAtual())
+      return count ?? 0
+    }
+
+    case 'briefing_mes': {
+      const { count } = await admin
+        .from('marca_content_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('tipo', 'briefing')
+        .gte('created_at', inicioMesAtual())
+      return count ?? 0
+    }
+
+    case 'match_mes': {
+      const { count } = await admin
+        .from('marca_content_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('tipo', 'match')
+        .gte('created_at', inicioMesAtual())
+      return count ?? 0
+    }
+
     default:
       return 0
   }
