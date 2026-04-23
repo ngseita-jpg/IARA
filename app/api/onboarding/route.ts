@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
     const cookieStore = await cookies()
     const refCode = cookieStore.get('iara_ref')?.value ?? null
 
-    const { error } = await supabase
+    // Admin client bypassa RLS — user_id vem do auth.getUser() verificado, seguro
+    const admin = createAdminClient()
+    const { error } = await admin
       .from('creator_profiles')
       .upsert({
         user_id: user.id,
@@ -45,7 +47,6 @@ export async function POST(req: NextRequest) {
 
     // Registra indicação pendente se veio de link de afiliado
     if (refCode && !error) {
-      const admin = createAdminClient()
       const { data: indicador } = await admin
         .from('creator_profiles')
         .select('user_id')

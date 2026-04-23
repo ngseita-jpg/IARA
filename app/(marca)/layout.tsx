@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { MarcaNavbar } from '@/components/marca-navbar'
 import Link from 'next/link'
 
@@ -14,15 +14,22 @@ export default async function MarcaLayout({
   if (!user) redirect('/login')
   if (user.user_metadata?.tipo_conta !== 'marca') redirect('/dashboard')
 
-  const { data: brand } = await supabase
+  // Admin bypass RLS (seguro — user_id verificado). Cria brand_profile mínimo se não existir
+  // para que a marca nunca fique "presa" fora do dashboard.
+  const admin = createAdminClient()
+  const { data: brand } = await admin
     .from('brand_profiles')
     .select('onboarding_completo, nome_empresa')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
-  if (!brand?.onboarding_completo) {
-    redirect('/marca/onboarding')
+  if (!brand) {
+    // Cria perfil vazio pra marca nunca ficar presa
+    await admin
+      .from('brand_profiles')
+      .insert({ user_id: user.id, nome_empresa: null, onboarding_completo: false })
   }
+  // Onboarding agora é OPCIONAL — acessível via link "completar perfil" dentro do dashboard
 
   return (
     <div className="min-h-screen bg-[#0a0a14]">
