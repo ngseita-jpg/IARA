@@ -6,15 +6,7 @@ import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft } from
 import { UpgradeModal } from '@/components/upgrade-modal'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-
-const PLANO_LABEL: Record<string, string> = {
-  free:         'Gratuito',
-  trial:        'Trial (3 dias)',
-  plus:         'Plus — R$ 59,90/mês',
-  premium:      'Premium — R$ 129,00/mês',
-  profissional: 'Profissional — R$ 249,00/mês',
-  agencia:      'Agência — R$ 499,00/mês',
-}
+import { labelPlano } from '@/lib/stripe'
 
 const PLANO_COLOR: Record<string, string> = {
   free:         'text-[#6b6b8a]',
@@ -128,7 +120,7 @@ export default function ContaPage() {
               <div>
                 <p className="text-xs text-[#6b6b8a] mb-0.5">Plano atual</p>
                 <p className={`text-sm font-bold ${PLANO_COLOR[plano] ?? 'text-white'}`}>
-                  {PLANO_LABEL[plano] ?? plano}
+                  {labelPlano(plano)}
                 </p>
               </div>
             </div>

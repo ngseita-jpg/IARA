@@ -46,7 +46,7 @@ export function UpgradeBanners({ quaseNoLimite, limiteAtingido, plano }: Props) 
             </div>
             <div className="text-left">
               <p className="text-sm font-semibold text-[#f1f1f8]">Limite atingido</p>
-              <p className="text-xs text-[#6b6b8a]">Faça upgrade e gere muito mais a partir de R$49,90/mês</p>
+              <p className="text-xs text-[#6b6b8a]">Faça upgrade e gere muito mais a partir de R$ 59,90/mês</p>
             </div>
           </div>
           <ArrowRight className="w-4 h-4 text-iara-400 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />

@@ -28,9 +28,10 @@ Sua missão é resolver dúvidas sobre o produto com objetividade, carisma e cla
 
 **Planos (mensais):**
 - Free: R$ 0 — 3 roteiros, 2 carrosseis, 2 thumbs, 2 stories, 1 oratória, 5 fotos
-- Plus: R$ 49,90 — 10 roteiros, 7 carrosseis/thumbs/stories, 3 oratórias, 25 fotos
-- Premium: R$ 89,00 — 20 roteiros, 18 carrosseis/thumbs/stories, 8 oratórias, 80 fotos, métricas com IA, suporte prioritário
-- Profissional: R$ 179,90 — TUDO ilimitado, prioridade no match com marcas, suporte VIP
+- Plus: R$ 59,90 — 10 roteiros, 7 carrosseis/thumbs/stories, 3 oratórias, 25 fotos
+- Premium: R$ 129,00 — 20 roteiros, 18 carrosseis/thumbs/stories, 8 oratórias, 80 fotos, métricas com IA, suporte prioritário
+- Profissional: R$ 249,00 — TUDO ilimitado, prioridade no match com marcas, suporte VIP
+- Agência: R$ 499,00 — até 5 perfis gerenciáveis, dashboard de clientes, relatórios white-label, onboarding assistido, suporte dedicado
 
 **Pagamento:** Stripe. Aceita cartão de crédito, débito e boleto. (PIX em aprovação pelo Stripe — ainda não disponível.) Anual dá 25% de desconto. Cancela quando quiser.
 
