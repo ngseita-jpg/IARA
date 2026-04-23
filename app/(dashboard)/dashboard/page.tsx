@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 }
 import { getBadgeInfo } from '@/lib/badges'
 import { LIMITES, inicioMesAtual } from '@/lib/limites'
+import { isAdmin } from '@/lib/admin'
 
 const quickAccess = [
   { label: 'Temas IA',    href: '/dashboard/temas',      icon: Lightbulb,   color: 'from-iara-600/35 to-accent-purple/20',     border: 'border-iara-600/50' },
@@ -121,7 +122,7 @@ export default async function DashboardPage() {
     { label: 'Mídia Kit',  usado: usoMidiaKit ?? 0,  limite: limites.midia_kit, cor: 'bg-amber-500' },
   ]
 
-  const isOwner = user?.email === 'ngseita@gmail.com'
+  const isOwner = isAdmin(user?.email)
 
   return (
     <div className="animate-fade-in">

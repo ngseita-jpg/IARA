@@ -52,8 +52,10 @@ const navItems = [
   { label: 'Histórico',       href: '/dashboard/historico',    icon: History },
 ]
 
+import { ADMIN_EMAILS } from '@/lib/admin'
+
 const ADMIN_NAV_ITEMS = [
-  { label: 'Marketing Squad', href: '/dashboard/marketing',    icon: Megaphone, adminEmails: ['ngseita@gmail.com'] },
+  { label: 'Marketing Squad', href: '/dashboard/marketing',    icon: Megaphone, adminEmails: ADMIN_EMAILS },
 ]
 
 export function Navbar({ userEmail }: { userEmail?: string }) {

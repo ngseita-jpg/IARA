@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { AGENTES, AGENTES_LIST, SINTESE_SYSTEM, type TipoPedido } from '@/lib/marketing-agents'
+import { ADMIN_EMAILS } from '@/lib/admin'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
-
-const ADMIN_EMAILS = ['ngseita@gmail.com']
 
 // Estimativa grosseira de custo (USD → BRL a 5,00)
 const CUSTO_SONNET_IN  = 3 / 1_000_000 * 5   // R$ por token input

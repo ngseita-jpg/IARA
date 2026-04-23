@@ -150,6 +150,140 @@ function AnimatedCounter({ value, suffix, label }: { value: number; suffix: stri
   )
 }
 
+/* ── Formulário de captura de lead corporativo ────────────────────── */
+function FormContatoEmpresas() {
+  const [nome, setNome] = useState('')
+  const [empresa, setEmpresa] = useState('')
+  const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [plano, setPlano] = useState('Pro')
+  const [mensagem, setMensagem] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [sucesso, setSucesso] = useState<number | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setEnviando(true); setErro(null)
+    try {
+      const res = await fetch('/api/ajuda/ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome,
+          email,
+          categoria: 'outro',
+          assunto: `[VENDAS B2B] Interesse no plano ${plano} — ${empresa}`,
+          mensagem: `Empresa: ${empresa}\nTelefone: ${telefone}\nPlano interesse: ${plano}\n\nMensagem:\n${mensagem || '(sem mensagem extra)'}`,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao enviar')
+      setSucesso(data.ticket_id)
+      setNome(''); setEmpresa(''); setEmail(''); setTelefone(''); setMensagem('')
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro desconhecido')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <section id="contato-vendas" className="py-20 sm:py-28 px-4 sm:px-6 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 20% 50%, rgba(168,85,247,0.05) 0%, transparent 55%)' }} />
+      <div className="max-w-3xl mx-auto relative z-10">
+        <div className="text-center mb-10">
+          <p className="text-[11px] tracking-[0.3em] uppercase font-semibold mb-5" style={{ color: '#C9A84C' }}>— Fale com o time comercial</p>
+          <h2 className="font-display font-black text-[clamp(30px,4.5vw,48px)] leading-[1.04] tracking-display mb-4">
+            Quer entender como a Iara{' '}
+            <span className="font-editorial font-normal" style={{ color: '#E2C068' }}>cabe</span>{' '}
+            na sua marca?
+          </h2>
+          <p className="text-[#9b9bb5] max-w-xl mx-auto">
+            Deixa seus dados. Nossa equipe responde em até 1 dia útil com proposta personalizada, demonstração e case do seu setor.
+          </p>
+        </div>
+
+        {sucesso ? (
+          <div className="rounded-2xl border border-green-700/40 bg-green-950/20 p-8 text-center">
+            <div className="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto mb-4">
+              <Check className="w-6 h-6 text-green-400" />
+            </div>
+            <p className="font-bold text-[#f1f1f8] text-lg mb-1">Recebido! Ticket #{sucesso}</p>
+            <p className="text-sm text-[#9b9bb5]">Em até 24h úteis você recebe retorno do nosso time. Enquanto isso, pode explorar o catálogo se criar conta grátis.</p>
+            <button
+              onClick={() => setSucesso(null)}
+              className="mt-4 text-sm text-[#E2C068] hover:text-[#C9A84C] font-semibold"
+            >
+              Enviar outra solicitação
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="rounded-2xl border border-[#1a1a2e] bg-[#0d0d1a]/80 p-6 sm:p-8 space-y-4">
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">Seu nome</label>
+                <input required value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Ana Ferreira"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-accent-purple/60 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">Empresa</label>
+                <input required value={empresa} onChange={e => setEmpresa(e.target.value)} placeholder="Ex: Marca Exemplo Ltda"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-accent-purple/60 focus:outline-none" />
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">Email corporativo</label>
+                <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ana@empresa.com"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-accent-purple/60 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">WhatsApp (opcional)</label>
+                <input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 9 9999-9999"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-accent-purple/60 focus:outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">Plano de interesse</label>
+              <select value={plano} onChange={e => setPlano(e.target.value)}
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] focus:border-accent-purple/60 focus:outline-none">
+                <option value="Starter">Starter — R$ 199/mês</option>
+                <option value="Pro">Pro — R$ 499/mês</option>
+                <option value="Enterprise">Enterprise — sob consulta</option>
+                <option value="Nao sei">Ainda não sei, preciso conversar</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] tracking-[0.2em] uppercase font-semibold text-[#6b6b8a] mb-1.5">Conta um pouco da sua marca (opcional)</label>
+              <textarea value={mensagem} onChange={e => setMensagem(e.target.value)} rows={4} maxLength={2000}
+                placeholder="Ex: vendemos produtos de skincare há 3 anos, queremos testar programa de afiliação com 20 influenciadores iniciais..."
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-accent-purple/60 focus:outline-none resize-none" />
+            </div>
+
+            {erro && (
+              <div className="px-4 py-3 rounded-xl bg-red-950/30 border border-red-900/40 text-red-400 text-sm">
+                ⚠ {erro}
+              </div>
+            )}
+
+            <button type="submit" disabled={enviando}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold text-[#0a0a14] transition-all hover:opacity-90 disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg,#E2C068,#C9A84C,#a855f7)' }}
+            >
+              {enviando ? 'Enviando...' : 'Enviar solicitação →'}
+            </button>
+
+            <p className="text-[10px] text-[#5a5a7a] text-center">
+              Seus dados são tratados conforme a LGPD. Nunca enviamos spam — só contato pertinente à sua solicitação.
+            </p>
+          </form>
+        )}
+      </div>
+    </section>
+  )
+}
+
 /* ── MAIN ────────────────────────────────────────────────────────── */
 export function LandingEmpresas() {
   const shouldReduce = useReducedMotion()
@@ -741,6 +875,150 @@ export function LandingEmpresas() {
           </motion.div>
         </div>
       </section>
+
+      {/* ── PREÇOS PARA MARCAS ── */}
+      <section id="planos" className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #08080f 0%, #0b0815 50%, #08080f 100%)' }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 60%)' }} />
+        <div className="max-w-6xl mx-auto relative z-10">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-16 prose-editorial">
+            <motion.p variants={fadeUp} className="text-[11px] tracking-[0.3em] uppercase font-semibold mb-5" style={{ color: '#C9A84C' }}>
+              — Planos para marcas
+            </motion.p>
+            <motion.h2 variants={fadeUp} className="font-display font-black text-[clamp(32px,5.5vw,56px)] leading-[1.04] tracking-display mb-4">
+              Preços claros.{' '}
+              <span className="font-editorial font-normal" style={{ color: '#E2C068' }}>Sem enrolação.</span>
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-[#9b9bb5] text-lg max-w-2xl mx-auto">
+              Pague por mês, cancele quando quiser. Campanhas ilimitadas mesmo no plano menor — a diferença está no alcance e nas ferramentas de IA para ROI.
+            </motion.p>
+          </motion.div>
+
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-40px' }} variants={stagger}
+            className="grid md:grid-cols-3 gap-5 mb-10">
+            {[
+              {
+                name: 'Starter',
+                price: 'R$ 199',
+                periodo: '/mês',
+                desc: 'Pra marca testando influência digital',
+                badge: null,
+                featured: false,
+                bg: 'bg-[#0d0d1a]/80',
+                border: 'border-[#1a1a2e]',
+                accent: '#818cf8',
+                cta: 'Começar com Starter',
+                ctaStyle: 'border border-iara-700/40 text-iara-300 hover:bg-iara-900/20',
+                items: [
+                  '1 campanha ativa por vez',
+                  'Afiliação de até 3 produtos',
+                  'Catálogo com filtros básicos',
+                  'Até 50 cupons ativos',
+                  'Dashboard de ROI simplificado',
+                  'Suporte por email (24h úteis)',
+                ],
+              },
+              {
+                name: 'Pro',
+                price: 'R$ 499',
+                periodo: '/mês',
+                desc: 'Pra marca com programa de afiliação ativo',
+                badge: 'Mais escolhido',
+                featured: true,
+                bg: 'bg-gradient-to-b from-[#15102a]/90 to-[#0d0d1a]/90',
+                border: 'border-accent-purple/40',
+                accent: '#a855f7',
+                cta: 'Assinar Pro',
+                ctaStyle: 'bg-gradient-to-r from-[#E2C068] to-accent-purple text-[#0a0a14] hover:opacity-90',
+                items: [
+                  'Até 5 campanhas ativas',
+                  'Afiliação ilimitada de produtos',
+                  'Catálogo com filtros avançados + segmentação',
+                  'Cupons ilimitados',
+                  'Chat Estratégico com IA (consultoria 24/7)',
+                  'ROI dashboard completo + análises da Iara',
+                  'Match prioritário com criadores top',
+                  'Suporte prioritário (4h úteis)',
+                ],
+              },
+              {
+                name: 'Enterprise',
+                price: 'Sob consulta',
+                periodo: '',
+                desc: 'Pra grandes marcas e agências',
+                badge: 'Premium',
+                featured: false,
+                bg: 'bg-[#0d0a14]/80',
+                border: 'border-[#C9A84C]/30',
+                accent: '#C9A84C',
+                cta: 'Falar com vendas',
+                ctaStyle: 'border text-[#E2C068] hover:bg-[#C9A84C]/10',
+                items: [
+                  'Campanhas ilimitadas',
+                  'Afiliação ilimitada',
+                  'Account manager dedicado',
+                  'Integração via API',
+                  'Relatórios white-label',
+                  'SLA de 1h útil',
+                  'Onboarding assistido + treinamento do time',
+                  'Auditoria mensal da estratégia com a Iara',
+                ],
+              },
+            ].map((plan, i) => (
+              <motion.div
+                key={plan.name}
+                variants={fadeUp}
+                custom={i}
+                className={`${plan.bg} rounded-2xl p-6 border ${plan.border} relative flex flex-col ${plan.featured ? 'ring-1 ring-accent-purple/30 shadow-xl shadow-purple-900/20' : ''}`}
+                style={plan.featured ? { background: 'linear-gradient(180deg, rgba(168,85,247,0.08), rgba(201,168,76,0.04), rgba(8,8,15,0.9))' } : undefined}
+              >
+                {plan.badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold text-[#0a0a14] tracking-widest uppercase"
+                      style={{ background: plan.featured ? 'linear-gradient(135deg,#E2C068,#a855f7)' : 'linear-gradient(135deg,#C9A84C,#E2C068)' }}>
+                      {plan.badge}
+                    </span>
+                  </div>
+                )}
+                <div className="mb-5 mt-1">
+                  <p className="text-sm font-bold text-[#f1f1f8] uppercase tracking-widest mb-1" style={{ color: plan.accent }}>{plan.name}</p>
+                  <p className="text-xs text-[#6b6b8a] mb-5 leading-relaxed">{plan.desc}</p>
+                  <div className="flex items-end gap-1">
+                    <span className="text-4xl font-black text-[#f1f1f8]">{plan.price}</span>
+                    {plan.periodo && <span className="text-[#9b9bb5] text-sm pb-2">{plan.periodo}</span>}
+                  </div>
+                </div>
+                <a
+                  href="#contato-vendas"
+                  className={`flex items-center justify-center gap-1.5 w-full py-3 rounded-xl text-sm font-bold transition-all mb-6 ${plan.ctaStyle}`}
+                  style={plan.name === 'Enterprise' ? { borderColor: '#C9A84C' } : undefined}
+                >
+                  {plan.cta} <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+                <ul className="space-y-2.5 flex-1">
+                  {plan.items.map(item => (
+                    <li key={item} className="flex items-start gap-2 text-[13px] text-[#9b9bb5]">
+                      <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: plan.accent }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center text-xs text-[#5a5a7a] max-w-2xl mx-auto"
+          >
+            💳 Pagamento via Stripe · Cancele quando quiser · Zero taxa de setup · NF emitida para CNPJ
+          </motion.p>
+        </div>
+      </section>
+
+      {/* ── FORMULÁRIO DE CONTATO VENDAS ── */}
+      <FormContatoEmpresas />
 
       {/* ── CTA FINAL ── */}
       <section className="py-32 px-4 sm:px-6 relative overflow-hidden">

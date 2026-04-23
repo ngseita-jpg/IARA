@@ -7,8 +7,7 @@ import {
   Sparkles, Send, Loader2, ChevronDown, ChevronUp,
   History, Zap,
 } from 'lucide-react'
-
-const ADMIN_EMAILS = ['ngseita@gmail.com']
+import { ADMIN_EMAILS } from '@/lib/admin'
 
 type Agente = {
   id: string

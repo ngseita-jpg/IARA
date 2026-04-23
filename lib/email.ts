@@ -335,7 +335,7 @@ export async function emailTicketNovoAdmin({
     </table>
     ${btn('https://supabase.com/dashboard/project/_/editor', 'Abrir Supabase →')}
   `
-  await send('ngseita@gmail.com', `[SAC] #${ticketId} · ${assunto}`, base(`Novo ticket de ${userNome || userEmail}`, body))
+  await send('iarahubapp@gmail.com', `[SAC] #${ticketId} · ${assunto}`, base(`Novo ticket de ${userNome || userEmail}`, body))
 }
 
 export async function emailTicketRespondidoUsuario({

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { ADMIN_EMAILS } from '@/lib/admin'
 
 export const runtime = 'nodejs'
-
-const ADMIN_EMAILS = ['ngseita@gmail.com']
 
 async function ensureAdmin() {
   const supabase = await createClient()

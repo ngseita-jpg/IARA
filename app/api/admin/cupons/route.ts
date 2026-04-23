@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
+import { isAdmin } from '@/lib/admin'
 import type Stripe from 'stripe'
-
-const OWNER_EMAIL = 'ngseita@gmail.com'
 
 async function isOwner(): Promise<boolean> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  return user?.email === OWNER_EMAIL
+  return isAdmin(user?.email)
 }
 
 // Normaliza promo code para estrutura esperada pelo frontend

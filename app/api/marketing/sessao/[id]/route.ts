@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { ADMIN_EMAILS } from '@/lib/admin'
 
 export const runtime = 'nodejs'
-
-const ADMIN_EMAILS = ['ngseita@gmail.com']
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
