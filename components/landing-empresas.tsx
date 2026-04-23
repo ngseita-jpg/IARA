@@ -150,6 +150,254 @@ function AnimatedCounter({ value, suffix, label }: { value: number; suffix: stri
   )
 }
 
+/* ── Preços Marcas (3 planos com toggle mensal/anual, checkout direto) ─── */
+function PricingMarcas() {
+  const [anual, setAnual] = useState(false)
+  const [carregando, setCarregando] = useState<string | null>(null)
+
+  async function assinar(plano: 'start' | 'pro' | 'scale') {
+    setCarregando(plano)
+    try {
+      const res = await fetch('/api/stripe/checkout-marca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plano, periodo: anual ? 'anual' : 'mensal' }),
+      })
+      const data = await res.json()
+      if (res.status === 401) {
+        window.location.href = '/register?tipo=marca&returnTo=/empresas%23planos'
+        return
+      }
+      if (!res.ok) {
+        if (data.redirect) {
+          window.location.href = data.redirect
+          return
+        }
+        alert(data.error ?? 'Erro ao iniciar checkout')
+        return
+      }
+      if (data.url) window.location.href = data.url
+    } catch {
+      alert('Erro de conexão. Tenta de novo.')
+    } finally {
+      setCarregando(null)
+    }
+  }
+
+  const PLANOS = [
+    {
+      id: 'start' as const,
+      name: 'Start',
+      mensal: 297,
+      anual: 2673,
+      anualMes: 222.75,
+      desc: 'Pra marca testando influência digital',
+      badge: null,
+      accent: '#818cf8',
+      items: [
+        '1 campanha ativa por vez',
+        'Afiliação de até 5 produtos',
+        'Catálogo com filtros básicos',
+        'Até 50 cupons ativos',
+        'ROI dashboard simplificado',
+        'Chat Estratégico com IA (limitado)',
+        'Suporte por email',
+      ],
+    },
+    {
+      id: 'pro' as const,
+      name: 'Pro',
+      mensal: 697,
+      anual: 6273,
+      anualMes: 522.75,
+      desc: 'Pra marca com programa de afiliação ativo',
+      badge: 'Mais escolhido',
+      featured: true,
+      accent: '#a855f7',
+      items: [
+        'Até 5 campanhas ativas',
+        'Afiliação ilimitada de produtos',
+        'Catálogo com filtros avançados + segmentação',
+        'Cupons ilimitados',
+        'Chat Estratégico com IA (completo)',
+        'ROI dashboard completo + análises IA',
+        'Match prioritário com criadores',
+        'Relatórios exportáveis',
+        'Suporte prioritário (4h úteis)',
+      ],
+    },
+    {
+      id: 'scale' as const,
+      name: 'Scale',
+      mensal: 1497,
+      anual: 13473,
+      anualMes: 1122.75,
+      desc: 'Pra grandes marcas, agências e grupos',
+      badge: 'Premium',
+      accent: '#C9A84C',
+      items: [
+        'Campanhas ilimitadas',
+        '20 perfis de time com permissões',
+        'API de integração',
+        'Relatórios white-label',
+        'Dashboard multi-produto',
+        'Onboarding assistido + treinamento',
+        'Auditoria mensal com a Iara',
+        'SLA 4h útil + account manager',
+      ],
+    },
+  ]
+
+  return (
+    <section id="planos" className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #08080f 0%, #0b0815 50%, #08080f 100%)' }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 60%)' }} />
+      <div className="max-w-6xl mx-auto relative z-10">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-10 prose-editorial">
+          <motion.p variants={fadeUp} className="text-[11px] tracking-[0.3em] uppercase font-semibold mb-5" style={{ color: '#C9A84C' }}>
+            — 7 dias grátis · Cancele quando quiser
+          </motion.p>
+          <motion.h2 variants={fadeUp} className="font-display font-black text-[clamp(32px,5.5vw,56px)] leading-[1.04] tracking-display mb-4">
+            Planos pensados pra{' '}
+            <span className="font-editorial font-normal" style={{ color: '#E2C068' }}>ROI real</span>.
+          </motion.h2>
+          <motion.p variants={fadeUp} className="text-[#9b9bb5] text-lg max-w-2xl mx-auto">
+            Escolha o plano, insira cartão, teste por 7 dias grátis. Se não fizer sentido, cancela antes e zero é cobrado.
+          </motion.p>
+        </motion.div>
+
+        {/* Toggle Mensal / Anual */}
+        <div className="flex items-center justify-center gap-3 mb-10">
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl border border-[#1a1a2e] bg-[#0a0a14]">
+            <button
+              onClick={() => setAnual(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${!anual ? 'bg-iara-600/25 text-iara-200 border border-iara-700/40' : 'text-[#6b6b8a] hover:text-[#9b9bb5]'}`}
+            >Mensal</button>
+            <button
+              onClick={() => setAnual(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${anual ? 'bg-iara-600/25 text-iara-200 border border-iara-700/40' : 'text-[#6b6b8a] hover:text-[#9b9bb5]'}`}
+            >
+              Anual
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800/30">25% off</span>
+            </button>
+          </div>
+        </div>
+
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-40px' }} variants={stagger}
+          className="grid md:grid-cols-3 gap-5 mb-10">
+          {PLANOS.map((plan, i) => {
+            const precoExibido = anual ? plan.anualMes : plan.mensal
+            const isFeatured = plan.featured
+            return (
+              <motion.div
+                key={plan.id}
+                variants={fadeUp}
+                custom={i}
+                className={`rounded-2xl p-6 border relative flex flex-col ${isFeatured ? 'ring-1 ring-accent-purple/30 shadow-xl shadow-purple-900/20' : ''}`}
+                style={{
+                  background: isFeatured
+                    ? 'linear-gradient(180deg, rgba(168,85,247,0.08), rgba(201,168,76,0.04), rgba(8,8,15,0.9))'
+                    : 'rgba(13,13,26,0.8)',
+                  borderColor: isFeatured ? 'rgba(168,85,247,0.4)' : 'rgba(26,26,46,0.6)',
+                }}
+              >
+                {plan.badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold text-[#0a0a14] tracking-widest uppercase whitespace-nowrap"
+                      style={{ background: isFeatured ? 'linear-gradient(135deg,#E2C068,#a855f7)' : 'linear-gradient(135deg,#C9A84C,#E2C068)' }}>
+                      {plan.badge}
+                    </span>
+                  </div>
+                )}
+                <div className="mb-5 mt-1">
+                  <p className="text-sm font-bold uppercase tracking-widest mb-1" style={{ color: plan.accent }}>{plan.name}</p>
+                  <p className="text-xs text-[#6b6b8a] mb-5 leading-relaxed">{plan.desc}</p>
+                  <div className="flex items-end gap-1">
+                    <span className="text-4xl font-black text-[#f1f1f8] tabular-nums">
+                      R$ {precoExibido.toFixed(2).replace('.', ',')}
+                    </span>
+                    <span className="text-[#9b9bb5] text-sm pb-2">/mês</span>
+                  </div>
+                  {anual && (
+                    <p className="text-xs text-green-400 mt-1">
+                      Cobrado R$ {plan.anual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/ano
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => assinar(plan.id)}
+                  disabled={carregando !== null}
+                  className="flex items-center justify-center gap-1.5 w-full py-3 rounded-xl text-sm font-bold transition-all mb-6 disabled:opacity-60"
+                  style={{
+                    background: isFeatured
+                      ? 'linear-gradient(135deg,#E2C068,#a855f7)'
+                      : plan.id === 'scale'
+                        ? 'linear-gradient(135deg,#C9A84C,#E2C068)'
+                        : undefined,
+                    color: isFeatured || plan.id === 'scale' ? '#0a0a14' : '#a5b4fc',
+                    border: isFeatured || plan.id === 'scale' ? 'none' : '1px solid rgba(99,102,241,0.4)',
+                  }}
+                >
+                  {carregando === plan.id ? 'Abrindo...' : `Assinar ${plan.name}`}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <ul className="space-y-2.5 flex-1">
+                  {plan.items.map(item => (
+                    <li key={item} className="flex items-start gap-2 text-[13px] text-[#9b9bb5]">
+                      <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: plan.accent }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )
+          })}
+        </motion.div>
+
+        <p className="text-center text-xs text-[#5a5a7a] max-w-2xl mx-auto">
+          💳 Stripe · Cartão de crédito ou débito · 7 dias de trial grátis · NF emitida para CNPJ · Cancele quando quiser
+        </p>
+      </div>
+    </section>
+  )
+}
+
+/* ── FAQ Marcas ────────────────────────────────────────────────── */
+function FAQMarcas() {
+  const [aberto, setAberto] = useState<number | null>(null)
+  const FAQS = [
+    { q: 'Tem trial grátis?', a: '7 dias grátis em qualquer plano. Precisa cadastrar cartão pra começar — se cancelar antes do dia 8, zero é cobrado.' },
+    { q: 'Posso mudar de plano depois?', a: 'Sim. Upgrade entra em vigor na hora com ajuste proporcional. Downgrade vira no próximo ciclo.' },
+    { q: 'Como funciona o pagamento por campanha?', a: 'Você paga apenas a mensalidade do plano. Os criadores ganham seus honorários acordados nas campanhas que você publica — negociação direta via plataforma.' },
+    { q: 'Emitem nota fiscal?', a: 'Sim, toda cobrança gera NFSe automática via nosso CNPJ. Anexamos ao recibo no seu email.' },
+    { q: 'E se eu quiser campanhas com mais de 5?', a: 'Troca pro plano Scale (campanhas ilimitadas) com 1 clique. Upgrade rola na hora.' },
+    { q: 'Tem taxa por venda de afiliação?', a: 'A plataforma cobra 10% da comissão que você paga ao criador (não do preço do produto). Ex: criador recebe R$ 20 de comissão por venda → Iara Hub fica com R$ 2. Transparente.' },
+    { q: 'Posso cancelar quando?', a: 'Em 1 clique no portal Stripe a partir do seu dashboard. Sem multa, sem fidelidade, sem ligação.' },
+  ]
+  return (
+    <section className="py-20 px-4 sm:px-6 relative">
+      <div className="max-w-3xl mx-auto">
+        <p className="text-[11px] tracking-[0.3em] uppercase font-semibold mb-5 text-center" style={{ color: '#C9A84C' }}>— Perguntas frequentes</p>
+        <h2 className="font-display font-black text-[clamp(28px,4vw,42px)] leading-tight text-center mb-10">
+          Dúvidas que marcas sempre <span className="font-editorial font-normal" style={{ color: '#E2C068' }}>fazem</span>.
+        </h2>
+        <div className="space-y-2">
+          {FAQS.map((f, i) => (
+            <div key={i} className="rounded-2xl border border-[#1a1a2e] bg-[#0d0d1a]/60 overflow-hidden">
+              <button onClick={() => setAberto(aberto === i ? null : i)} className="w-full flex items-center justify-between gap-4 p-5 text-left">
+                <p className="text-[15px] font-semibold text-[#f1f1f8]">{f.q}</p>
+                <ChevronDown className={`w-5 h-5 text-[#5a5a7a] flex-shrink-0 transition-transform ${aberto === i ? 'rotate-180' : ''}`} />
+              </button>
+              {aberto === i && (
+                <div className="px-5 pb-5 -mt-1 text-[14px] text-[#9b9bb5] leading-relaxed">{f.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /* ── Formulário de captura de lead corporativo ────────────────────── */
 function FormContatoEmpresas() {
   const [nome, setNome] = useState('')
@@ -877,145 +1125,10 @@ export function LandingEmpresas() {
       </section>
 
       {/* ── PREÇOS PARA MARCAS ── */}
-      <section id="planos" className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #08080f 0%, #0b0815 50%, #08080f 100%)' }}>
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 60%)' }} />
-        <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger} className="text-center mb-16 prose-editorial">
-            <motion.p variants={fadeUp} className="text-[11px] tracking-[0.3em] uppercase font-semibold mb-5" style={{ color: '#C9A84C' }}>
-              — Planos para marcas
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-display font-black text-[clamp(32px,5.5vw,56px)] leading-[1.04] tracking-display mb-4">
-              Preços claros.{' '}
-              <span className="font-editorial font-normal" style={{ color: '#E2C068' }}>Sem enrolação.</span>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-[#9b9bb5] text-lg max-w-2xl mx-auto">
-              Pague por mês, cancele quando quiser. Campanhas ilimitadas mesmo no plano menor — a diferença está no alcance e nas ferramentas de IA para ROI.
-            </motion.p>
-          </motion.div>
+      <PricingMarcas />
 
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-40px' }} variants={stagger}
-            className="grid md:grid-cols-3 gap-5 mb-10">
-            {[
-              {
-                name: 'Starter',
-                price: 'R$ 199',
-                periodo: '/mês',
-                desc: 'Pra marca testando influência digital',
-                badge: null,
-                featured: false,
-                bg: 'bg-[#0d0d1a]/80',
-                border: 'border-[#1a1a2e]',
-                accent: '#818cf8',
-                cta: 'Começar com Starter',
-                ctaStyle: 'border border-iara-700/40 text-iara-300 hover:bg-iara-900/20',
-                items: [
-                  '1 campanha ativa por vez',
-                  'Afiliação de até 3 produtos',
-                  'Catálogo com filtros básicos',
-                  'Até 50 cupons ativos',
-                  'Dashboard de ROI simplificado',
-                  'Suporte por email (24h úteis)',
-                ],
-              },
-              {
-                name: 'Pro',
-                price: 'R$ 499',
-                periodo: '/mês',
-                desc: 'Pra marca com programa de afiliação ativo',
-                badge: 'Mais escolhido',
-                featured: true,
-                bg: 'bg-gradient-to-b from-[#15102a]/90 to-[#0d0d1a]/90',
-                border: 'border-accent-purple/40',
-                accent: '#a855f7',
-                cta: 'Assinar Pro',
-                ctaStyle: 'bg-gradient-to-r from-[#E2C068] to-accent-purple text-[#0a0a14] hover:opacity-90',
-                items: [
-                  'Até 5 campanhas ativas',
-                  'Afiliação ilimitada de produtos',
-                  'Catálogo com filtros avançados + segmentação',
-                  'Cupons ilimitados',
-                  'Chat Estratégico com IA (consultoria 24/7)',
-                  'ROI dashboard completo + análises da Iara',
-                  'Match prioritário com criadores top',
-                  'Suporte prioritário (4h úteis)',
-                ],
-              },
-              {
-                name: 'Enterprise',
-                price: 'Sob consulta',
-                periodo: '',
-                desc: 'Pra grandes marcas e agências',
-                badge: 'Premium',
-                featured: false,
-                bg: 'bg-[#0d0a14]/80',
-                border: 'border-[#C9A84C]/30',
-                accent: '#C9A84C',
-                cta: 'Falar com vendas',
-                ctaStyle: 'border text-[#E2C068] hover:bg-[#C9A84C]/10',
-                items: [
-                  'Campanhas ilimitadas',
-                  'Afiliação ilimitada',
-                  'Account manager dedicado',
-                  'Integração via API',
-                  'Relatórios white-label',
-                  'SLA de 1h útil',
-                  'Onboarding assistido + treinamento do time',
-                  'Auditoria mensal da estratégia com a Iara',
-                ],
-              },
-            ].map((plan, i) => (
-              <motion.div
-                key={plan.name}
-                variants={fadeUp}
-                custom={i}
-                className={`${plan.bg} rounded-2xl p-6 border ${plan.border} relative flex flex-col ${plan.featured ? 'ring-1 ring-accent-purple/30 shadow-xl shadow-purple-900/20' : ''}`}
-                style={plan.featured ? { background: 'linear-gradient(180deg, rgba(168,85,247,0.08), rgba(201,168,76,0.04), rgba(8,8,15,0.9))' } : undefined}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-bold text-[#0a0a14] tracking-widest uppercase"
-                      style={{ background: plan.featured ? 'linear-gradient(135deg,#E2C068,#a855f7)' : 'linear-gradient(135deg,#C9A84C,#E2C068)' }}>
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-                <div className="mb-5 mt-1">
-                  <p className="text-sm font-bold text-[#f1f1f8] uppercase tracking-widest mb-1" style={{ color: plan.accent }}>{plan.name}</p>
-                  <p className="text-xs text-[#6b6b8a] mb-5 leading-relaxed">{plan.desc}</p>
-                  <div className="flex items-end gap-1">
-                    <span className="text-4xl font-black text-[#f1f1f8]">{plan.price}</span>
-                    {plan.periodo && <span className="text-[#9b9bb5] text-sm pb-2">{plan.periodo}</span>}
-                  </div>
-                </div>
-                <a
-                  href="#contato-vendas"
-                  className={`flex items-center justify-center gap-1.5 w-full py-3 rounded-xl text-sm font-bold transition-all mb-6 ${plan.ctaStyle}`}
-                  style={plan.name === 'Enterprise' ? { borderColor: '#C9A84C' } : undefined}
-                >
-                  {plan.cta} <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-                <ul className="space-y-2.5 flex-1">
-                  {plan.items.map(item => (
-                    <li key={item} className="flex items-start gap-2 text-[13px] text-[#9b9bb5]">
-                      <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: plan.accent }} />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center text-xs text-[#5a5a7a] max-w-2xl mx-auto"
-          >
-            💳 Pagamento via Stripe · Cancele quando quiser · Zero taxa de setup · NF emitida para CNPJ
-          </motion.p>
-        </div>
-      </section>
+      {/* ── FAQ / PERGUNTAS FREQUENTES MARCAS ── */}
+      <FAQMarcas />
 
       {/* ── FORMULÁRIO DE CONTATO VENDAS ── */}
       <FormContatoEmpresas />

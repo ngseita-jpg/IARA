@@ -25,7 +25,10 @@ alter table public.brand_profiles add column if not exists nichos_interesse    t
 alter table public.brand_profiles add column if not exists plataformas_foco    text[] default '{}';
 alter table public.brand_profiles add column if not exists plano               text default 'free';
 alter table public.brand_profiles add column if not exists onboarding_completo boolean default false;
-alter table public.brand_profiles add column if not exists updated_at          timestamptz default now();
+alter table public.brand_profiles add column if not exists updated_at             timestamptz default now();
+alter table public.brand_profiles add column if not exists stripe_customer_id     text;
+alter table public.brand_profiles add column if not exists stripe_subscription_id text;
+alter table public.brand_profiles add column if not exists plano_periodo          text default 'mensal';
 
 alter table public.brand_profiles enable row level security;
 

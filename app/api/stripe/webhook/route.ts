@@ -143,6 +143,18 @@ async function estornarIndicacao(subscriptionId: string, motivo: string) {
   console.log(`[indicacao] estornada: ${indicacao.id} — ${motivo}`)
 }
 
+// Atualiza plano no brand_profiles (fluxo de MARCA)
+async function setPlanoMarca(userId: string, plano: string, periodo: string, subscriptionId: string | null) {
+  await supabaseAdmin
+    .from('brand_profiles')
+    .update({
+      plano,
+      plano_periodo: periodo,
+      stripe_subscription_id: subscriptionId,
+    })
+    .eq('user_id', userId)
+}
+
 async function enviarBoasVindas(userId: string, plano: string) {
   if (plano === 'free' || !['plus', 'premium', 'profissional', 'agencia'].includes(plano)) return
   try {
@@ -177,15 +189,21 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
       const userId = session.metadata?.user_id
+      const tipo = session.metadata?.tipo ?? 'criador'
       const planoEscolhido = session.metadata?.plano
+      const periodo = session.metadata?.periodo ?? 'mensal'
       const subId = session.subscription as string
-      if (userId && planoEscolhido && subId) {
-        // Busca a subscription pra saber se está em trial
-        const sub = await stripe.subscriptions.retrieve(subId)
-        const emTrial = sub.status === 'trialing'
-        // Durante trial, plano = 'trial' (limites reduzidos). Ao ativar, plano real.
+      if (!userId || !planoEscolhido || !subId) break
+
+      const sub = await stripe.subscriptions.retrieve(subId)
+      const emTrial = sub.status === 'trialing'
+
+      if (tipo === 'marca') {
+        // Fluxo de MARCA — durante trial usa o plano real mesmo (marca não tem limites por plano, só features)
+        await setPlanoMarca(userId, planoEscolhido, periodo, subId)
+      } else {
+        // Fluxo de CRIADOR — durante trial usa plano 'trial' com limites reduzidos
         await setPlano(userId, emTrial ? 'trial' : planoEscolhido, subId)
-        // Email de boas-vindas só quando já paga (não no trial)
         if (!emTrial) await enviarBoasVindas(userId, planoEscolhido)
       }
       break
@@ -194,7 +212,9 @@ export async function POST(req: NextRequest) {
     case 'customer.subscription.updated': {
       const sub = event.data.object as Stripe.Subscription
       const userId = sub.metadata?.user_id
+      const tipo = sub.metadata?.tipo ?? 'criador'
       const planoMeta = sub.metadata?.plano
+      const periodo = sub.metadata?.periodo ?? 'mensal'
       const priceId = sub.items.data[0]?.price.id
       const planoByPrice = priceId ? priceIdToPlano(priceId) : null
       const planoEscolhido = planoMeta ?? planoByPrice
@@ -204,29 +224,38 @@ export async function POST(req: NextRequest) {
       const ativo = sub.status === 'active'
       const cancelado = ['canceled', 'unpaid', 'incomplete_expired'].includes(sub.status)
 
-      if (cancelado) {
-        await supabaseAdmin
-          .from('creator_profiles')
-          .update({ plano: 'free', stripe_subscription_id: null })
-          .eq('user_id', userId)
-        await estornarIndicacao(sub.id, `status=${sub.status}`)
-      } else if (emTrial) {
-        await setPlano(userId, 'trial', sub.id)
-      } else if (ativo) {
-        // Detecta transição trial → active (cobrança aprovada, primeira vez)
-        const { data: atual } = await supabaseAdmin
-          .from('creator_profiles')
-          .select('plano')
-          .eq('user_id', userId)
-          .maybeSingle()
-        await setPlano(userId, planoEscolhido, sub.id)
-        if (atual?.plano === 'trial') {
-          // Saiu de trial pra active → envia welcome agora
-          await enviarBoasVindas(userId, planoEscolhido)
-          // Ativa comissão de afiliado (se houver indicação pendente)
-          const valorPlano = sub.items.data[0]?.price.unit_amount
-          if (valorPlano) {
-            await ativarIndicacao(userId, valorPlano / 100, sub.id, planoEscolhido)
+      if (tipo === 'marca') {
+        if (cancelado) {
+          await supabaseAdmin
+            .from('brand_profiles')
+            .update({ plano: 'free', stripe_subscription_id: null })
+            .eq('user_id', userId)
+        } else if (emTrial || ativo) {
+          await setPlanoMarca(userId, planoEscolhido, periodo, sub.id)
+        }
+      } else {
+        // fluxo criador (mantido)
+        if (cancelado) {
+          await supabaseAdmin
+            .from('creator_profiles')
+            .update({ plano: 'free', stripe_subscription_id: null })
+            .eq('user_id', userId)
+          await estornarIndicacao(sub.id, `status=${sub.status}`)
+        } else if (emTrial) {
+          await setPlano(userId, 'trial', sub.id)
+        } else if (ativo) {
+          const { data: atual } = await supabaseAdmin
+            .from('creator_profiles')
+            .select('plano')
+            .eq('user_id', userId)
+            .maybeSingle()
+          await setPlano(userId, planoEscolhido, sub.id)
+          if (atual?.plano === 'trial') {
+            await enviarBoasVindas(userId, planoEscolhido)
+            const valorPlano = sub.items.data[0]?.price.unit_amount
+            if (valorPlano) {
+              await ativarIndicacao(userId, valorPlano / 100, sub.id, planoEscolhido)
+            }
           }
         }
       }

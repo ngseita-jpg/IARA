@@ -11,7 +11,20 @@ export const PRICE_IDS = {
   agencia:       process.env.STRIPE_PRICE_AGENCIA!,
 } as const
 
+export const PRICE_IDS_MARCA = {
+  start:    process.env.STRIPE_PRICE_MARCA_START!,
+  pro:      process.env.STRIPE_PRICE_MARCA_PRO!,
+  scale:    process.env.STRIPE_PRICE_MARCA_SCALE!,
+} as const
+
+export const PRICE_IDS_MARCA_ANUAL = {
+  start:    process.env.STRIPE_PRICE_MARCA_START_ANUAL!,
+  pro:      process.env.STRIPE_PRICE_MARCA_PRO_ANUAL!,
+  scale:    process.env.STRIPE_PRICE_MARCA_SCALE_ANUAL!,
+} as const
+
 export type PlanoStripe = keyof typeof PRICE_IDS
+export type PlanoMarca = keyof typeof PRICE_IDS_MARCA
 
 // Preços públicos (mensal) em BRL — fonte única de verdade
 export const PRECOS_BRL = {
@@ -26,6 +39,18 @@ export const PRECOS_ANUAL_BRL = {
   premium:      1161.00,  // 129,00 × 12 × 0,75
   profissional: 2241.00,  // 249,00 × 12 × 0,75
   agencia:      4491.00,  // 499,00 × 12 × 0,75
+} as const
+
+export const PRECOS_MARCA_BRL = {
+  start:  297.00,
+  pro:    697.00,
+  scale:  1497.00,
+} as const
+
+export const PRECOS_MARCA_ANUAL_BRL = {
+  start:  2673.00,   // 297 × 12 × 0,75 = R$ 222,75/mês equivalente
+  pro:    6273.00,   // 697 × 12 × 0,75 = R$ 522,75/mês
+  scale:  13473.00,  // 1497 × 12 × 0,75 = R$ 1.122,75/mês
 } as const
 
 export function formatarPrecoMensal(plano: string): string {
