@@ -211,11 +211,42 @@ export function PricingSection() {
           })}
         </div>
 
-        {/* Math highlight */}
-        <div className="mt-10 p-4 rounded-2xl bg-[#0a0a14] border border-iara-700/20 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-center">
-          <span className="text-[#9b9bb5]">💡 <strong className="text-[#f1f1f8]">Premium</strong> = 156% mais conteúdo que o Plus por apenas 78% a mais</span>
-          <span className="hidden sm:block text-[#2a2a4a]">|</span>
-          <span className="text-[#9b9bb5]"><strong className="text-green-400">R$0,55/geração</strong> no Premium vs <strong className="text-[#f1f1f8]">R$0,85</strong> no Plus</span>
+        {/* Math highlight — comparativo de mercado */}
+        <div className="mt-12 rounded-3xl border border-iara-700/20 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04), #0a0a14)' }}>
+          <div className="p-6 sm:p-8 grid md:grid-cols-3 gap-6 items-center">
+
+            {/* Bloco 1 — a dor numérica (agência) */}
+            <div className="text-center md:text-left">
+              <p className="text-[10px] tracking-[0.3em] uppercase font-semibold text-[#6b6b8a] mb-2">Uma agência cobra</p>
+              <p className="text-3xl sm:text-4xl font-black text-[#f1f1f8] leading-none tabular-nums">R$ 150<span className="text-lg text-[#6b6b8a] font-normal">/carrossel</span></p>
+              <p className="text-xs text-[#5a5a7a] mt-2 leading-relaxed">Um social media júnior cobra R$ 1.800/mês pra entregar ~15 posts.</p>
+            </div>
+
+            {/* Bloco central — Iara Premium */}
+            <div className="text-center border-t md:border-t-0 md:border-l md:border-r border-white/5 py-5 md:py-0">
+              <p className="text-[10px] tracking-[0.3em] uppercase font-semibold text-iara-400 mb-2">Iara Premium</p>
+              <p className="text-4xl sm:text-5xl font-black leading-none">
+                <span className="bg-gradient-to-br from-[#f1f1f8] via-[#d8ccff] to-accent-purple bg-clip-text text-transparent tabular-nums">
+                  R$ 4,30
+                </span>
+                <span className="text-lg text-[#9b9bb5] font-normal">/dia</span>
+              </p>
+              <p className="text-xs text-[#9b9bb5] mt-2 leading-relaxed">
+                70+ conteúdos por mês por menos que um{' '}
+                <span className="italic text-[#d8ccff]" style={{ fontFamily: "'Playfair Display', serif" }}>café</span>.
+              </p>
+            </div>
+
+            {/* Bloco 3 — o ganho */}
+            <div className="text-center md:text-right">
+              <p className="text-[10px] tracking-[0.3em] uppercase font-semibold text-green-400/90 mb-2">Economia mensal</p>
+              <p className="text-3xl sm:text-4xl font-black leading-none tabular-nums bg-gradient-to-br from-green-400 to-teal-400 bg-clip-text text-transparent">R$ 1.671</p>
+              <p className="text-xs text-[#5a5a7a] mt-2 leading-relaxed">
+                Vs contratar social media + agência. Ainda sobram 6h por semana.
+              </p>
+            </div>
+
+          </div>
         </div>
       </div>
     </section>
