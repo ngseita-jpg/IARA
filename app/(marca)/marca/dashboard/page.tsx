@@ -1,9 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import {
   Users, Building2, Sparkles, ArrowRight, Zap,
   TrendingUp, Search, Briefcase, ChevronRight, MessageSquare,
 } from 'lucide-react'
+
+// Desativa cache — sempre busca plano atualizado (importante após upgrade via Stripe)
+export const dynamic = 'force-dynamic'
 
 export default async function MarcaDashboardPage() {
   const supabase = await createClient()
@@ -11,11 +14,13 @@ export default async function MarcaDashboardPage() {
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Parceiro'
 
-  const { data: brand } = await supabase
+  // Admin client bypassa RLS + sempre lê direto do banco (sem cache)
+  const admin = createAdminClient()
+  const { data: brand } = await admin
     .from('brand_profiles')
     .select('nome_empresa, segmento, porte, plano')
     .eq('user_id', user?.id ?? '')
-    .single()
+    .maybeSingle()
 
   const hora = new Date().getHours()
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
@@ -129,7 +134,7 @@ export default async function MarcaDashboardPage() {
             <span className="text-xs font-semibold text-[#6b6b8a] uppercase tracking-wider">Plano</span>
           </div>
           <p className="text-2xl font-bold text-[#f1f1f8] capitalize">{brand?.plano ?? 'Free'}</p>
-          <Link href="/#planos" className="text-xs text-[#C9A84C] hover:text-[#E2C068] transition-colors mt-0.5 block">
+          <Link href="/empresas#planos" className="text-xs text-[#C9A84C] hover:text-[#E2C068] transition-colors mt-0.5 block">
             Ver planos →
           </Link>
         </div>
@@ -218,7 +223,7 @@ export default async function MarcaDashboardPage() {
       {/* CTA upgrade if free */}
       {(!brand?.plano || brand.plano === 'free') && (
         <div className="mt-8">
-          <Link href="/#planos" className="group flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border border-[#C9A84C]/20 hover:border-[#C9A84C]/40 transition-all duration-200"
+          <Link href="/empresas#planos" className="group flex items-center justify-between gap-3 px-5 py-4 rounded-2xl border border-[#C9A84C]/20 hover:border-[#C9A84C]/40 transition-all duration-200"
             style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.06) 0%, rgba(168,85,247,0.06) 100%)' }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -227,7 +232,7 @@ export default async function MarcaDashboardPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-[#f1f1f8]">Desbloqueie o potencial completo da Iara</p>
-                <p className="text-xs text-[#6b6b8a]">Acesse vagas, IA estratégica e relatórios de ROI a partir de R$397/mês</p>
+                <p className="text-xs text-[#6b6b8a]">Acesse IA estratégica, relatórios de ROI e match com criadores a partir de R$ 197/mês</p>
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-[#C9A84C] group-hover:translate-x-0.5 transition-transform flex-shrink-0" />

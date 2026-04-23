@@ -3,6 +3,9 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { MarcaNavbar } from '@/components/marca-navbar'
 import Link from 'next/link'
 
+// Desativa cache — plano de marca atualiza na hora após Stripe webhook
+export const dynamic = 'force-dynamic'
+
 export default async function MarcaLayout({
   children,
 }: {
