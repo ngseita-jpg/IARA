@@ -199,12 +199,13 @@ export async function POST(req: NextRequest) {
       const emTrial = sub.status === 'trialing'
 
       if (tipo === 'marca') {
-        // Fluxo de MARCA — durante trial usa o plano real mesmo (marca não tem limites por plano, só features)
+        // Fluxo de MARCA — durante trial usa o plano real mesmo
         await setPlanoMarca(userId, planoEscolhido, periodo, subId)
       } else {
-        // Fluxo de CRIADOR — durante trial usa plano 'trial' com limites reduzidos
-        await setPlano(userId, emTrial ? 'trial' : planoEscolhido, subId)
-        if (!emTrial) await enviarBoasVindas(userId, planoEscolhido)
+        // Fluxo de CRIADOR — Netflix-style: acesso completo ao plano escolhido desde o dia 1.
+        // Stripe cancela automaticamente se pagamento falhar no fim do trial (trial_settings.end_behavior).
+        await setPlano(userId, planoEscolhido, subId)
+        await enviarBoasVindas(userId, planoEscolhido)
       }
       break
     }
@@ -234,24 +235,23 @@ export async function POST(req: NextRequest) {
           await setPlanoMarca(userId, planoEscolhido, periodo, sub.id)
         }
       } else {
-        // fluxo criador (mantido)
+        // fluxo criador — Netflix-style: plano pleno durante trial.
         if (cancelado) {
           await supabaseAdmin
             .from('creator_profiles')
             .update({ plano: 'free', stripe_subscription_id: null })
             .eq('user_id', userId)
           await estornarIndicacao(sub.id, `status=${sub.status}`)
-        } else if (emTrial) {
-          await setPlano(userId, 'trial', sub.id)
-        } else if (ativo) {
+        } else if (emTrial || ativo) {
           const { data: atual } = await supabaseAdmin
             .from('creator_profiles')
             .select('plano')
             .eq('user_id', userId)
             .maybeSingle()
+          const eraFreeOuTrial = !atual?.plano || atual.plano === 'free' || atual.plano === 'trial'
           await setPlano(userId, planoEscolhido, sub.id)
-          if (atual?.plano === 'trial') {
-            await enviarBoasVindas(userId, planoEscolhido)
+          // Ativa indicação quando o usuário vira pagante (sai de free/trial) e não está mais em trial
+          if (ativo && eraFreeOuTrial) {
             const valorPlano = sub.items.data[0]?.price.unit_amount
             if (valorPlano) {
               await ativarIndicacao(userId, valorPlano / 100, sub.id, planoEscolhido)
