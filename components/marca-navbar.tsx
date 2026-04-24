@@ -52,21 +52,21 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
   return (
     <>
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex flex-col w-64 min-h-screen bg-[#0d0d1a] border-r border-marca-900/30 px-4 py-6 fixed left-0 top-0 z-40">
+      <aside className="hidden md:flex flex-col w-64 h-screen bg-[#0d0d1a] border-r border-marca-900/30 px-4 py-6 fixed left-0 top-0 z-40 overflow-hidden">
         {/* Logo */}
-        <Link href="/marca/dashboard" className="px-2 mb-2">
+        <Link href="/marca/dashboard" className="px-2 mb-2 flex-shrink-0">
           <IaraLogo size="sm" layout="horizontal" />
         </Link>
 
         {/* Badge marca */}
-        <div className="px-2 mb-8">
+        <div className="px-2 mb-6 flex-shrink-0">
           <span className="text-[10px] font-semibold text-[#C9A84C] uppercase tracking-widest">
             Área da Marca
           </span>
         </div>
 
-        {/* Nav items */}
-        <nav className="flex-1 space-y-1">
+        {/* Nav items — scrollável pra não esconder o botão Sair */}
+        <nav className="flex-1 overflow-y-auto space-y-1 no-scrollbar pr-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             const Icon = item.icon
@@ -108,8 +108,8 @@ export function MarcaNavbar({ nomeEmpresa }: { nomeEmpresa?: string }) {
           })}
         </nav>
 
-        {/* Empresa + logout */}
-        <div className="border-t border-marca-900/30 pt-4 mt-4">
+        {/* Empresa + logout — sempre visível (flex-shrink-0) */}
+        <div className="flex-shrink-0 border-t border-marca-900/30 pt-4 mt-4">
           {nomeEmpresa && (
             <p className="px-3 text-xs text-[#5a5a7a] truncate mb-3">{nomeEmpresa}</p>
           )}
