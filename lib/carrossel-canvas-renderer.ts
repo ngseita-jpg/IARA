@@ -256,7 +256,7 @@ function wrapRichText(
       const weight = run.bold ? '700' : '500'
       const style = run.italic ? 'italic' : 'normal'
       const family = run.fontFamily ?? 'Inter'
-      ctx.font = `${style} ${weight} ${fontSize}px ${family}, system-ui, sans-serif`
+      ctx.font = `${style} ${weight} ${fontSize}px "${family}", system-ui, sans-serif`
       const width = ctx.measureText(token).width
 
       if (currentLine.totalWidth + width > maxWidth && currentLine.runs.length > 0 && token.trim()) {
@@ -358,7 +358,7 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer, size: nu
       const weight = run.bold ? '700' : '500'
       const style = run.italic ? 'italic' : 'normal'
       const family = run.fontFamily ?? 'Inter'
-      ctx.font = `${style} ${weight} ${fontSize}px ${family}, system-ui, sans-serif`
+      ctx.font = `${style} ${weight} ${fontSize}px "${family}", system-ui, sans-serif`
       ctx.fillStyle = run.color ?? '#ffffff'
       // letterSpacing via medição manual caractere a caractere (não há API nativa confiável)
       if (run.letterSpacing && run.letterSpacing !== 0) {

@@ -253,7 +253,7 @@ export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
   }
 
   const fonteFamilia = slide.fonte_override === 'oswald' ? 'Oswald'
-                     : slide.fonte_override === 'playfair' ? 'Playfair'
+                     : slide.fonte_override === 'playfair' ? 'Playfair Display'
                      : 'Inter'
 
   return {
@@ -282,7 +282,7 @@ function makeTextLayer(
   fonteOverride?: 'inter' | 'oswald' | 'playfair',
 ): TextLayer {
   const fontFamily = fonteOverride === 'oswald' ? 'Oswald'
-                   : fonteOverride === 'playfair' ? 'Playfair'
+                   : fonteOverride === 'playfair' ? 'Playfair Display'
                    : 'Inter'
   const corFinal = corOverride || preset.color
 

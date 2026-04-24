@@ -24,6 +24,10 @@ import {
 import {
   preloadImages, renderSlide2, canvasToBlob, type ImageCache, CANVAS_SIZE,
 } from '@/lib/carrossel-canvas-renderer'
+import {
+  FONTES as CATALOGO_FONTES, CATEGORIAS, buildGoogleFontsUrl, ensureFontsLoaded,
+  cssFamilyFor, type CategoriaFonte,
+} from '@/lib/carrossel-fontes'
 
 // ─── Paleta 50 cores (compartilhada) ─────────────────────────────────────
 const CORES_50 = [
@@ -38,11 +42,8 @@ const CORES_50 = [
   '#f87171', '#fdba74',
 ]
 
-const FONTES = [
-  { id: 'Inter',    label: 'Moderna',   cssFamily: 'Inter, sans-serif' },
-  { id: 'Oswald',   label: 'Impacto',   cssFamily: 'Oswald, sans-serif' },
-  { id: 'Playfair', label: 'Editorial', cssFamily: '"Playfair Display", serif' },
-] as const
+// URL única do Google Fonts que carrega todo o catálogo em 1 request
+const GOOGLE_FONTS_URL = buildGoogleFontsUrl()
 
 type Props = {
   slides: Slide2[]
@@ -283,10 +284,25 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   }
 
   // ─── Export ─────────────────────────────────────────────────────
+  /** Lista todas as fontes usadas nos slides pra pré-carregar antes de exportar */
+  function collectFontsInUse(): string[] {
+    const usadas = new Set<string>()
+    for (const s of slides) {
+      if (s.fonte_familia) usadas.add(s.fonte_familia)
+      for (const l of s.layers) {
+        if (l.type === 'text') {
+          for (const run of l.runs) if (run.fontFamily) usadas.add(run.fontFamily)
+        }
+      }
+    }
+    return Array.from(usadas)
+  }
+
   async function exportarTodosPng() {
     if (!imageCache) return
     setExportando(true)
     try {
+      await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
       hidden.width = CANVAS_SIZE
       hidden.height = CANVAS_SIZE
@@ -312,6 +328,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (!imageCache) return
     setExportando(true)
     try {
+      await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
       hidden.width = CANVAS_SIZE
       hidden.height = CANVAS_SIZE
@@ -343,12 +360,13 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
 
   return (
     <div className="fixed inset-0 z-50 bg-[#050510] flex flex-col">
-      {/* Fonts */}
+      {/* Todas as fontes do catálogo em um único stylesheet Google Fonts */}
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Oswald:wght@500;700&family=Playfair+Display:wght@500;700;900&display=swap"
-      />
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link rel="stylesheet" href={GOOGLE_FONTS_URL} />
 
       {/* Topbar */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-[#1a1a2e] bg-[#0a0a14]">
@@ -559,9 +577,7 @@ function CanvasStage({
       style={{
         width: displaySize, height: displaySize,
         ...bgStyle,
-        fontFamily: slide.fonte_familia === 'Oswald' ? 'Oswald, sans-serif'
-                  : slide.fonte_familia === 'Playfair' ? '"Playfair Display", serif'
-                  : 'Inter, sans-serif',
+        fontFamily: cssFamilyFor(slide.fonte_familia ?? 'Inter'),
       }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -742,7 +758,7 @@ function RichTextView({ runs, displaySize }: { runs: Run[]; displaySize: number 
           style={{
             color: run.color,
             fontSize: run.fontSize ? run.fontSize * scale : undefined,
-            fontFamily: run.fontFamily ? run.fontFamily : undefined,
+            fontFamily: run.fontFamily ? cssFamilyFor(run.fontFamily) : undefined,
             fontWeight: run.bold ? 700 : 500,
             fontStyle: run.italic ? 'italic' : undefined,
             textDecoration: run.underline ? 'underline' : undefined,
@@ -773,7 +789,7 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
       const style: string[] = []
       if (run.color) style.push(`color:${run.color}`)
       if (run.fontSize) style.push(`font-size:${run.fontSize * scale}px`)
-      if (run.fontFamily) style.push(`font-family:${run.fontFamily}`)
+      if (run.fontFamily) style.push(`font-family:${cssFamilyFor(run.fontFamily)}`)
       if (run.bold) style.push(`font-weight:700`)
       if (run.italic) style.push(`font-style:italic`)
       if (run.underline) style.push(`text-decoration:underline`)
@@ -1160,25 +1176,11 @@ function TextInspector({ layer, onUpdate, onDelete, onDuplicate, onMoveZ, compac
         className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-lg p-2 text-xs text-[#f1f1f8] resize-none focus:outline-none focus:border-iara-500"
       />
 
-      {/* Fonte */}
-      <div>
-        <p className="text-[10px] text-[#6b6b8a] mb-1.5">Fonte</p>
-        <div className="grid grid-cols-3 gap-1">
-          {FONTES.map(f => {
-            const ativo = (r.fontFamily ?? 'Inter') === f.id
-            return (
-              <button key={f.id} onClick={() => atualizaRuns({ fontFamily: f.id })}
-                className={`py-1.5 rounded-md border text-[10px] transition-all ${
-                  ativo ? 'border-iara-500 bg-iara-600/20 text-iara-200' : 'border-[#1a1a2e] bg-[#0d0d1a] text-[#9b9bb5]'
-                }`}
-                style={{ fontFamily: f.cssFamily }}
-              >
-                {f.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      {/* Fonte — picker com ~35 opções categorizadas */}
+      <FontPicker
+        value={r.fontFamily ?? 'Inter'}
+        onChange={(id) => atualizaRuns({ fontFamily: id })}
+      />
 
       {/* Tamanho + peso + itálico + underline */}
       <div className="flex items-center gap-2">
@@ -1370,6 +1372,92 @@ function PhotoInspector({ layer, onUpdate, onDelete, onDuplicate, onMoveZ, image
         />
         Sombra
       </label>
+    </div>
+  )
+}
+
+// ─── FontPicker ─────────────────────────────────────────────────────
+// Picker categorizado com search + preview visual de cada fonte.
+// Fica expandido num dropdown (posicionamento natural no inspector).
+
+function FontPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [busca, setBusca] = useState('')
+  const [categoria, setCategoria] = useState<CategoriaFonte | 'all'>('all')
+  const atual = CATALOGO_FONTES.find(f => f.id === value) ?? CATALOGO_FONTES[0]
+
+  const filtradas = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    return CATALOGO_FONTES.filter(f => {
+      if (categoria !== 'all' && f.categoria !== categoria) return false
+      if (!q) return true
+      return f.label.toLowerCase().includes(q) || f.categoria.includes(q)
+    })
+  }, [busca, categoria])
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[10px] text-[#6b6b8a]">Fonte</p>
+        <span className="text-[9px] text-[#5a5a7a]" style={{ fontFamily: atual.cssFamily }}>
+          {atual.label} · {CATEGORIAS[atual.categoria]}
+        </span>
+      </div>
+
+      {/* Filtros por categoria */}
+      <div className="flex gap-1 mb-2 overflow-x-auto no-scrollbar">
+        {(['all', ...Object.keys(CATEGORIAS)] as Array<CategoriaFonte | 'all'>).map(cat => (
+          <button
+            key={cat}
+            onClick={() => setCategoria(cat)}
+            className={`shrink-0 px-2 py-1 rounded-md text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap transition-all ${
+              categoria === cat
+                ? 'bg-iara-600/30 text-iara-200'
+                : 'bg-[#0d0d1a] text-[#6b6b8a] border border-[#1a1a2e] hover:text-[#9b9bb5]'
+            }`}
+          >
+            {cat === 'all' ? 'Todas' : CATEGORIAS[cat as CategoriaFonte]}
+          </button>
+        ))}
+      </div>
+
+      {/* Busca */}
+      <input
+        type="text"
+        value={busca}
+        onChange={e => setBusca(e.target.value)}
+        placeholder="Buscar fonte..."
+        className="w-full mb-2 px-2 py-1.5 rounded-md bg-[#08080f] border border-[#1a1a2e] text-[11px] text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
+      />
+
+      {/* Lista */}
+      <div className="grid grid-cols-2 gap-1 max-h-60 overflow-y-auto pr-1">
+        {filtradas.map(f => {
+          const ativo = value === f.id
+          return (
+            <button
+              key={f.id}
+              onClick={() => onChange(f.id)}
+              className={`text-left p-2 rounded-md border transition-all ${
+                ativo ? 'border-iara-500 bg-iara-600/20' : 'border-[#1a1a2e] bg-[#0d0d1a] hover:border-iara-700/40'
+              }`}
+              title={`${f.label} — ${f.dica ?? f.categoria}`}
+            >
+              <div
+                className="text-[13px] font-bold truncate"
+                style={{ fontFamily: f.cssFamily, color: ativo ? '#fff' : '#f1f1f8' }}
+              >
+                {f.label}
+              </div>
+              <div className="text-[9px] text-[#5a5a7a] uppercase tracking-wider">
+                {f.dica ?? CATEGORIAS[f.categoria]}
+              </div>
+            </button>
+          )
+        })}
+        {filtradas.length === 0 && (
+          <p className="col-span-2 text-xs text-[#5a5a7a] text-center py-4">Nenhuma fonte com &ldquo;{busca}&rdquo;</p>
+        )}
+      </div>
     </div>
   )
 }

@@ -17,7 +17,8 @@ export type Slide2 = {
   background: Background
   overlay?: Overlay
   layers: Layer[]
-  fonte_familia?: 'Inter' | 'Oswald' | 'Playfair'
+  /** Fonte global do slide (fallback para quando a layer não especifica a própria) */
+  fonte_familia?: string
   paleta?: { primaria: string; secundaria: string; texto: string }
 }
 
@@ -52,7 +53,12 @@ export type Run = {
   italic?: boolean
   color?: string
   fontSize?: number        // px no sistema 1080 (será escalado)
-  fontFamily?: 'Inter' | 'Oswald' | 'Playfair'
+  /**
+   * Família da fonte. Qualquer id do catálogo em lib/carrossel-fontes.ts.
+   * Ex: 'Inter', 'Playfair Display', 'Oswald', 'Bebas Neue'…
+   * Mantemos string pra aceitar qualquer fonte futura sem alterar o tipo.
+   */
+  fontFamily?: string
   letterSpacing?: number
   underline?: boolean
 }
