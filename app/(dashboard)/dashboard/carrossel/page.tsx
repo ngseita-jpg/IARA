@@ -37,6 +37,9 @@ import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 import { CarrosselEditorSlide } from '@/components/carrossel-editor-slide'
+import { CarrosselCanvasEditor } from '@/components/carrossel-canvas-editor'
+import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'
+import type { Slide2 } from '@/lib/carrossel-canvas-types'
 
 function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
   return new Promise((resolve) => {
@@ -124,6 +127,10 @@ export default function CarrosselPage() {
 
   // Edição manual de slide
   const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
+
+  // Editor Canvas (beta) — Entrega 2
+  const [canvasEditorAberto, setCanvasEditorAberto] = useState(false)
+  const [slidesCanvas, setSlidesCanvas] = useState<Slide2[] | null>(null)
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -1298,6 +1305,22 @@ export default function CarrosselPage() {
                       </button>
                     )}
                     <button
+                      onClick={() => {
+                        if (!carrossel) return
+                        const s2 = carrosselParaSlide2(carrossel.slides)
+                        setSlidesCanvas(s2)
+                        setCanvasEditorAberto(true)
+                      }}
+                      disabled={!carrossel}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-iara-600 via-accent-purple to-accent-pink hover:opacity-90 disabled:opacity-40 text-white text-sm font-semibold transition-all whitespace-nowrap shadow-lg relative"
+                    >
+                      <Wand2 className="w-4 h-4" />
+                      Editor Canvas
+                      <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-[#E2C068] text-[#0a0a14] tracking-wider">
+                        BETA
+                      </span>
+                    </button>
+                    <button
                       onClick={exportarParaInstagram}
                       disabled={exportandoZip || Object.values(slidePngs).filter(p => !p.startsWith('ERROR:')).length === 0}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-sm font-medium transition-all whitespace-nowrap shadow-lg"
@@ -1491,7 +1514,7 @@ export default function CarrosselPage() {
         )}
       </div>
 
-      {/* ── Editor expandido ── */}
+      {/* ── Editor expandido (legacy, modal) ── */}
       {slideEditando && (
         <CarrosselEditorSlide
           slide={slideEditando}
@@ -1499,6 +1522,17 @@ export default function CarrosselPage() {
           onFechar={() => setSlideEditando(null)}
           onAplicar={handleAplicarEdicao}
           temFoto={imagens.length > 0}
+        />
+      )}
+
+      {/* ── Editor Canvas (beta) — fullscreen tipo Canva ── */}
+      {canvasEditorAberto && slidesCanvas && (
+        <CarrosselCanvasEditor
+          slides={slidesCanvas}
+          imagensBase64={imagens}
+          onFechar={() => setCanvasEditorAberto(false)}
+          onSalvar={(nv) => setSlidesCanvas(nv)}
+          watermark={showWatermark}
         />
       )}
 
