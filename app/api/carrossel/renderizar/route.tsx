@@ -61,9 +61,25 @@ function prepImg(raw: string | undefined): string | undefined {
 }
 
 function clamp(n: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, n)) }
+
+/**
+ * Trunca texto com margem generosa — o renderer usa flexbox com word-wrap,
+ * então dá pra acomodar bem mais texto do que o limite histórico sugeria.
+ * O fator 1.6 foi calibrado pra recuperar frases completas sem quebrar o layout
+ * dos arquétipos mais apertados.
+ *
+ * Se o texto for inteiro, não corta. Só corta quando realmente passa do teto —
+ * e nesse caso faz corte em fim de palavra + reticências quando cabe.
+ */
 function trunc(s: string | undefined, max: number) {
-  const str = s ?? ''
-  return str.length > max ? str.slice(0, max) + '…' : str
+  const str = (s ?? '').trim()
+  const teto = Math.ceil(max * 1.6)
+  if (str.length <= teto) return str
+  // corta em fim de palavra mais próxima
+  const cortado = str.slice(0, teto)
+  const ultEspaco = cortado.lastIndexOf(' ')
+  const base = ultEspaco > teto * 0.7 ? cortado.slice(0, ultEspaco) : cortado
+  return base + '…'
 }
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -129,9 +145,34 @@ function fotoObjectPosition(foco?: string): string {
   }
 }
 
-function Photo({ src, foco }: { src: string; foco?: string }) {
+/** Resolve a posição final da foto — override manual tem prioridade */
+function resolvePhotoPosition(slide: Slide): string {
+  if (slide.foto_object_position) return slide.foto_object_position
+  return fotoObjectPosition(slide.foto_foco)
+}
+
+/** Cor de texto com override do editor */
+function colorOf(slide: Slide, fallback: string): string {
+  const c = slide.cor_texto_override
+  return c && /^#([0-9a-fA-F]{3,8})$/.test(c) ? c : fallback
+}
+
+/** Alinhamento horizontal com override do editor */
+function alignOf(slide: Slide, fallback: 'left' | 'center' | 'right' = 'left'): 'left' | 'center' | 'right' {
+  if (slide.alinhamento && ['left','center','right'].includes(slide.alinhamento)) return slide.alinhamento
+  return fallback
+}
+
+function Photo({ src, foco, slide }: { src: string; foco?: string; slide?: Slide }) {
+  const position = slide ? resolvePhotoPosition(slide) : fotoObjectPosition(foco)
+  const zoom = slide?.foto_zoom && slide.foto_zoom > 1 ? slide.foto_zoom : 1
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: fotoObjectPosition(foco) }} />
+  return <img src={src} alt="" style={{
+    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+    objectFit: 'cover', objectPosition: position,
+    transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+    transformOrigin: 'center',
+  }} />
 }
 
 // ─── Archetype 1: cover_full ──────────────────────────────────────────────────
@@ -142,7 +183,7 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Background */}
       {imgSrc
-        ? <Photo src={imgSrc} foco={slide.foto_foco} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim base — apenas atrás do texto */}
@@ -157,8 +198,8 @@ function renderCoverFull(slide: Slide, imgSrc: string | undefined, total: number
       </div>
 
       {/* Título */}
-      <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116 }}>
-        <div style={{ fontSize: fs, fontWeight: 800, color: TEXT, lineHeight: 1.05, letterSpacing: -1.5 }}>
+      <div style={{ position: 'absolute', left: EDGE, right: EDGE, bottom: 116, display: 'flex' }}>
+        <div style={{ width: '100%', fontSize: fs, fontWeight: 800, color: colorOf(slide, TEXT), lineHeight: 1.05, letterSpacing: -1.5, textAlign: alignOf(slide, 'left') }}>
           {text}
         </div>
       </div>
@@ -192,13 +233,13 @@ function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
           {trunc(slide.eyebrow || `${String(clamp(slide.ordem - 1, 1, 99)).padStart(2, '0')} · conteúdo`, 40)}
         </span>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, textAlign: alignOf(slide, 'left') }}>
           {titulo && (
-            <div style={{ fontSize: fs, fontWeight: 800, color: TEXT, lineHeight: 1.05, letterSpacing: -1 }}>
+            <div style={{ fontSize: fs, fontWeight: 800, color: colorOf(slide, TEXT), lineHeight: 1.05, letterSpacing: -1 }}>
               {titulo}
             </div>
           )}
-          <div style={{ fontSize: 24, fontWeight: 400, color: TEXT_DIM, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 24, fontWeight: 400, color: colorOf(slide, TEXT_DIM), lineHeight: 1.5 }}>
             {corpo}
           </div>
         </div>
@@ -212,7 +253,7 @@ function renderSplitV(slide: Slide, imgSrc: string | undefined, total: number) {
       {/* Coluna direita — foto ou gradiente */}
       <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.35) 100%)', display: 'flex' }} />
         }
         <div style={{ position: 'absolute', top: 0, left: 0, width: 4, bottom: 0, backgroundImage: GRAD_H, display: 'flex' }} />
@@ -231,7 +272,7 @@ function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) 
       {/* Metade inferior — foto ou gradiente */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 520, bottom: 0, display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, #1a1a2e 0%, rgba(168,85,247,0.40) 100%)', display: 'flex' }} />
         }
         {/* Fade topo para bg */}
@@ -245,15 +286,19 @@ function renderTopText(slide: Slide, imgSrc: string | undefined, total: number) 
 
       {/* Título */}
       {titulo && (
-        <div style={{ position: 'absolute', left: EDGE, right: EDGE, top: 148, fontSize: fs, fontWeight: 800, color: TEXT, lineHeight: 1.05, letterSpacing: -1.5 }}>
-          {titulo}
+        <div style={{ position: 'absolute', left: EDGE, right: EDGE, top: 148, display: 'flex' }}>
+          <div style={{ width: '100%', fontSize: fs, fontWeight: 800, color: colorOf(slide, TEXT), lineHeight: 1.05, letterSpacing: -1.5, textAlign: alignOf(slide, 'left') }}>
+            {titulo}
+          </div>
         </div>
       )}
 
       {/* Corpo */}
       {corpo && (
-        <div style={{ position: 'absolute', left: EDGE, right: 280, top: 420, fontSize: 26, fontWeight: 400, color: TEXT_DIM, lineHeight: 1.45 }}>
-          {corpo}
+        <div style={{ position: 'absolute', left: EDGE, right: 280, top: 420, display: 'flex' }}>
+          <div style={{ width: '100%', fontSize: 26, fontWeight: 400, color: colorOf(slide, TEXT_DIM), lineHeight: 1.45, textAlign: alignOf(slide, 'left') }}>
+            {corpo}
+          </div>
         </div>
       )}
 
@@ -273,7 +318,7 @@ function renderFullBleed(slide: Slide, imgSrc: string | undefined, total: number
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Background */}
       {imgSrc
-        ? <Photo src={imgSrc} foco={slide.foto_foco} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
       }
       {/* Scrim base para texto */}
@@ -316,7 +361,7 @@ function renderQuote(slide: Slide, imgSrc: string | undefined, total: number) {
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
       {/* Background */}
       {imgSrc
-        ? <Photo src={imgSrc} foco={slide.foto_foco} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }} />
       }
       {/* Overlay escuro */}
@@ -359,7 +404,7 @@ function renderClosing(slide: Slide, total: number, imgSrc?: string) {
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: BG, display: 'flex' }}>
       {/* Foto de fundo se disponível */}
-      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
+      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />}
       {/* Overlay leve sobre foto */}
       {imgSrc
         ? <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(8,8,15,0.55)', display: 'flex' }} />
@@ -414,7 +459,7 @@ function renderBrandCover(slide: Slide, imgSrc: string | undefined, total: numbe
   const fs   = text.length > 30 ? 88 : 112
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: CARD, display: 'flex' }}>
-      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} />}
+      {imgSrc && <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />}
       {imgSrc && (
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(180deg, rgba(19,19,31,0.55) 0%, rgba(19,19,31,0) 35%, rgba(19,19,31,0) 55%, rgba(19,19,31,0.65) 100%)', display: 'flex' }} />
       )}
@@ -452,7 +497,7 @@ function renderBrandStory(slide: Slide, imgSrc: string | undefined, total: numbe
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
       {imgSrc
-        ? <Photo src={imgSrc} foco={slide.foto_foco} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.30) 100%)', display: 'flex' }} />
       }
       {/* Scrim esquerdo */}
@@ -604,7 +649,7 @@ function renderEditorial(slide: Slide, imgSrc: string | undefined, total: number
       {/* Foto direita */}
       <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #e8e4dc 0%, #c8c4bc 100%)', display: 'flex' }} />
         }
         {/* Linha de acento no topo */}
@@ -641,7 +686,7 @@ function renderCinematic(slide: Slide, imgSrc: string | undefined, total: number
       {/* Faixa central — foto */}
       <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.5) 100%)', display: 'flex' }} />
         }
         {/* Vinheta nas bordas horizontais */}
@@ -683,7 +728,7 @@ function renderCaptionBar(slide: Slide, imgSrc: string | undefined, total: numbe
       {/* Zona de foto — topo */}
       <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
         }
         {/* Eyebrow no topo da foto */}
@@ -748,7 +793,7 @@ function renderInsetPhoto(slide: Slide, imgSrc: string | undefined, total: numbe
       {/* Foto emoldurada */}
       <div style={{ height: PHOTO_H, position: 'relative', display: 'flex', overflow: 'hidden', borderRadius: 16, flexShrink: 0 }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
         }
         {/* Overlay sutil */}
@@ -782,7 +827,7 @@ function renderWarmOverlay(slide: Slide, imgSrc: string | undefined, total: numb
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', backgroundColor: '#1a0e05' }}>
       {imgSrc
-        ? <Photo src={imgSrc} foco={slide.foto_foco} />
+        ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
         : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: 'linear-gradient(135deg, #3d1a05 0%, #7c3a12 100%)', display: 'flex' }} />
       }
       {/* Scrim base — apenas atrás do texto */}
@@ -833,7 +878,7 @@ function renderBoldType(slide: Slide, imgSrc: string | undefined, total: number)
       {/* Foto com opacidade reduzida — apenas textura */}
       {imgSrc && (
         <>
-          <Photo src={imgSrc} foco={slide.foto_foco} />
+          <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex' }} />
         </>
       )}
@@ -892,7 +937,7 @@ function renderSideRight(slide: Slide, imgSrc: string | undefined, total: number
       {/* Foto à esquerda */}
       <div style={{ width: PHOTO_W, position: 'relative', display: 'flex', overflow: 'hidden', flexShrink: 0 }}>
         {imgSrc
-          ? <Photo src={imgSrc} foco={slide.foto_foco} />
+          ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           : <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: GRAD_D, display: 'flex' }} />
         }
         {/* Fade direita */}
@@ -947,7 +992,7 @@ function renderNeonCard(slide: Slide, imgSrc: string | undefined, total: number)
       {/* Foto de fundo com overlay forte */}
       {imgSrc && (
         <>
-          <Photo src={imgSrc} foco={slide.foto_foco} />
+          <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} />
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(2,2,9,0.55)', display: 'flex' }} />
         </>
       )}
@@ -1045,7 +1090,7 @@ function renderPhotoTopFull(slide: Slide, imgSrc: string | undefined, total: num
   return (
     <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', flexDirection:'column', backgroundColor:BG }}>
       <div style={{ flex:1, position:'relative', display:'flex', overflow:'hidden' }}>
-        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
         <div style={{ position:'absolute', bottom:0, left:0, right:0, height:60, backgroundImage:`linear-gradient(0deg, ${BG} 0%, rgba(8,8,15,0) 100%)`, display:'flex' }} />
         <div style={{ position:'absolute', top:28, right:32, paddingTop:8, paddingBottom:8, paddingLeft:16, paddingRight:16, backgroundColor:'rgba(0,0,0,0.40)', borderRadius:999, display:'flex', alignItems:'center', gap:8 }}>
           <IaraStar size={12} />
@@ -1104,7 +1149,7 @@ function renderDarkSplit(slide: Slide, imgSrc: string | undefined, total: number
   return (
     <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', backgroundColor:BG }}>
       <div style={{ width:540, position:'relative', display:'flex', overflow:'hidden', flexShrink:0 }}>
-        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
         <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(90deg, rgba(8,8,15,0) 50%, rgba(8,8,15,0.85) 100%)', display:'flex' }} />
         <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, backgroundImage:GRAD_H, display:'flex' }} />
       </div>
@@ -1153,7 +1198,7 @@ function renderMagazineFull(slide: Slide, imgSrc: string | undefined, total: num
   const fs = titulo.length > 28 ? 52 : titulo.length > 18 ? 64 : 78
   return (
     <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, display:'flex', backgroundColor:BG }}>
-      {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+      {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
       <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(180deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.55) 100%)', display:'flex' }} />
       <div style={{ position:'absolute', left:EDGE, right:EDGE, bottom:100, backgroundColor:'rgba(8,8,15,0.72)', borderRadius:20, paddingTop:40, paddingBottom:40, paddingLeft:52, paddingRight:52, border:'1px solid rgba(255,255,255,0.08)', display:'flex', flexDirection:'column', gap:16 }}>
         {slide.eyebrow && <span style={{ fontSize:12, color:VIOLET, fontWeight:700, letterSpacing:2 }}>{trunc(slide.eyebrow,40).toUpperCase()}</span>}
@@ -1187,7 +1232,7 @@ function renderStoryArc(slide: Slide, imgSrc: string | undefined, total: number)
         <Dots total={total} active={slide.ordem-1} />
       </div>
       <div style={{ flex:1, position:'relative', display:'flex', overflow:'hidden' }}>
-        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.35) 100%)', display:'flex' }} />}
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #1a1a2e 0%, rgba(99,102,241,0.35) 100%)', display:'flex' }} />}
         <div style={{ position:'absolute', top:0, left:0, width:80, bottom:0, backgroundImage:`linear-gradient(90deg, ${BG} 0%, rgba(8,8,15,0) 100%)`, display:'flex' }} />
         <div style={{ position:'absolute', top:0, left:0, right:0, height:4, backgroundImage:GRAD_H, display:'flex' }} />
       </div>
@@ -1230,7 +1275,7 @@ function renderPhotoFrame(slide: Slide, imgSrc: string | undefined, total: numbe
       <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'radial-gradient(circle at 30% 70%, rgba(200,190,180,0.5) 0%, transparent 60%)', display:'flex' }} />
       <div style={{ width:860, height:970, backgroundColor:'#ffffff', borderRadius:4, boxShadow:'0 8px 60px rgba(0,0,0,0.18)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
         <div style={{ flex:1, position:'relative', margin:FRAME, marginBottom:0, display:'flex', overflow:'hidden' }}>
-          {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #e8e0d8 0%, #d0c8c0 100%)', display:'flex' }} />}
+          {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:'linear-gradient(135deg, #e8e0d8 0%, #d0c8c0 100%)', display:'flex' }} />}
         </div>
         <div style={{ height:CAP+FRAME, paddingLeft:FRAME+12, paddingRight:FRAME+12, paddingTop:20, paddingBottom:16, display:'flex', flexDirection:'column', gap:6, backgroundColor:'#ffffff' }}>
           {titulo && <div style={{ fontSize:22, fontWeight:700, color:'#1a1a1a', lineHeight:1.2, letterSpacing:-0.5 }}>{titulo}</div>}
@@ -1294,7 +1339,7 @@ function renderDuoPanel(slide: Slide, imgSrc: string | undefined, total: number)
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}><IaraStar size={16} /><Dots total={total} active={slide.ordem-1} /></div>
       </div>
       <div style={{ width:480, position:'relative', display:'flex', overflow:'hidden', flexShrink:0 }}>
-        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
+        {imgSrc ? <Photo src={imgSrc} foco={slide.foto_foco} slide={slide} /> : <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, backgroundImage:GRAD_D, display:'flex' }} />}
         <div style={{ position:'absolute', top:0, right:0, bottom:0, width:4, backgroundImage:GRAD_H, display:'flex' }} />
         <div style={{ position:'absolute', top:0, left:0, width:60, bottom:0, backgroundImage:`linear-gradient(90deg, ${CARD} 0%, rgba(19,19,31,0) 100%)`, display:'flex' }} />
       </div>
@@ -1361,7 +1406,10 @@ export async function POST(req: NextRequest) {
     const show_wm: boolean = body.show_watermark === true
     const modo: string = body.modo || 'criador'
 
-    const fonte = (body.fonte as string | undefined) || 'inter'
+    // Fonte: override do slide > fonte global > inter
+    const fonteSlide = (slide.fonte_override as string | undefined)
+    const fonteGlobal = (body.fonte as string | undefined) || 'inter'
+    const fonte = fonteSlide || fonteGlobal
     const fontData = await loadFont(req.url, fonte)
     const fontFamilyName = fonte === 'oswald' ? 'Oswald' : fonte === 'playfair' ? 'Playfair' : 'Inter'
     const fonts = fontData
@@ -1406,8 +1454,11 @@ export async function POST(req: NextRequest) {
       default:                content = renderFallback(slide, total)
     }
 
+    const bgOverride = slide.cor_fundo_override
+    const rootBg = bgOverride && /^#([0-9a-fA-F]{3,8})$/.test(bgOverride) ? bgOverride : BG
+
     const root = (c: React.ReactElement) => (
-      <div style={{ width: 1080, height: 1080, position: 'relative', backgroundColor: BG, display: 'flex', fontFamily: 'Inter', overflow: 'hidden' }}>
+      <div style={{ width: 1080, height: 1080, position: 'relative', backgroundColor: rootBg, display: 'flex', fontFamily: fontFamilyName, overflow: 'hidden' }}>
         {c}
         {show_wm && <Watermark />}
       </div>

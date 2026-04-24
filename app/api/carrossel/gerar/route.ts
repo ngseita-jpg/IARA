@@ -25,6 +25,14 @@ export type Slide = {
   // Dados da análise visual — usados pelo renderer para object-position e fallback de arquétipo
   foto_foco?: 'topo' | 'centro' | 'base' | 'esquerda' | 'direita' | 'distribuido'
   foto_tem_rosto?: boolean
+
+  // Overrides do editor manual — sobrescrevem o estilo automático do arquétipo
+  fonte_override?: 'inter' | 'oswald' | 'playfair'
+  cor_texto_override?: string          // hex
+  cor_fundo_override?: string          // hex — pinta o fundo em arquétipos text-only ou overlay
+  alinhamento?: 'left' | 'center' | 'right'
+  foto_object_position?: string        // CSS object-position (ex: 'center top', '50% 30%')
+  foto_zoom?: number                   // 1 = normal, >1 = zoom in
 }
 
 export type CarrosselData = {
@@ -217,12 +225,23 @@ export async function POST(req: NextRequest) {
   const analiseCtx = (() => {
     if (!num_imagens) return '\n\nNenhuma imagem foi fornecida — use layouts com fundo de cor sólida. Não defina imagem_index em nenhum slide.'
 
+    // Slots disponíveis pra fotos = slides de conteúdo + capa, excluindo encerramento
+    const slotsParaFotos = incluir_encerramento ? num_slides - 1 : num_slides
+    const todasFotosCabem = num_imagens <= slotsParaFotos
+
     const regrasBase = `\n\n## Imagens disponíveis: ${num_imagens} foto(s) (índices 0 a ${num_imagens - 1})
 
-REGRA CRÍTICA: Cada imagem DEVE ser usada em pelo menos um slide. Com ${num_slides} slides e ${num_imagens} imagens, distribua de forma que nenhuma foto fique de fora.`
+REGRA CRÍTICA #1 — NENHUMA foto pode ficar de fora. Você tem ${num_imagens} fotos e ${slotsParaFotos} slots disponíveis (todos os slides exceto o encerramento). ${todasFotosCabem ? `TODAS as ${num_imagens} fotos DEVEM aparecer.` : `Use as ${slotsParaFotos} melhores fotos.`}
+
+REGRA CRÍTICA #2 — Arquétipos PROIBIDOS porque NÃO mostram foto:
+- quote, closing (esses ignoram a foto mesmo com imagem_index)
+- minimal_text, gradient_text, list_card, highlight_box, dark_card_center, color_block, step_card, neon_card
+Você NÃO pode usar esses arquétipos em NENHUM slide que tenha imagem_index — se o slide vai exibir foto, escolha SÓ entre: cover_full, split_v, top_text, full_bleed, editorial, cinematic, caption_bar, inset_photo, warm_overlay, bold_type, side_right, photo_top_full, dark_split, magazine_full, story_arc, photo_frame, duo_panel${modo === 'marca' ? ', brand_cover, brand_story' : ''}.
+
+REGRA CRÍTICA #3 — Capa (slide 1) SEMPRE usa imagem_index=0 com arquétipo que mostra foto (cover_full, split_v, full_bleed ou ${modo === 'marca' ? 'brand_cover' : 'editorial'}).`
 
     if (!analise_imagens?.length) {
-      return regrasBase + '\nDistribua os imagem_index de forma variada. Preste atenção no arquétipo escolhido para não cobrir rostos com texto.'
+      return regrasBase + '\n\nDistribua os imagem_index de 0 a ' + (num_imagens - 1) + ' em ordem crescente pelos slides de conteúdo. Mantenha variedade de arquétipos — nunca repita dois seguidos.'
     }
 
     const detalhes = analise_imagens.map(a =>
@@ -230,7 +249,7 @@ REGRA CRÍTICA: Cada imagem DEVE ser usada em pelo menos um slide. Com ${num_sli
     ).join('\n')
 
     return `${regrasBase}\n\n### Análise visual de cada foto:\n${detalhes}\n\nUse a análise visual para:
-1. Escolher o arquétipo certo para cada foto (respeite EVITAR)
+1. Escolher o arquétipo certo para cada foto (respeite EVITAR — e respeite também a REGRA CRÍTICA #2 acima)
 2. Escrever o copy alinhado com o mood e contexto da foto
 3. Garantir que rostos fiquem visíveis e não cobertos por texto`
   })()
@@ -326,30 +345,65 @@ Regras:
       return NextResponse.json({ error: 'A IA não gerou slides. Tente novamente.' }, { status: 500 })
     }
 
-    // Post-processamento: garantir que todas as imagens sejam usadas
+    // ═══════════════════════════════════════════════════════════════════════
+    // Post-processamento AGRESSIVO: garantir que TODAS as fotos apareçam
+    // ═══════════════════════════════════════════════════════════════════════
     if (num_imagens > 0) {
-      const usados = new Set(
-        carrossel.slides
-          .filter(s => s.imagem_index !== undefined)
-          .map(s => s.imagem_index!)
-      )
+      // Arquétipos que NÃO renderizam foto mesmo com imagem_index definido.
+      // Se a IA colocou um desses num slide que deveria ter foto, convertemos pra um visual.
+      const ARCHS_SEM_FOTO = new Set([
+        'quote', 'closing', 'minimal_text', 'gradient_text', 'list_card',
+        'highlight_box', 'dark_card_center', 'color_block', 'step_card', 'neon_card',
+      ])
+      // Arquétipos visuais de fallback por tipo de slide
+      const FALLBACK_VISUAIS = modo === 'marca'
+        ? ['brand_story', 'split_v', 'editorial', 'caption_bar', 'inset_photo', 'side_right']
+        : ['split_v', 'editorial', 'caption_bar', 'inset_photo', 'cinematic', 'side_right', 'full_bleed', 'photo_top_full']
 
-      const faltando = Array.from({ length: num_imagens }, (_, i) => i).filter(i => !usados.has(i))
+      // Slots válidos pra foto = slides de conteúdo + capa (exceto encerramento)
+      const slotsFoto = carrossel.slides.filter(s => s.tipo !== 'encerramento')
 
-      if (faltando.length > 0) {
-        // Candidatos: slides que reutilizam índice OU têm quote no meio do carrossel
-        const candidatos = carrossel.slides.filter(s =>
-          s.tipo !== 'encerramento' &&
-          (s.arquetipo === 'quote' ||
-            (s.imagem_index !== undefined &&
-              carrossel.slides.filter(s2 => s2.imagem_index === s.imagem_index).length > 1))
-        )
-
-        for (let i = 0; i < faltando.length && i < candidatos.length; i++) {
-          const slide = candidatos[i]
-          slide.imagem_index = faltando[i]
-          if (slide.arquetipo === 'quote') slide.arquetipo = 'full_bleed'
+      // Passo 1: força todo slide não-encerramento a ter um imagem_index válido
+      slotsFoto.forEach((slide, i) => {
+        if (slide.imagem_index === undefined || slide.imagem_index < 0 || slide.imagem_index >= num_imagens) {
+          slide.imagem_index = i % num_imagens
         }
+      })
+
+      // Passo 2: converte arquétipos text-only em visuais quando há foto atribuída
+      let fallbackIdx = 0
+      slotsFoto.forEach(slide => {
+        if (slide.imagem_index !== undefined && slide.arquetipo && ARCHS_SEM_FOTO.has(slide.arquetipo)) {
+          slide.arquetipo = FALLBACK_VISUAIS[fallbackIdx % FALLBACK_VISUAIS.length]
+          fallbackIdx++
+        }
+      })
+
+      // Passo 3: REDISTRIBUIÇÃO — garantir que cada foto (0..num_imagens-1)
+      // apareça em pelo menos UM slot. Se a IA repetiu a mesma foto em vários slots
+      // e deixou outras fora, reatribuímos.
+      const usosPorFoto = new Map<number, number[]>()           // fotoIdx -> [slotsIdx]
+      slotsFoto.forEach((s, slotIdx) => {
+        const idx = s.imagem_index
+        if (idx === undefined) return
+        if (!usosPorFoto.has(idx)) usosPorFoto.set(idx, [])
+        usosPorFoto.get(idx)!.push(slotIdx)
+      })
+
+      const fotosFaltando: number[] = []
+      for (let i = 0; i < num_imagens; i++) if (!usosPorFoto.has(i)) fotosFaltando.push(i)
+
+      // Pega slots com fotos duplicadas e reatribui pras que estão faltando
+      for (const fotoFaltando of fotosFaltando) {
+        // Encontra uma foto que tá sendo usada >1x e pega um dos slots dela
+        let candidato: number | null = null
+        for (const [, slots] of usosPorFoto.entries()) {
+          if (slots.length > 1) { candidato = slots.pop()!; break }
+        }
+        if (candidato === null) break // nada a fazer
+        slotsFoto[candidato].imagem_index = fotoFaltando
+        if (!usosPorFoto.has(fotoFaltando)) usosPorFoto.set(fotoFaltando, [])
+        usosPorFoto.get(fotoFaltando)!.push(candidato)
       }
 
       // Enriquece cada slide com dados de análise visual da foto atribuída
