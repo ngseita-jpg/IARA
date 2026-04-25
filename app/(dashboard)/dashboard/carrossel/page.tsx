@@ -1289,12 +1289,12 @@ export default function CarrosselPage() {
                 </div>
 
                 {/* Header com raciocínio + download all */}
-                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#0f0f20] border border-iara-700/20">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-4 rounded-xl bg-[#0f0f20] border border-iara-700/20">
                   <div className="flex-1">
                     <p className="text-xs font-medium text-iara-400 uppercase tracking-wider mb-1">Raciocínio da Iara</p>
                     <p className="text-sm text-[#9b9bb5]">{carrossel.raciocinio}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                     {Object.values(slidePngs).some(p => p.startsWith('ERROR:')) && (
                       <button
                         onClick={() => carrossel && renderizarTodos(carrossel)}
