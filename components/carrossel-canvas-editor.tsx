@@ -398,8 +398,13 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       {/* Topbar — responsivo: labels somem no mobile, ícones permanecem */}
       <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-[#1a1a2e] bg-[#0a0a14] flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <button onClick={onFechar} className="p-2 rounded-lg hover:bg-[#1a1a2e] text-[#9b9bb5] flex-shrink-0">
-            <ChevronLeft className="w-4 h-4" />
+          <button
+            onClick={onFechar}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] hover:border-[#3a3a5a] text-[#c1c1d8] hover:text-white text-xs font-semibold transition-all flex-shrink-0"
+            title="Fechar editor (Esc)"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Fechar</span>
           </button>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#f1f1f8] truncate">Editor Canvas</p>
@@ -453,9 +458,26 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         </div>
       </div>
 
+      {/* Thumbs horizontais — APENAS mobile, sempre visíveis pra trocar de slide */}
+      <div className="md:hidden flex-shrink-0 border-b border-[#1a1a2e] bg-[#08080f] px-2 py-2">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {slides.map((s, i) => (
+            <div key={s.id} className="flex-shrink-0 w-16">
+              <Thumbnail
+                slide={s}
+                active={i === slideIdx}
+                imageCache={imageCache}
+                onClick={() => { setSlideIdx(i); setSelectedLayerId(null); setEditingTextId(null) }}
+                number={i + 1}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Body: thumbnails + canvas + inspector */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Thumbnails esquerda */}
+        {/* Thumbnails esquerda — APENAS desktop */}
         <div className="hidden md:flex flex-col gap-2 w-28 overflow-y-auto py-4 px-2 border-r border-[#1a1a2e] bg-[#08080f]">
           {slides.map((s, i) => (
             <Thumbnail
@@ -527,22 +549,36 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         </div>
       </div>
 
-      {/* Inspector mobile (abre por baixo quando layer selecionado) */}
+      {/* Inspector mobile — sheet por baixo quando layer selecionada (lg-) */}
       {selectedLayer && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-60 bg-[#0a0a14] border-t border-[#1a1a2e] max-h-[50vh] overflow-y-auto">
-          <Inspector
-            slide={slide}
-            selected={selectedLayer}
-            onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
-            onUpdateSlide={updateSlide}
-            onDelete={() => deleteLayer(selectedLayer.id)}
-            onDuplicate={() => duplicateLayer(selectedLayer.id)}
-            onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
-            onAddText={addTextLayer}
-            onAddPhoto={addPhotoLayer}
-            imagensCache={imagensCache}
-            compact
-          />
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-60 bg-[#0a0a14] border-t border-[#1a1a2e] max-h-[60vh] flex flex-col rounded-t-2xl shadow-2xl">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1a1a2e] flex-shrink-0">
+            <p className="text-xs font-semibold text-[#f1f1f8]">
+              {selectedLayer.type === 'text' ? 'Editar texto' : selectedLayer.type === 'photo' ? 'Editar foto' : 'Editar forma'}
+            </p>
+            <button
+              onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
+              className="p-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] text-[#9b9bb5] hover:text-white"
+              title="Fechar inspector"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1">
+            <Inspector
+              slide={slide}
+              selected={selectedLayer}
+              onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
+              onUpdateSlide={updateSlide}
+              onDelete={() => deleteLayer(selectedLayer.id)}
+              onDuplicate={() => duplicateLayer(selectedLayer.id)}
+              onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
+              onAddText={addTextLayer}
+              onAddPhoto={addPhotoLayer}
+              imagensCache={imagensCache}
+              compact
+            />
+          </div>
         </div>
       )}
 

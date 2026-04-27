@@ -233,20 +233,11 @@ export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
     }
   }
 
-  // 2) Overlay (scrim) — vira ShapeLayer rect rgba sobre a foto pra dar legibilidade ao texto.
-  //    Só adiciona se havia overlay no preset E há foto (sem foto não faz sentido escurecer).
-  if (preset.overlay && slide.imagem_index !== undefined && preset.bgType === 'photo') {
-    const opacity = preset.overlay.opacity
-    // Converte hex+opacity em rgba
-    const fillRgba = opacityToRgba(preset.overlay.color, opacity)
-    layers.push({
-      id: newId('overlay'),
-      type: 'shape',
-      shape: 'rect',
-      x: 0, y: 0, w: 100, h: 100,
-      fill: fillRgba,
-    })
-  }
+  // 2) Overlay (scrim) — fica como Slide2.overlay (não vira layer) pra que NÃO
+  //    intercepte cliques. Renderizado com pointer-events:none no editor e como
+  //    pintura simples no export PNG. Usuário ajusta opacidade pelo Inspector
+  //    do slide quando nada está selecionado.
+  // (atribuído mais abaixo, no return)
 
   const corTextoOverride = slide.cor_texto_override
   const align = slide.alinhamento
@@ -284,27 +275,21 @@ export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
                      : slide.fonte_override === 'playfair' ? 'Playfair Display'
                      : 'Inter'
 
+  // Overlay decorativo (não-clickable) — só se tinha foto e o preset previa
+  const overlay = preset.overlay && slide.imagem_index !== undefined && preset.bgType === 'photo'
+    ? { color: preset.overlay.color, opacity: preset.overlay.opacity }
+    : undefined
+
   return {
     id: newId('s'),
     ordem: slide.ordem,
     tipo: slide.tipo,
     background,
-    // overlay removido — agora vira ShapeLayer rect rgba na lista de layers acima.
-    // Slide2.overlay continua disponível no tipo pra slides futuros que possam querer,
-    // mas o adapter NÃO cria mais (deixa tudo como layer manipulável).
+    overlay,
     layers,
     fonte_familia: fonteFamilia,
   }
   void totalSlides
-}
-
-/** Converte hex (#000000) + opacity (0..1) em rgba(0,0,0,0.45) */
-function opacityToRgba(hex: string, opacity: number): string {
-  const clean = hex.replace('#', '')
-  const r = parseInt(clean.slice(0, 2), 16) || 0
-  const g = parseInt(clean.slice(2, 4), 16) || 0
-  const b = parseInt(clean.slice(4, 6), 16) || 0
-  return `rgba(${r},${g},${b},${opacity})`
 }
 
 type TextPreset = {

@@ -100,6 +100,7 @@ export default async function DashboardPage() {
     { count: usoOratorio },
     { count: usoMidiaKit },
     { count: usoTemas },
+    { count: totalConteudoEver },     // Total absoluto pra detectar primeira-vez
   ] = await Promise.all([
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'roteiro').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'carrossel').gte('created_at', mesAtual),
@@ -108,7 +109,10 @@ export default async function DashboardPage() {
     supabase.from('voice_analyses').select('*', { count: 'exact', head: true }).eq('user_id', uid).gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'midia_kit').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'temas').gte('created_at', mesAtual),
+    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid),
   ])
+
+  const isPrimeiraVez = (totalConteudoEver ?? 0) === 0
 
   const limites = LIMITES[planoAtual] ?? LIMITES['free']
   const isIlimitado = planoAtual === 'profissional'
@@ -135,6 +139,44 @@ export default async function DashboardPage() {
             <ChevronRight className="w-4 h-4 text-indigo-400" />
           </div>
         </Link>
+      )}
+
+      {/* ── Banner primeiro carrossel (only se nunca gerou nada) ── */}
+      {isPrimeiraVez && (
+        <div className="rounded-2xl border border-iara-600/40 bg-gradient-to-br from-iara-900/50 via-accent-purple/15 to-accent-pink/10 p-5 mb-6 relative overflow-hidden">
+          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-iara-500/20 blur-3xl pointer-events-none" />
+          <div className="relative">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-iara-600/30 border border-iara-500/40 text-[10px] font-bold text-iara-200 tracking-wider uppercase mb-3">
+              <Sparkles className="w-3 h-3" />
+              Bem-vindo, {nome}!
+            </div>
+            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#f1f1f8] leading-tight mb-2">
+              Seu primeiro carrossel{' '}
+              <span className="font-editorial font-normal" style={{ color: '#E2C068' }}>em 2 minutos</span>
+            </h2>
+            <p className="text-sm text-[#c1c1d8] mb-4 max-w-xl">
+              Cole um link do YouTube, suba algumas fotos e a Iara monta tudo pra você. Você pode editar tudo no Editor Canvas depois — mover textos, trocar fontes, ajustar fotos. É como o Canva, só que automático.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/dashboard/carrossel"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg shadow-iara-900/40 transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7,#ec4899)' }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Criar primeiro carrossel
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/dashboard/temas"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#c1c1d8] border border-[#1a1a2e] bg-[#0f0f20] hover:border-iara-700/50 transition-all"
+              >
+                <Lightbulb className="w-4 h-4 text-iara-400" />
+                Ou, gere ideias com Faísca Criativa
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Banner perfil incompleto ── */}
