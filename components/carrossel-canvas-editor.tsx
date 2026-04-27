@@ -151,6 +151,26 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setTimeout(() => { hydrating.current = false }, 0)
   }, [historyIdx, history])
 
+  // Bloqueia pinch-to-zoom do iOS Safari — `touch-action: none` não é suficiente
+  // no Safari porque o pinch é tratado em nível de viewport. Listener com passive:false
+  // permite preventDefault e mata o gesto antes do browser zoomar a tela toda.
+  useEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) e.preventDefault()
+    }
+    const onGestureStart = (e: Event) => e.preventDefault()  // iOS-specific
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    document.addEventListener('gesturestart', onGestureStart)
+    document.addEventListener('gesturechange', onGestureStart)
+    document.addEventListener('gestureend', onGestureStart)
+    return () => {
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('gesturestart', onGestureStart)
+      document.removeEventListener('gesturechange', onGestureStart)
+      document.removeEventListener('gestureend', onGestureStart)
+    }
+  }, [])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (editingTextId) return // quando editando texto, não atropela
@@ -386,7 +406,13 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   if (!slide) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#050510] flex flex-col">
+    <div
+      className="fixed inset-0 z-50 bg-[#050510] flex flex-col"
+      // touch-action: none bloqueia pinch-zoom e gestos default do browser (iOS Safari)
+      // que estavam arrastando a tela inteira. Sub-elementos relaxam isso conforme
+      // a necessidade (canvas: none, inspector: pan-y, thumbs: pan-x).
+      style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+    >
       {/* Todas as fontes do catálogo em um único stylesheet Google Fonts */}
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -460,7 +486,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
 
       {/* Thumbs horizontais — APENAS mobile, sempre visíveis pra trocar de slide */}
       <div className="md:hidden flex-shrink-0 border-b border-[#1a1a2e] bg-[#08080f] px-2 py-2">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        <div
+          className="flex gap-2 overflow-x-auto no-scrollbar"
+          style={{ touchAction: 'pan-x' }}
+        >
           {slides.map((s, i) => (
             <div key={s.id} className="flex-shrink-0 w-16">
               <Thumbnail
@@ -497,7 +526,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           <div
             ref={stageContainerRef}
             className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#050510] min-h-0"
-            style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050510 80%)' }}
+            style={{
+              backgroundImage: 'radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050510 80%)',
+              touchAction: 'none',
+            }}
             onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
           >
             <CanvasStage
@@ -537,11 +569,14 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           </div>
 
           {/* Inspector mobile — flex-sibling abaixo do canvas (NÃO mais fixed/overlay).
-              ResizeObserver vai detectar o canvas menor e shrink ele junto.
-              Altura controlada por max-h, mas dentro do flex layout. */}
+              ResizeObserver vai detectar o canvas menor e shrink ele junto. */}
           {selectedLayer && (
             <div className="lg:hidden flex-shrink-0 border-t-2 border-[#1a1a2e] bg-[#0a0a14] flex flex-col"
-              style={{ maxHeight: '52vh', minHeight: '180px' }}
+              style={{
+                // Altura: pelo menos 200px, no máx 55% da viewport descontando safe-area
+                maxHeight: 'min(55vh, calc(100dvh - 240px))',
+                minHeight: '200px',
+              }}
             >
               <div className="flex items-center justify-between px-4 py-2 border-b border-[#1a1a2e] flex-shrink-0">
                 <p className="text-xs font-semibold text-[#f1f1f8]">
@@ -556,7 +591,18 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
                   Fechar
                 </button>
               </div>
-              <div className="overflow-y-auto flex-1 overscroll-contain">
+              {/* Scroll body — touch-action: pan-y libera apenas scroll vertical
+                  dentro deste container; pinch e horizontal continuam bloqueados pelo root.
+                  webkit-overflow-scrolling pra momentum scroll no iOS.
+                  paddingBottom inclui safe-area-inset-bottom (notch / home indicator). */}
+              <div
+                className="overflow-y-auto flex-1 overscroll-contain"
+                style={{
+                  touchAction: 'pan-y',
+                  WebkitOverflowScrolling: 'touch',
+                  paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
+                }}
+              >
                 <Inspector
                   slide={slide}
                   selected={selectedLayer}
@@ -576,7 +622,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         </div>
 
         {/* Inspector direita (desktop) */}
-        <div className="hidden lg:flex flex-col w-80 overflow-y-auto border-l border-[#1a1a2e] bg-[#08080f]">
+        <div
+          className="hidden lg:flex flex-col w-80 overflow-y-auto border-l border-[#1a1a2e] bg-[#08080f]"
+          style={{ touchAction: 'pan-y' }}
+        >
           <Inspector
             slide={slide}
             selected={selectedLayer}
