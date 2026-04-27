@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
   Scissors, Loader2, AlertCircle, Youtube, Clock,
   Sparkles, Play, Hash, Star, ChevronRight, FileText, Copy,
+  Upload, Film, Smartphone, Monitor, Download, X, CheckCircle,
 } from 'lucide-react'
 import { LegendaEditor } from './legenda-editor'
+import { cortarVideo, cortarVideoVertical, browserSuportaFFmpeg } from '@/lib/cortes-ffmpeg'
 
 type Trecho = {
   id?: string
@@ -56,6 +58,13 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
   const [trechos, setTrechos] = useState<Trecho[]>([])
   const [trechoSelecionado, setTrechoSelecionado] = useState<Trecho | null>(null)
   const [historico, setHistorico] = useState<{ id: string; video_id: string; titulo: string | null; created_at: string; status: string }[]>([])
+
+  // ─── Cortador de vídeo client-side (FFmpeg.wasm) ─────────────────
+  const [videoArquivo, setVideoArquivo] = useState<File | null>(null)
+  const [cortando, setCortando] = useState<{ ordem: number; formato: 'h' | 'v' } | null>(null)
+  const [progressoCorte, setProgressoCorte] = useState(0)
+  const [erroCorte, setErroCorte] = useState<string | null>(null)
+  const videoFileInputRef = useRef<HTMLInputElement>(null)
 
   const carregarHistorico = useCallback(async () => {
     const res = await fetch('/api/cortes/lista')
@@ -115,6 +124,57 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
   function copiarLegendaCompleta(trecho: Trecho) {
     const texto = `${trecho.hook}\n\n${trecho.descricao}\n\n${trecho.hashtags.join(' ')}`
     navigator.clipboard.writeText(texto)
+  }
+
+  function handleVideoFile(file: File | null) {
+    if (!file) return
+    if (file.size > 500 * 1024 * 1024) {
+      setErroCorte('Vídeo muito grande (máx 500MB). Comprime antes.')
+      return
+    }
+    if (!file.type.startsWith('video/')) {
+      setErroCorte('Selecione um arquivo de vídeo (mp4, mov, webm).')
+      return
+    }
+    setErroCorte(null)
+    setVideoArquivo(file)
+  }
+
+  async function executarCorte(trecho: Trecho, formato: 'h' | 'v') {
+    if (!videoArquivo) {
+      setErroCorte('Sobe o vídeo MP4 primeiro pra cortar.')
+      return
+    }
+    if (!browserSuportaFFmpeg()) {
+      setErroCorte('Seu navegador não suporta esse recurso. Tente Chrome ou Edge atualizado.')
+      return
+    }
+    setCortando({ ordem: trecho.ordem, formato })
+    setProgressoCorte(0)
+    setErroCorte(null)
+
+    try {
+      const fn = formato === 'v' ? cortarVideoVertical : cortarVideo
+      const blob = await fn(
+        videoArquivo,
+        trecho.inicio_segundos,
+        trecho.fim_segundos,
+        ({ progress }) => setProgressoCorte(Math.max(0, Math.min(1, progress))),
+      )
+      // Download imediato
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const sufixo = formato === 'v' ? '-vertical' : ''
+      a.download = `corte-${String(trecho.ordem).padStart(2, '0')}${sufixo}.mp4`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } catch (e) {
+      setErroCorte(e instanceof Error ? e.message : 'Erro ao cortar')
+    } finally {
+      setCortando(null)
+      setProgressoCorte(0)
+    }
   }
 
   return (
@@ -301,6 +361,48 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
                   <FileText className="w-4 h-4" />
                   Copiar legenda pronta (hook + descrição + hashtags)
                 </button>
+
+                {/* Cortar vídeo direto aqui */}
+                <div className="rounded-xl border p-3"
+                  style={{ borderColor: videoArquivo ? `${corAcento}33` : '#1a1a2e', backgroundColor: '#0a0a14' }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scissors className="w-3.5 h-3.5" style={{ color: corAcento }} />
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-[#6b6b8a]">
+                      Cortar vídeo aqui no app
+                    </p>
+                  </div>
+                  {!videoArquivo ? (
+                    <p className="text-[11px] text-[#5a5a7a] mb-2">
+                      Suba o MP4 do vídeo no banner acima e o corte vira mp4 pronto pra publicar.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-[#9b9bb5] mb-2 leading-relaxed">
+                      Escolhe o formato. Dura ~{Math.ceil((trechoSelecionado.fim_segundos - trechoSelecionado.inicio_segundos) * 0.3)}s pra processar (vertical demora 1-2 min).
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      disabled={!videoArquivo || cortando !== null}
+                      onClick={() => executarCorte(trechoSelecionado, 'h')}
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg border border-[#2a2a4a] bg-[#13131f] text-[#c1c1d8] disabled:opacity-30 hover:border-white/20 hover:text-white transition-all"
+                    >
+                      <Monitor className="w-4 h-4" />
+                      <span className="text-[10px] font-semibold">Cortar 16:9</span>
+                      <span className="text-[9px] text-[#5a5a7a]">YouTube · LinkedIn</span>
+                    </button>
+                    <button
+                      disabled={!videoArquivo || cortando !== null}
+                      onClick={() => executarCorte(trechoSelecionado, 'v')}
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-white font-semibold disabled:opacity-30 transition-all"
+                      style={{ background: videoArquivo && cortando === null ? `linear-gradient(135deg, ${corAcento}, #a855f7)` : '#1a1a2e' }}
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      <span className="text-[10px] font-semibold">Cortar 9:16</span>
+                      <span className="text-[9px] opacity-80">Reels · Shorts · TikTok</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Direita — editor de legenda */}
@@ -331,6 +433,82 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
       {/* Grid de trechos */}
       {trechos.length > 0 && video && (
         <>
+          {/* Banner de upload de vídeo — habilita o "Cortar de verdade" via FFmpeg.wasm */}
+          <div className="mb-5 rounded-2xl border bg-gradient-to-br from-[#0d0d1a] to-[#08080f] p-4 sm:p-5"
+            style={{ borderColor: videoArquivo ? `${corAcento}55` : '#1a1a2e' }}
+          >
+            {!videoArquivo ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${corAcento}1A`, border: `1px solid ${corAcento}40` }}
+                >
+                  <Film className="w-5 h-5" style={{ color: corAcento }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#f1f1f8] mb-0.5">
+                    Quer cortar o vídeo de verdade aqui dentro?
+                  </p>
+                  <p className="text-[11px] text-[#9b9bb5] leading-relaxed">
+                    Suba o MP4 do vídeo original — a Iara corta cada trecho no seu navegador (zero servidor, privado, instantâneo). Funciona com qualquer MP4 até 500MB.
+                  </p>
+                  <p className="text-[10px] text-[#5a5a7a] mt-1">
+                    Não tem o MP4? Use{' '}
+                    <a href="https://cobalt.tools" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#9b9bb5]">cobalt.tools</a>
+                    {' '}ou similar pra baixar do YouTube primeiro.
+                  </p>
+                </div>
+                <button
+                  onClick={() => videoFileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white whitespace-nowrap"
+                  style={{ background: `linear-gradient(135deg, ${corAcento}, #a855f7)` }}
+                >
+                  <Upload className="w-4 h-4" />
+                  Subir MP4
+                </button>
+                <input
+                  ref={videoFileInputRef}
+                  type="file"
+                  accept="video/mp4,video/*"
+                  className="hidden"
+                  onChange={e => handleVideoFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-green-900/30 border border-green-700/40">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#f1f1f8] mb-0.5">
+                    Vídeo pronto — agora os botões "Cortar 16:9" e "Cortar 9:16" funcionam
+                  </p>
+                  <p className="text-[11px] text-[#9b9bb5] truncate">
+                    {videoArquivo.name} · {(videoArquivo.size / 1024 / 1024).toFixed(1)} MB
+                  </p>
+                </div>
+                <button
+                  onClick={() => setVideoArquivo(null)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-[#9b9bb5] hover:text-red-400 border border-[#1a1a2e] hover:border-red-900/40"
+                >
+                  Trocar
+                </button>
+                <input
+                  ref={videoFileInputRef}
+                  type="file"
+                  accept="video/mp4,video/*"
+                  className="hidden"
+                  onChange={e => handleVideoFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            )}
+            {erroCorte && (
+              <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-red-950/30 border border-red-900/40 text-red-400 text-xs">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                {erroCorte}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-[11px] tracking-[0.3em] uppercase font-semibold" style={{ color: corAcento }}>
@@ -393,12 +571,47 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
 
           <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-[#1a1a2e]/30 to-[#0d0d1a]/30 border border-[#1a1a2e]">
             <p className="text-xs text-[#9b9bb5] leading-relaxed">
-              <strong className="text-[#f1f1f8]">Próximos passos:</strong> Clique em cada corte, personalize a legenda animada e baixe o arquivo .ASS ou .SRT.
-              Importa no <strong>CapCut</strong> (Texto → Legenda → Importar) ou <strong>InShot / Premiere / DaVinci</strong>.
-              O corte do vídeo em si você faz no próprio CapCut colando o intervalo informado.
+              <strong className="text-[#f1f1f8]">Próximos passos:</strong> {videoArquivo
+                ? <>Clique no corte, escolha 16:9 ou 9:16 e baixe o MP4 pronto pra publicar. Pra adicionar legendas animadas, baixe o .SRT/.ASS dentro do corte e importe no CapCut/InShot.</>
+                : <>Clique em cada corte, personalize a legenda animada (.ASS) e suba o vídeo aqui pra cortar dentro do app — sem precisar do CapCut pra cortar.</>
+              }
             </p>
           </div>
         </>
+      )}
+
+      {/* Overlay global de progresso enquanto corta */}
+      {cortando && (
+        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="w-full max-w-sm rounded-2xl border border-[#1a1a2e] bg-[#0a0a14] p-6 text-center">
+            <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+              style={{ background: `${corAcento}1A`, border: `1px solid ${corAcento}40` }}
+            >
+              <Scissors className="w-6 h-6 animate-pulse" style={{ color: corAcento }} />
+            </div>
+            <p className="text-sm font-semibold text-[#f1f1f8] mb-1">
+              Cortando {cortando.formato === 'v' ? 'em 9:16 vertical' : 'em 16:9'}…
+            </p>
+            <p className="text-xs text-[#6b6b8a] mb-4">
+              Corte #{cortando.ordem} · processando no seu navegador
+            </p>
+            <div className="h-2 rounded-full bg-[#1a1a2e] overflow-hidden mb-2">
+              <div
+                className="h-full transition-all duration-150"
+                style={{
+                  width: `${Math.max(2, progressoCorte * 100)}%`,
+                  background: `linear-gradient(90deg, ${corAcento}, #a855f7)`,
+                }}
+              />
+            </div>
+            <p className="text-[11px] text-[#5a5a7a] tabular-nums">
+              {Math.round(progressoCorte * 100)}%
+            </p>
+            <p className="text-[10px] text-[#5a5a7a] mt-3 leading-relaxed">
+              Primeira execução baixa o FFmpeg (~30MB). Próximos cortes são instantâneos.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Histórico */}
