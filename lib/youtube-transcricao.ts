@@ -52,7 +52,13 @@ async function tryYoutubeTranscriptLib(videoId: string): Promise<TranscriptSegme
 // ─── Estratégia 2: scrape HTML ──────────────────────────────
 async function tryHtmlScrape(videoId: string): Promise<Record<string, unknown> | null> {
   try {
-    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, { headers: YT_HEADERS })
+    const ctrl = new AbortController()
+    const timeout = setTimeout(() => ctrl.abort(), 8000)
+    const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: YT_HEADERS,
+      signal: ctrl.signal,
+    })
+    clearTimeout(timeout)
     if (!res.ok) return null
     const html = await res.text()
     const match = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\})(?:;|\s*<\/script>)/)
@@ -69,6 +75,8 @@ async function fetchInnerTube(
   extraHeaders: Record<string, string> = {},
 ): Promise<Record<string, unknown> | null> {
   try {
+    const ctrl = new AbortController()
+    const timeout = setTimeout(() => ctrl.abort(), 6000)   // 6s timeout por cliente
     const res = await fetch('https://www.youtube.com/youtubei/v1/player', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...YT_HEADERS, ...extraHeaders },
@@ -76,7 +84,9 @@ async function fetchInnerTube(
         context: { client: { clientName, clientVersion, hl: 'pt', gl: 'BR' } },
         videoId,
       }),
+      signal: ctrl.signal,
     })
+    clearTimeout(timeout)
     if (!res.ok) return null
     return await res.json() as Record<string, unknown>
   } catch { return null }
@@ -247,8 +257,35 @@ export async function fetchYouTubeTranscricao(videoId: string): Promise<Transcri
     }
   }
 
-  // 3. InnerTube — múltiplos clientes
+  // 3. InnerTube — 6 clientes diferentes. Cada um tem regras de bot-detection
+  // próprias e o YouTube costuma bloquear de forma desigual entre eles, então
+  // alguma combinação tende a funcionar mesmo quando outros falham.
   const clients: Array<{ name: string; version: string; headers: Record<string, string> }> = [
+    // iOS — geralmente o mais confiável pra contornar bloqueios em IPs cloud
+    {
+      name: 'IOS', version: '19.45.4',
+      headers: {
+        'User-Agent': 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X)',
+        'X-YouTube-Client-Name': '5', 'X-YouTube-Client-Version': '19.45.4',
+      },
+    },
+    // iPad
+    {
+      name: 'IOS_TABLET', version: '19.45.4',
+      headers: {
+        'User-Agent': 'com.google.ios.youtube/19.45.4 (iPad14,3; U; CPU iOS 18_1 like Mac OS X)',
+        'X-YouTube-Client-Name': '5', 'X-YouTube-Client-Version': '19.45.4',
+      },
+    },
+    // Android Music — outro cliente nativo
+    {
+      name: 'ANDROID_MUSIC', version: '7.27.52',
+      headers: {
+        'User-Agent': 'com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 14) gzip',
+        'X-YouTube-Client-Name': '21', 'X-YouTube-Client-Version': '7.27.52',
+      },
+    },
+    // TV HTML5 — bypassa muito anti-bot porque YouTube prioriza esse cliente
     {
       name: 'TVHTML5', version: '7.20230105.08.01',
       headers: {
@@ -256,14 +293,16 @@ export async function fetchYouTubeTranscricao(videoId: string): Promise<Transcri
         'X-YouTube-Client-Name': '7', 'X-YouTube-Client-Version': '7.20230105.08.01',
       },
     },
+    // Android nativo
     {
-      name: 'ANDROID', version: '17.31.35',
+      name: 'ANDROID', version: '19.44.38',
       headers: {
-        'User-Agent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip',
-        'X-YouTube-Client-Name': '3', 'X-YouTube-Client-Version': '17.31.35',
+        'User-Agent': 'com.google.android.youtube/19.44.38 (Linux; U; Android 14) gzip',
+        'X-YouTube-Client-Name': '3', 'X-YouTube-Client-Version': '19.44.38',
       },
     },
-    { name: 'WEB', version: '2.20231121.08.00', headers: {} },
+    // Web fallback
+    { name: 'WEB', version: '2.20241126.01.00', headers: {} },
   ]
 
   let melhorAudio: Array<{ url?: string; mimeType?: string; bitrate?: number }> = []

@@ -37,13 +37,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const body = await req.json() as {
-    url: string;
-    modo?: Modo;
-    num_cortes?: number;
-    transcricao_manual?: string;       // Fallback: usuário cola a transcrição direto
-    duracao_manual?: number;           // Duração estimada em segundos (quando colado manual)
-  }
+  const body = await req.json() as { url: string; modo?: Modo; num_cortes?: number }
   const modo: Modo = body.modo === 'marca' ? 'marca' : 'criador'
   const numCortes = Math.min(Math.max(body.num_cortes ?? 6, 3), 12)
 
@@ -51,8 +45,6 @@ export async function POST(req: NextRequest) {
   if (!videoId) {
     return NextResponse.json({ error: 'URL inválida. Cole um link do YouTube completo.' }, { status: 400 })
   }
-
-  const usandoManual = !!body.transcricao_manual && body.transcricao_manual.trim().length >= 100
 
   // Checa limite ANTES de baixar transcript
   const admin = createAdminClient()
@@ -75,57 +67,21 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── PIPELINE DE TRANSCRIÇÃO ─────────────────────────────────────────
-  let segs: { offset: number; duration: number; text: string }[]
-  let titulo = ''
-  let duracaoTotal = 0
-  let fonteUsada: string
+  // 5 estratégias em cascata: youtube-transcript → HTML scrape → InnerTube
+  // (5 clientes: TVHTML5/Android/Web/iOS/iPad) → Whisper API (audio fallback)
+  const resultado = await fetchYouTubeTranscricao(videoId)
 
-  if (usandoManual) {
-    // Modo manual: usuário colou a transcrição direto. Quebramos em "frases"
-    // por pontuação ou quebra de linha e distribuímos timestamps proporcionalmente
-    // pela duracao_manual fornecida (ou estimamos com base no comprimento).
-    fonteUsada = 'manual'
-    const texto = body.transcricao_manual!.trim()
-    duracaoTotal = body.duracao_manual && body.duracao_manual > 0
-      ? body.duracao_manual
-      : Math.max(60, Math.ceil(texto.split(/\s+/).length / 2.5))   // ~150 wpm
-
-    // Quebra em sentenças (pontuação forte ou \n) preservando os terminadores
-    const sentencas = texto
-      .split(/(?<=[.!?\n])\s+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 2)
-
-    if (sentencas.length === 0) {
-      return NextResponse.json({ error: 'Transcrição muito curta. Cole pelo menos 100 caracteres.' }, { status: 400 })
-    }
-
-    // Distribui tempo proporcional ao comprimento da sentença
-    const totalChars = sentencas.reduce((a, s) => a + s.length, 0)
-    let cursor = 0
-    segs = sentencas.map(s => {
-      const dur = (s.length / totalChars) * duracaoTotal
-      const seg = { offset: cursor, duration: dur, text: s }
-      cursor += dur
-      return seg
-    })
-  } else {
-    // Pipeline robusto — youtube-transcript → scrape HTML → InnerTube (3 clientes) → Whisper
-    const resultado = await fetchYouTubeTranscricao(videoId)
-
-    if (!resultado || !resultado.segmentos.length) {
-      return NextResponse.json({
-        error: 'Não consegui extrair a transcrição desse vídeo.',
-        detalhe: 'O YouTube tem bloqueado downloads em servidores cloud. Tenta colar a transcrição manualmente abaixo — funciona com qualquer vídeo.',
-        fallback_manual_disponivel: true,
-      }, { status: 422 })
-    }
-
-    segs = resultado.segmentos
-    titulo = resultado.titulo
-    fonteUsada = resultado.fonte
-    duracaoTotal = Math.max(...segs.map(s => s.offset + s.duration))
+  if (!resultado || !resultado.segmentos.length) {
+    return NextResponse.json({
+      error: 'Não consegui extrair a transcrição desse vídeo.',
+      detalhe: 'O YouTube está bloqueando o download. Tente um vídeo de outro canal ou tente novamente em alguns minutos.',
+    }, { status: 422 })
   }
+
+  const segs = resultado.segmentos
+  const titulo = resultado.titulo
+  const fonteUsada = resultado.fonte
+  const duracaoTotal = Math.max(...segs.map(s => s.offset + s.duration))
 
   // Monta transcrição numerada com timestamps (a cada linha) pra Claude analisar
   const linhas: string[] = []

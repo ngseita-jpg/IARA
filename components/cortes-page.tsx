@@ -59,11 +59,6 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
   const [trechoSelecionado, setTrechoSelecionado] = useState<Trecho | null>(null)
   const [historico, setHistorico] = useState<{ id: string; video_id: string; titulo: string | null; created_at: string; status: string }[]>([])
 
-  // Fallback manual de transcrição (quando YouTube bloqueia)
-  const [mostrarFallback, setMostrarFallback] = useState(false)
-  const [transcricaoManual, setTranscricaoManual] = useState('')
-  const [duracaoManual, setDuracaoManual] = useState<number>(0)
-
   // ─── Cortador de vídeo client-side (FFmpeg.wasm) ─────────────────
   const [videoArquivo, setVideoArquivo] = useState<File | null>(null)
   const [cortando, setCortando] = useState<{ ordem: number; formato: 'h' | 'v' } | null>(null)
@@ -94,37 +89,24 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
     setTrechos(d.trechos ?? [])
   }
 
-  async function analisar(opts?: { manual?: boolean }) {
+  async function analisar() {
     if (!url.trim()) {
       setErro('Cola um link do YouTube')
       return
     }
-    if (opts?.manual && transcricaoManual.trim().length < 100) {
-      setErro('Cola pelo menos 100 caracteres da transcrição')
-      return
-    }
     setAnalisando(true); setErro(null); setTrechoSelecionado(null); setTrechos([]); setVideo(null)
     try {
-      const body: Record<string, unknown> = { url, modo, num_cortes: numCortes }
-      if (opts?.manual) {
-        body.transcricao_manual = transcricaoManual.trim()
-        if (duracaoManual > 0) body.duracao_manual = duracaoManual
-      }
       const res = await fetch('/api/cortes/analisar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ url, modo, num_cortes: numCortes }),
       })
       const d = await res.json()
       if (!res.ok) {
         setErro(d.error ?? d.mensagem ?? 'Erro ao analisar')
-        // Se a API sinalizar fallback disponível, mostra textarea
-        if (d.fallback_manual_disponivel) setMostrarFallback(true)
         return
       }
       setVideo(d.video)
-      setMostrarFallback(false)
-      setTranscricaoManual('')
       // Re-busca via GET pra pegar IDs reais do DB
       await carregarVideo(d.video.id)
       carregarHistorico()
@@ -268,55 +250,6 @@ export function CortesPage({ modo, corAcento, tituloDestaque = '#E2C068', planos
               {(erro.includes('Limite') || erro.includes('limite') || erro.includes('plano')) && (
                 <Link href={planosLink} className="ml-2 underline text-red-300 font-semibold">Ver planos</Link>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Fallback manual — aparece quando YouTube bloqueia transcrição */}
-        {mostrarFallback && (
-          <div className="rounded-xl border-2 p-4 space-y-3"
-            style={{ borderColor: `${corAcento}55`, backgroundColor: `${corAcento}0F` }}
-          >
-            <div>
-              <p className="text-sm font-semibold text-[#f1f1f8] mb-1 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" style={{ color: corAcento }} />
-                Cola a transcrição aqui (modo backup)
-              </p>
-              <p className="text-[11px] text-[#9b9bb5] leading-relaxed">
-                O YouTube tem bloqueado servidores cloud ultimamente. Como solução: abra o vídeo no YouTube → clique em &ldquo;...&rdquo; abaixo do player → &ldquo;Mostrar transcrição&rdquo; → copie tudo e cole aqui.
-                Funciona com qualquer vídeo público, mesmo os que dão erro no modo automático.
-              </p>
-            </div>
-            <textarea
-              value={transcricaoManual}
-              onChange={e => setTranscricaoManual(e.target.value)}
-              rows={6}
-              placeholder="Cole aqui a transcrição completa do vídeo. A Iara identifica automaticamente os melhores momentos e gera os cortes..."
-              className="w-full rounded-lg border border-[#1a1a2e] bg-[#0a0a14] px-3 py-2.5 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:outline-none resize-y"
-            />
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-[11px] text-[#9b9bb5] whitespace-nowrap">Duração do vídeo (min):</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={300}
-                  value={duracaoManual ? Math.round(duracaoManual / 60) : ''}
-                  onChange={e => setDuracaoManual(Number(e.target.value) * 60)}
-                  placeholder="ex: 15"
-                  className="w-20 rounded-md border border-[#1a1a2e] bg-[#0a0a14] px-2 py-1 text-sm text-[#f1f1f8] focus:outline-none"
-                />
-              </div>
-              <span className="text-[10px] text-[#5a5a7a] flex-1">{transcricaoManual.length} caracteres · mínimo 100</span>
-              <button
-                onClick={() => analisar({ manual: true })}
-                disabled={analisando || transcricaoManual.trim().length < 100}
-                className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-sm font-bold text-white whitespace-nowrap disabled:opacity-40"
-                style={{ background: `linear-gradient(135deg, ${corAcento}, #a855f7)` }}
-              >
-                {analisando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                Gerar com transcrição manual
-              </button>
             </div>
           </div>
         )}
