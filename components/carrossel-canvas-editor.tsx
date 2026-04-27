@@ -154,21 +154,28 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   // Bloqueia pinch-to-zoom do iOS Safari — `touch-action: none` não é suficiente
   // no Safari porque o pinch é tratado em nível de viewport. Listener com passive:false
   // permite preventDefault e mata o gesto antes do browser zoomar a tela toda.
+  // Defensivo: só anexa se document existe E suporta os eventos. Falha silenciosa
+  // não impede o editor de carregar.
   useEffect(() => {
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 1) e.preventDefault()
-    }
-    const onGestureStart = (e: Event) => e.preventDefault()  // iOS-specific
-    document.addEventListener('touchmove', onTouchMove, { passive: false })
-    document.addEventListener('gesturestart', onGestureStart)
-    document.addEventListener('gesturechange', onGestureStart)
-    document.addEventListener('gestureend', onGestureStart)
-    return () => {
-      document.removeEventListener('touchmove', onTouchMove)
-      document.removeEventListener('gesturestart', onGestureStart)
-      document.removeEventListener('gesturechange', onGestureStart)
-      document.removeEventListener('gestureend', onGestureStart)
-    }
+    if (typeof document === 'undefined') return
+    let cleanup: (() => void) | undefined
+    try {
+      const onTouchMove = (e: TouchEvent) => {
+        if (e.touches.length > 1) e.preventDefault()
+      }
+      const onGestureStart = (e: Event) => e.preventDefault()
+      document.addEventListener('touchmove', onTouchMove, { passive: false })
+      document.addEventListener('gesturestart', onGestureStart)
+      document.addEventListener('gesturechange', onGestureStart)
+      document.addEventListener('gestureend', onGestureStart)
+      cleanup = () => {
+        document.removeEventListener('touchmove', onTouchMove)
+        document.removeEventListener('gesturestart', onGestureStart)
+        document.removeEventListener('gesturechange', onGestureStart)
+        document.removeEventListener('gestureend', onGestureStart)
+      }
+    } catch { /* sem-op */ }
+    return cleanup
   }, [])
 
   useEffect(() => {
