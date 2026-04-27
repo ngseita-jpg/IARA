@@ -466,5 +466,25 @@ export function canvasToBlob(canvas: HTMLCanvasElement, quality = 0.95): Promise
   })
 }
 
+/**
+ * Helper de alto nível: dado um Slide2 + cache de imagens, gera uma URL de blob
+ * com o PNG renderizado. Pronto pra usar como `src` de <img> no grid.
+ *
+ * Útil pra eliminar chamadas pra /api/carrossel/renderizar — toda renderização
+ * client-side fica gratuita (zero compute Vercel) e instantânea.
+ */
+export async function slide2ToPngUrl(
+  slide: Slide2,
+  imageCache: ImageCache,
+  opts: RenderOptions = {},
+): Promise<string> {
+  const canvas = document.createElement('canvas')
+  canvas.width = CANVAS_SIZE
+  canvas.height = CANVAS_SIZE
+  await renderSlide2(canvas, slide, imageCache, opts)
+  const blob = await canvasToBlob(canvas)
+  return URL.createObjectURL(blob)
+}
+
 // Satisfaz linter para imports não usados por Layer em runtime
 void null as unknown as Layer

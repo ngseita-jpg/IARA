@@ -182,20 +182,20 @@ function getPreset(arquetipo?: string): LayoutPreset {
   return PRESETS.cover_full
 }
 
-/** Converte um Slide (formato antigo) em Slide2 (formato rico) */
+/** Converte um Slide (formato antigo) em Slide2 (formato rico).
+ *
+ * REGRA UNIFICADA (2026-04-25): tudo vira Layer. Foto NUNCA fica em background
+ * — sempre é PhotoLayer (full-bleed ou em região específica). Overlay vira
+ * ShapeLayer rect com fill rgba. Background fica reservado APENAS para cor
+ * sólida ou gradiente decorativo (sem foto). Isso dá controle 1:1 ao usuário:
+ * cada elemento é manipulável individualmente no editor.
+ */
 export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
   const preset = getPreset(slide.arquetipo)
 
-  // Determinar background
+  // Background — APENAS cor sólida ou gradiente decorativo. Nunca foto.
   let background: Background
-  if (preset.bgType === 'photo' && slide.imagem_index !== undefined) {
-    background = {
-      type: 'photo',
-      imageIdx: slide.imagem_index,
-      objectPosition: slide.foto_object_position,
-      zoom: slide.foto_zoom,
-    }
-  } else if (preset.bgType === 'gradient' && preset.bgGradient) {
+  if (preset.bgType === 'gradient' && preset.bgGradient) {
     background = { type: 'gradient', ...preset.bgGradient }
   } else if (slide.cor_fundo_override) {
     background = { type: 'color', color: slide.cor_fundo_override }
@@ -203,20 +203,48 @@ export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
     background = { type: 'color', color: preset.bgColor ?? '#08080f' }
   }
 
-  // Monta layers em ordem de z-index (bg vai no fundo, depois photoLayer se houver, depois textos)
+  // Layers em ordem de z-index. bg fica no slide.background, overlay em layer rgba se houver,
+  // foto vira PhotoLayer (full-bleed se preset.bgType era 'photo', ou na região do preset.photoLayer)
   const layers: Layer[] = []
 
-  // Foto como layer se o preset tiver photoLayer e temos imagem
-  if (preset.photoLayer && slide.imagem_index !== undefined) {
+  // 1) Foto principal — SEMPRE como PhotoLayer (full-bleed quando bgType era photo)
+  if (slide.imagem_index !== undefined) {
+    if (preset.bgType === 'photo') {
+      // Antes era background photo → agora é PhotoLayer ocupando 100%
+      layers.push({
+        id: newId('photo'),
+        type: 'photo',
+        x: 0, y: 0, w: 100, h: 100,
+        imageIdx: slide.imagem_index,
+        objectPosition: slide.foto_object_position,
+      })
+    } else if (preset.photoLayer) {
+      // Foto numa região (split, editorial, caption_bar etc)
+      layers.push({
+        id: newId('photo'),
+        type: 'photo',
+        x: preset.photoLayer.x,
+        y: preset.photoLayer.y,
+        w: preset.photoLayer.w,
+        h: preset.photoLayer.h,
+        imageIdx: slide.imagem_index,
+        objectPosition: slide.foto_object_position,
+      })
+    }
+  }
+
+  // 2) Overlay (scrim) — vira ShapeLayer rect rgba sobre a foto pra dar legibilidade ao texto.
+  //    Só adiciona se havia overlay no preset E há foto (sem foto não faz sentido escurecer).
+  if (preset.overlay && slide.imagem_index !== undefined && preset.bgType === 'photo') {
+    const opacity = preset.overlay.opacity
+    // Converte hex+opacity em rgba
+    const fillRgba = opacityToRgba(preset.overlay.color, opacity)
     layers.push({
-      id: newId('photo'),
-      type: 'photo',
-      x: preset.photoLayer.x,
-      y: preset.photoLayer.y,
-      w: preset.photoLayer.w,
-      h: preset.photoLayer.h,
-      imageIdx: slide.imagem_index,
-      objectPosition: slide.foto_object_position,
+      id: newId('overlay'),
+      type: 'shape',
+      shape: 'rect',
+      x: 0, y: 0, w: 100, h: 100,
+      fill: fillRgba,
     })
   }
 
@@ -261,11 +289,22 @@ export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
     ordem: slide.ordem,
     tipo: slide.tipo,
     background,
-    overlay: preset.overlay,
+    // overlay removido — agora vira ShapeLayer rect rgba na lista de layers acima.
+    // Slide2.overlay continua disponível no tipo pra slides futuros que possam querer,
+    // mas o adapter NÃO cria mais (deixa tudo como layer manipulável).
     layers,
     fonte_familia: fonteFamilia,
   }
   void totalSlides
+}
+
+/** Converte hex (#000000) + opacity (0..1) em rgba(0,0,0,0.45) */
+function opacityToRgba(hex: string, opacity: number): string {
+  const clean = hex.replace('#', '')
+  const r = parseInt(clean.slice(0, 2), 16) || 0
+  const g = parseInt(clean.slice(2, 4), 16) || 0
+  const b = parseInt(clean.slice(4, 6), 16) || 0
+  return `rgba(${r},${g},${b},${opacity})`
 }
 
 type TextPreset = {

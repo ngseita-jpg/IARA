@@ -36,10 +36,10 @@ import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
-import { CarrosselEditorSlide } from '@/components/carrossel-editor-slide'
 import { CarrosselCanvasEditor } from '@/components/carrossel-canvas-editor'
 import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'
 import type { Slide2 } from '@/lib/carrossel-canvas-types'
+import { preloadImages, slide2ToPngUrl, type ImageCache } from '@/lib/carrossel-canvas-renderer'
 
 function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
   return new Promise((resolve) => {
@@ -125,12 +125,10 @@ export default function CarrosselPage() {
   const [respostasPerguntas, setRespostasPerguntas] = useState<(string | null)[]>([null, null])
   const [detalheLivre, setDetalheLivre] = useState('')
 
-  // Edição manual de slide
-  const [slideEditando, setSlideEditando] = useState<Slide | null>(null)
-
-  // Editor Canvas (beta) — Entrega 2
+  // Editor Canvas — agora único editor (modal legacy removido)
   const [canvasEditorAberto, setCanvasEditorAberto] = useState(false)
   const [slidesCanvas, setSlidesCanvas] = useState<Slide2[] | null>(null)
+  const [imageCache, setImageCache] = useState<ImageCache>(new Map())
 
   // ───────────────────────────────────────────
   // Step 1: ler URL
@@ -315,68 +313,67 @@ export default function CarrosselPage() {
     }
   }
 
+  /**
+   * Renderiza todos os slides client-side via canvas. Substitui as N chamadas
+   * a /api/carrossel/renderizar (uma por slide) por renderização local — zero
+   * compute Vercel, instantâneo, e o PNG aqui é EXATAMENTE o que o usuário vê
+   * no Editor Canvas. Source-of-truth unificado.
+   */
   async function renderizarTodos(c: CarrosselData) {
-    const promises = c.slides.map((slide) => renderizarSlide(slide, c))
+    // Garante imageCache atualizado (caso imagens tenham mudado)
+    let cache = imageCache
+    if (cache.size !== imagens.length && imagens.length > 0) {
+      cache = await preloadImages(imagens)
+      setImageCache(cache)
+    }
+
+    const slide2s = carrosselParaSlide2(c.slides)
+    setSlidesCanvas(slide2s)
+    const promises = slide2s.map((s2) => renderizarSlide2(s2, cache))
     await Promise.all(promises)
   }
 
-  async function renderizarSlide(slide: Slide, c: CarrosselData) {
-    setRenderizando((prev) => ({ ...prev, [slide.ordem]: true }))
-
-    // Usa imagem_index da IA; se não veio e temos imagens, distribui round-robin
-    // Só closing e brand_promo não usam foto — todo o resto usa se tiver imagem_index
-    const ARCHS_SEM_IMAGEM = new Set(['brand_promo'])
-    const arquetipo = slide.arquetipo ?? ''
-    const usarImagem = imagens.length > 0 && !ARCHS_SEM_IMAGEM.has(arquetipo)
-    const imgIdx = slide.imagem_index !== undefined ? slide.imagem_index : (usarImagem ? (slide.ordem - 1) % imagens.length : -1)
-    const imgBase64 = imgIdx >= 0 && imagens[imgIdx]
-      ? `data:image/jpeg;base64,${imagens[imgIdx]}`
-      : undefined
-
+  async function renderizarSlide2(s2: Slide2, cache: ImageCache) {
+    setRenderizando((prev) => ({ ...prev, [s2.ordem]: true }))
     try {
-      const res = await fetch('/api/carrossel/renderizar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slide,
-          imagem_base64: imgBase64,
-          paleta: c.paleta,
-          total_slides: c.slides.length,
-          show_watermark: showWatermark,
-          modo,
-          fonte: fonteCarrossel,
-        }),
+      const url = await slide2ToPngUrl(s2, cache, { watermark: showWatermark })
+      setSlidePngs((prev) => {
+        // Revoga URL antiga se houver pra evitar leak
+        const old = prev[s2.ordem]
+        if (old && old.startsWith('blob:')) URL.revokeObjectURL(old)
+        return { ...prev, [s2.ordem]: url }
       })
-
-      if (!res.ok) {
-        const errText = await res.text().catch(() => `HTTP ${res.status}`)
-        console.error(`Renderizar slide ${slide.ordem} falhou:`, res.status, errText)
-        setSlidePngs((prev) => ({ ...prev, [slide.ordem]: `ERROR:${res.status}` }))
-        return
-      }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      setSlidePngs((prev) => ({ ...prev, [slide.ordem]: url }))
     } catch (e) {
-      console.error(`Renderizar slide ${slide.ordem} exception:`, e)
-      setSlidePngs((prev) => ({ ...prev, [slide.ordem]: `ERROR:fetch` }))
+      console.error(`Renderizar slide ${s2.ordem} falhou:`, e)
+      setSlidePngs((prev) => ({ ...prev, [s2.ordem]: `ERROR:canvas` }))
     } finally {
-      setRenderizando((prev) => ({ ...prev, [slide.ordem]: false }))
+      setRenderizando((prev) => ({ ...prev, [s2.ordem]: false }))
     }
   }
 
-  // ───────────────────────────────────────────
-  // Edição manual de slide
-  // ───────────────────────────────────────────
-  function handleAplicarEdicao() {
-    if (!slideEditando || !carrossel) return
-    const slidesAtualizados = carrossel.slides.map(s =>
-      s.ordem === slideEditando.ordem ? slideEditando : s
-    )
-    const carrosselAtualizado = { ...carrossel, slides: slidesAtualizados }
-    setCarrossel(carrosselAtualizado)
-    renderizarSlide(slideEditando, carrosselAtualizado)
-    setSlideEditando(null)
+  // Compat: chamado pelo "Tentar de novo" e por renderizarTodos.
+  // Como agora renderizamos Slide2, achamos o equivalente no slidesCanvas.
+  async function renderizarSlide(slide: Slide, _c: CarrosselData) {
+    if (!slidesCanvas) return
+    const s2 = slidesCanvas.find(s => s.ordem === slide.ordem)
+    if (!s2) return
+    let cache = imageCache
+    if (cache.size === 0 && imagens.length > 0) {
+      cache = await preloadImages(imagens)
+      setImageCache(cache)
+    }
+    await renderizarSlide2(s2, cache)
+  }
+
+  /** Chamado pelo Canvas Editor quando salva — atualiza slidesCanvas e re-renderiza grid */
+  async function aplicarEdicoesCanvas(novos: Slide2[]) {
+    setSlidesCanvas(novos)
+    let cache = imageCache
+    if (cache.size === 0 && imagens.length > 0) {
+      cache = await preloadImages(imagens)
+      setImageCache(cache)
+    }
+    await Promise.all(novos.map(s2 => renderizarSlide2(s2, cache)))
   }
 
   // ───────────────────────────────────────────
@@ -1384,9 +1381,15 @@ export default function CarrosselPage() {
                             <div className="flex items-center gap-2">
                               {png && !png.startsWith('ERROR:') && (
                                 <button
-                                  onClick={() => setSlideEditando({ ...slide })}
+                                  onClick={() => {
+                                    if (!carrossel) return
+                                    if (!slidesCanvas) {
+                                      setSlidesCanvas(carrosselParaSlide2(carrossel.slides))
+                                    }
+                                    setCanvasEditorAberto(true)
+                                  }}
                                   className="flex items-center gap-1 text-xs text-[#9b9bb5] hover:text-iara-300 transition-colors"
-                                  title="Editar este slide"
+                                  title="Editar no Canvas"
                                 >
                                   <Pencil className="w-3 h-3" />
                                   Editar
@@ -1514,24 +1517,13 @@ export default function CarrosselPage() {
         )}
       </div>
 
-      {/* ── Editor expandido (legacy, modal) ── */}
-      {slideEditando && (
-        <CarrosselEditorSlide
-          slide={slideEditando}
-          setSlide={(s: Slide) => setSlideEditando(s)}
-          onFechar={() => setSlideEditando(null)}
-          onAplicar={handleAplicarEdicao}
-          temFoto={imagens.length > 0}
-        />
-      )}
-
-      {/* ── Editor Canvas (beta) — fullscreen tipo Canva ── */}
+      {/* ── Editor Canvas — único editor ── */}
       {canvasEditorAberto && slidesCanvas && (
         <CarrosselCanvasEditor
           slides={slidesCanvas}
           imagensBase64={imagens}
           onFechar={() => setCanvasEditorAberto(false)}
-          onSalvar={(nv) => setSlidesCanvas(nv)}
+          onSalvar={aplicarEdicoesCanvas}
           watermark={showWatermark}
         />
       )}

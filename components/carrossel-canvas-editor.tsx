@@ -76,8 +76,35 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     mode: 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br'
   } | null>(null)
 
-  // Preview zoom (canvas HTML resolvido em px)
-  const canvasDisplaySize = 520 // px visíveis
+  // Canvas display size — RESPONSIVO: medido do container via ResizeObserver.
+  // Fallback inicial: 520px desktop, ajusta no primeiro layout.
+  const stageContainerRef = useRef<HTMLDivElement>(null)
+  const [canvasDisplaySize, setCanvasDisplaySize] = useState(520)
+
+  useEffect(() => {
+    if (!stageContainerRef.current) return
+    const el = stageContainerRef.current
+
+    const measure = () => {
+      const rect = el.getBoundingClientRect()
+      // Subtraímos padding interno e bottom-bar de navegação (~80px no mobile)
+      const padding = 32
+      const reservedBottom = 80
+      const available = Math.min(rect.width - padding, rect.height - reservedBottom)
+      // Mín 280 (extra-small phones), max 720 (não fica monstruoso em desktops largos)
+      const next = Math.max(280, Math.min(720, available))
+      setCanvasDisplaySize(Math.floor(next))
+    }
+    measure()
+
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    window.addEventListener('orientationchange', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('orientationchange', measure)
+    }
+  }, [])
 
   const slide = slides[slideIdx]
   const selectedLayer = slide?.layers.find(l => l.id === selectedLayerId) ?? null
@@ -368,19 +395,20 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link rel="stylesheet" href={GOOGLE_FONTS_URL} />
 
-      {/* Topbar */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-[#1a1a2e] bg-[#0a0a14]">
-        <div className="flex items-center gap-3">
-          <button onClick={onFechar} className="p-2 rounded-lg hover:bg-[#1a1a2e] text-[#9b9bb5]">
+      {/* Topbar — responsivo: labels somem no mobile, ícones permanecem */}
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-[#1a1a2e] bg-[#0a0a14] flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button onClick={onFechar} className="p-2 rounded-lg hover:bg-[#1a1a2e] text-[#9b9bb5] flex-shrink-0">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <div>
-            <p className="text-sm font-semibold text-[#f1f1f8]">Editor Canvas</p>
-            <p className="text-[11px] text-[#5a5a7a]">Slide {slideIdx + 1} de {slides.length} · arraste, clique, edite</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#f1f1f8] truncate">Editor Canvas</p>
+            <p className="text-[11px] text-[#5a5a7a] truncate hidden sm:block">Slide {slideIdx + 1} de {slides.length} · arraste, clique, edite</p>
+            <p className="text-[10px] text-[#5a5a7a] sm:hidden">{slideIdx + 1}/{slides.length}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <button
             onClick={undo}
             disabled={historyIdx === 0}
@@ -397,7 +425,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           >
             <Redo2 className="w-4 h-4" />
           </button>
-          <div className="h-5 w-px bg-[#2a2a4a] mx-1" />
+          <div className="h-5 w-px bg-[#2a2a4a] mx-0.5 sm:mx-1" />
           <button
             onClick={() => setShowPreview(true)}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] text-[#9b9bb5] hover:text-white text-xs font-medium"
@@ -407,18 +435,20 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           <button
             onClick={compartilharInstagram}
             disabled={exportando}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-xs font-semibold"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-xs font-semibold"
+            title="Compartilhar"
           >
             {exportando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-            Compartilhar
+            <span className="hidden sm:inline">Compartilhar</span>
           </button>
           <button
             onClick={exportarTodosPng}
             disabled={exportando}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-xs font-semibold"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-xs font-semibold"
+            title="Baixar PNGs"
           >
             {exportando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-            Baixar PNGs
+            <span className="hidden sm:inline">Baixar</span>
           </button>
         </div>
       </div>
@@ -439,8 +469,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           ))}
         </div>
 
-        {/* Canvas central */}
+        {/* Canvas central — responsivo via ResizeObserver */}
         <div
+          ref={stageContainerRef}
           className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#050510]"
           style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050510 80%)' }}
           onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
@@ -704,8 +735,29 @@ function LayerView({
       )
     }
 
-    // shape
-    return <div style={common} />
+    // shape — rect/circle/line desenhados via CSS
+    const shapeLayer = layer as import('@/lib/carrossel-canvas-types').ShapeLayer
+    const shapeStyle: React.CSSProperties = { ...common, pointerEvents: 'auto' }
+    if (shapeLayer.shape === 'rect') {
+      if (shapeLayer.fill) shapeStyle.backgroundColor = shapeLayer.fill
+      if (shapeLayer.stroke && shapeLayer.strokeWidth) {
+        shapeStyle.border = `${shapeLayer.strokeWidth}px solid ${shapeLayer.stroke}`
+      }
+    } else if (shapeLayer.shape === 'circle') {
+      if (shapeLayer.fill) shapeStyle.backgroundColor = shapeLayer.fill
+      shapeStyle.borderRadius = '50%'
+      if (shapeLayer.stroke && shapeLayer.strokeWidth) {
+        shapeStyle.border = `${shapeLayer.strokeWidth}px solid ${shapeLayer.stroke}`
+      }
+    } else if (shapeLayer.shape === 'line') {
+      shapeStyle.backgroundColor = shapeLayer.stroke ?? '#fff'
+      shapeStyle.height = (shapeLayer.strokeWidth ?? 4) * (displaySize / CANVAS_SIZE)
+    }
+    return (
+      <div style={shapeStyle}>
+        {selected && <ResizeHandles onPointerDown={(e, mode) => onPointerDown(e, layer.id, mode)} />}
+      </div>
+    )
   })()
 
   // Wrapper que captura pointerDown
