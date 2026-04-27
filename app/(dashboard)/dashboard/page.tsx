@@ -102,7 +102,6 @@ export default async function DashboardPage() {
     { count: usoOratorio },
     { count: usoMidiaKit },
     { count: usoTemas },
-    { count: totalConteudoEver },     // Total absoluto pra detectar primeira-vez
   ] = await Promise.all([
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'roteiro').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'carrossel').gte('created_at', mesAtual),
@@ -111,10 +110,16 @@ export default async function DashboardPage() {
     supabase.from('voice_analyses').select('*', { count: 'exact', head: true }).eq('user_id', uid).gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'midia_kit').gte('created_at', mesAtual),
     supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid).eq('tipo', 'temas').gte('created_at', mesAtual),
-    supabase.from('content_history').select('*', { count: 'exact', head: true }).eq('user_id', uid),
   ])
 
-  const isPrimeiraVez = (totalConteudoEver ?? 0) === 0
+  // Heurística leve: "primeira vez" = nenhum uso este mês de qualquer módulo.
+  // Antes usávamos count(*) absoluto em content_history, que ficava lento em users
+  // com muito histórico e travava a dashboard. Mais simples e suficiente: se ele
+  // não gerou NADA este mês, mostra o banner de boas-vindas.
+  const usoTotalMes =
+    (usoRoteiros ?? 0) + (usoCarrossel ?? 0) + (usoStories ?? 0) + (usoThumbnail ?? 0) +
+    (usoOratorio ?? 0) + (usoMidiaKit ?? 0) + (usoTemas ?? 0)
+  const isPrimeiraVez = usoTotalMes === 0
 
   const limites = LIMITES[planoAtual] ?? LIMITES['free']
   const isIlimitado = planoAtual === 'profissional'
