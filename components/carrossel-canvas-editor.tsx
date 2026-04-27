@@ -475,7 +475,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         </div>
       </div>
 
-      {/* Body: thumbnails + canvas + inspector */}
+      {/* Body: thumbnails(desktop) | wrapper-canvas-and-mobile-inspector | inspector(desktop) */}
       <div className="flex-1 flex overflow-hidden">
         {/* Thumbnails esquerda — APENAS desktop */}
         <div className="hidden md:flex flex-col gap-2 w-28 overflow-y-auto py-4 px-2 border-r border-[#1a1a2e] bg-[#08080f]">
@@ -491,48 +491,91 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           ))}
         </div>
 
-        {/* Canvas central — responsivo via ResizeObserver */}
-        <div
-          ref={stageContainerRef}
-          className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#050510]"
-          style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050510 80%)' }}
-          onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
-        >
-          <CanvasStage
-            slide={slide}
-            imagensCache={imagensCache}
-            selectedLayerId={selectedLayerId}
-            editingTextId={editingTextId}
-            onSelectLayer={setSelectedLayerId}
-            onStartEditText={setEditingTextId}
-            onLayerPointerDown={onLayerPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onUpdateLayer={updateLayer}
-            displaySize={canvasDisplaySize}
-          />
+        {/* Wrapper vertical — canvas + inspector mobile (este vira flex-sibling pra encolher canvas) */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+          {/* Canvas central — responsivo via ResizeObserver, encolhe quando inspector mobile abre */}
+          <div
+            ref={stageContainerRef}
+            className="flex-1 flex items-center justify-center relative overflow-hidden bg-[#050510] min-h-0"
+            style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050510 80%)' }}
+            onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
+          >
+            <CanvasStage
+              slide={slide}
+              imagensCache={imagensCache}
+              selectedLayerId={selectedLayerId}
+              editingTextId={editingTextId}
+              onSelectLayer={setSelectedLayerId}
+              onStartEditText={setEditingTextId}
+              onLayerPointerDown={onLayerPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onUpdateLayer={updateLayer}
+              displaySize={canvasDisplaySize}
+            />
 
-          {/* Navegação entre slides (mobile-friendly) */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-2 rounded-full bg-[#0a0a14]/90 border border-[#1a1a2e] backdrop-blur-sm">
-            <button
-              onClick={() => setSlideIdx(Math.max(0, slideIdx - 1))}
-              disabled={slideIdx === 0}
-              className="p-1.5 rounded-full hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-xs text-[#9b9bb5] min-w-[50px] text-center tabular-nums">{slideIdx + 1} / {slides.length}</span>
-            <button
-              onClick={() => setSlideIdx(Math.min(slides.length - 1, slideIdx + 1))}
-              disabled={slideIdx === slides.length - 1}
-              className="p-1.5 rounded-full hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {/* Navegação entre slides — só aparece se NÃO tem inspector mobile aberto, pra não atrapalhar */}
+            {!selectedLayer && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-2 rounded-full bg-[#0a0a14]/90 border border-[#1a1a2e] backdrop-blur-sm">
+                <button
+                  onClick={() => setSlideIdx(Math.max(0, slideIdx - 1))}
+                  disabled={slideIdx === 0}
+                  className="p-1.5 rounded-full hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-xs text-[#9b9bb5] min-w-[50px] text-center tabular-nums">{slideIdx + 1} / {slides.length}</span>
+                <button
+                  onClick={() => setSlideIdx(Math.min(slides.length - 1, slideIdx + 1))}
+                  disabled={slideIdx === slides.length - 1}
+                  className="p-1.5 rounded-full hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Inspector mobile — flex-sibling abaixo do canvas (NÃO mais fixed/overlay).
+              ResizeObserver vai detectar o canvas menor e shrink ele junto.
+              Altura controlada por max-h, mas dentro do flex layout. */}
+          {selectedLayer && (
+            <div className="lg:hidden flex-shrink-0 border-t-2 border-[#1a1a2e] bg-[#0a0a14] flex flex-col"
+              style={{ maxHeight: '52vh', minHeight: '180px' }}
+            >
+              <div className="flex items-center justify-between px-4 py-2 border-b border-[#1a1a2e] flex-shrink-0">
+                <p className="text-xs font-semibold text-[#f1f1f8]">
+                  {selectedLayer.type === 'text' ? '✏️ Editar texto' : selectedLayer.type === 'photo' ? '🖼️ Editar foto' : '🔷 Editar forma'}
+                </p>
+                <button
+                  onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#13131f] border border-[#2a2a4a] text-[#9b9bb5] hover:text-white text-[10px] font-semibold"
+                  title="Fechar"
+                >
+                  <X className="w-3 h-3" />
+                  Fechar
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 overscroll-contain">
+                <Inspector
+                  slide={slide}
+                  selected={selectedLayer}
+                  onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
+                  onUpdateSlide={updateSlide}
+                  onDelete={() => deleteLayer(selectedLayer.id)}
+                  onDuplicate={() => duplicateLayer(selectedLayer.id)}
+                  onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
+                  onAddText={addTextLayer}
+                  onAddPhoto={addPhotoLayer}
+                  imagensCache={imagensCache}
+                  compact
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Inspector direita */}
+        {/* Inspector direita (desktop) */}
         <div className="hidden lg:flex flex-col w-80 overflow-y-auto border-l border-[#1a1a2e] bg-[#08080f]">
           <Inspector
             slide={slide}
@@ -549,38 +592,6 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         </div>
       </div>
 
-      {/* Inspector mobile — sheet por baixo quando layer selecionada (lg-) */}
-      {selectedLayer && (
-        <div className="lg:hidden fixed inset-x-0 bottom-0 z-60 bg-[#0a0a14] border-t border-[#1a1a2e] max-h-[60vh] flex flex-col rounded-t-2xl shadow-2xl">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#1a1a2e] flex-shrink-0">
-            <p className="text-xs font-semibold text-[#f1f1f8]">
-              {selectedLayer.type === 'text' ? 'Editar texto' : selectedLayer.type === 'photo' ? 'Editar foto' : 'Editar forma'}
-            </p>
-            <button
-              onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
-              className="p-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] text-[#9b9bb5] hover:text-white"
-              title="Fechar inspector"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="overflow-y-auto flex-1">
-            <Inspector
-              slide={slide}
-              selected={selectedLayer}
-              onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
-              onUpdateSlide={updateSlide}
-              onDelete={() => deleteLayer(selectedLayer.id)}
-              onDuplicate={() => duplicateLayer(selectedLayer.id)}
-              onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
-              onAddText={addTextLayer}
-              onAddPhoto={addPhotoLayer}
-              imagensCache={imagensCache}
-              compact
-            />
-          </div>
-        </div>
-      )}
 
       {/* Preview modal */}
       {showPreview && (
