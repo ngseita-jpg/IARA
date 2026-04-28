@@ -77,10 +77,12 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     mode: 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br'
   } | null>(null)
 
-  // Pinch state (2 dedos) — escala fontSize de TextLayer ou w/h de PhotoLayer
+  // Pinch + rotate state (2 dedos) — escala fontSize/dimensões E rotaciona
   const pinchRef = useRef<{
     layerId: string
     initialDistance: number
+    initialAngle: number       // ângulo inicial entre os 2 dedos (radianos)
+    initialRotation: number    // rotação inicial da layer
     initialFontSizes?: number[]
     initialW?: number
     initialH?: number
@@ -97,6 +99,11 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   // Bottom sheet — 3 snap stops: peek (180px), normal (45vh), full (85vh)
   // 0 = peek, 1 = normal, 2 = full
   const [sheetStop, setSheetStop] = useState<0 | 1 | 2>(1)
+
+  // Auto-save indicator — 'idle' | 'saving' | 'saved'.
+  // saving aparece quando user faz mudança, vira saved após 800ms, some após 2s.
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const saveTimer = useRef<{ saving?: ReturnType<typeof setTimeout>; saved?: ReturnType<typeof setTimeout> } | null>(null)
 
   // Haptic feedback util — vibração curta em ações (iOS / Android)
   const haptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -156,10 +163,19 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setHistory(prev => {
       const trimmed = prev.slice(0, historyIdx + 1)
       trimmed.push(JSON.parse(JSON.stringify(next)))
-      // limite de 30 estados
       return trimmed.slice(-30)
     })
     setHistoryIdx(prev => Math.min(prev + 1, 29))
+
+    // Auto-save indicator: "salvando" → "salvo" → fade out
+    if (saveTimer.current?.saving) clearTimeout(saveTimer.current.saving)
+    if (saveTimer.current?.saved) clearTimeout(saveTimer.current.saved)
+    setSaveStatus('saving')
+    saveTimer.current = saveTimer.current ?? {}
+    saveTimer.current.saving = setTimeout(() => {
+      setSaveStatus('saved')
+      saveTimer.current!.saved = setTimeout(() => setSaveStatus('idle'), 1800)
+    }, 600)
   }, [historyIdx])
 
   const undo = useCallback(() => {
@@ -333,9 +349,22 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     const dx = ((e.clientX - dragState.startX) / canvasDisplaySize) * 100
     const dy = ((e.clientY - dragState.startY) / canvasDisplaySize) * 100
 
-    // Snap guides — só durante move (não resize). Threshold 1.5%, snap a 0.5%.
+    // Snap guides — durante MOVE. Threshold 1.8%, snap pra alinhar.
+    // Targets:
+    //   1. Canvas: 0%, 50%, 100% (centros e bordas do slide)
+    //   2. Outras layers: bordas (left/right/top/bottom) e centros (x, y)
+    //      → permite alinhar elemento com OUTRO elemento (Figma/Canva-style)
     const SNAP_THRESHOLD = 1.8
-    const SNAP_TARGETS = [0, 50, 100]
+    const otherLayers = slide.layers.filter(l => l.id !== dragState.layerId)
+
+    // Coleta todos os "alvos" de snap (vertical = X, horizontal = Y)
+    const targetsX: number[] = [0, 50, 100]
+    const targetsY: number[] = [0, 50, 100]
+    for (const o of otherLayers) {
+      targetsX.push(o.x, o.x + o.w / 2, o.x + o.w)
+      targetsY.push(o.y, o.y + o.h / 2, o.y + o.h)
+    }
+
     const guidesV: number[] = []
     const guidesH: number[] = []
     let snapped = false
@@ -345,16 +374,19 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       if (dragState.mode === 'move') {
         let nx = Math.max(0, Math.min(100 - l.w, dragState.origX + dx))
         let ny = Math.max(0, Math.min(100 - l.h, dragState.origY + dy))
-        // Snap em centros e bordas
-        const centerX = nx + l.w / 2
-        const centerY = ny + l.h / 2
-        for (const t of SNAP_TARGETS) {
-          if (Math.abs(centerX - t) < SNAP_THRESHOLD) { nx = t - l.w / 2; guidesV.push(t); snapped = true }
-          if (Math.abs(nx - t) < SNAP_THRESHOLD) { nx = t; guidesV.push(t); snapped = true }
-          if (Math.abs((nx + l.w) - t) < SNAP_THRESHOLD) { nx = t - l.w; guidesV.push(t); snapped = true }
-          if (Math.abs(centerY - t) < SNAP_THRESHOLD) { ny = t - l.h / 2; guidesH.push(t); snapped = true }
-          if (Math.abs(ny - t) < SNAP_THRESHOLD) { ny = t; guidesH.push(t); snapped = true }
-          if (Math.abs((ny + l.h) - t) < SNAP_THRESHOLD) { ny = t - l.h; guidesH.push(t); snapped = true }
+        // Snap eixo X (vertical guides): borda esq, centro, borda dir
+        const checkX = [nx, nx + l.w / 2, nx + l.w]
+        for (const t of targetsX) {
+          if (Math.abs(checkX[0] - t) < SNAP_THRESHOLD) { nx = t; guidesV.push(t); snapped = true; break }
+          if (Math.abs(checkX[1] - t) < SNAP_THRESHOLD) { nx = t - l.w / 2; guidesV.push(t); snapped = true; break }
+          if (Math.abs(checkX[2] - t) < SNAP_THRESHOLD) { nx = t - l.w; guidesV.push(t); snapped = true; break }
+        }
+        // Snap eixo Y (horizontal guides): borda topo, centro, borda base
+        const checkY = [ny, ny + l.h / 2, ny + l.h]
+        for (const t of targetsY) {
+          if (Math.abs(checkY[0] - t) < SNAP_THRESHOLD) { ny = t; guidesH.push(t); snapped = true; break }
+          if (Math.abs(checkY[1] - t) < SNAP_THRESHOLD) { ny = t - l.h / 2; guidesH.push(t); snapped = true; break }
+          if (Math.abs(checkY[2] - t) < SNAP_THRESHOLD) { ny = t - l.h; guidesH.push(t); snapped = true; break }
         }
         next.x = nx
         next.y = ny
@@ -399,9 +431,12 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     const dx = e.touches[0].clientX - e.touches[1].clientX
     const dy = e.touches[0].clientY - e.touches[1].clientY
     const distance = Math.hypot(dx, dy)
+    const angle = Math.atan2(dy, dx)
     pinchRef.current = {
       layerId: selectedLayerId,
       initialDistance: distance,
+      initialAngle: angle,
+      initialRotation: layer.rotation ?? 0,
       initialFontSizes: layer.type === 'text'
         ? (layer as TextLayer).runs.map(r => r.fontSize ?? 40)
         : undefined,
@@ -422,12 +457,25 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     const scale = distance / pinchRef.current.initialDistance
     if (!isFinite(scale) || scale <= 0) return
 
+    // Rotação: variação do ângulo entre os dedos (graus)
+    const angle = Math.atan2(dy, dx)
+    let rotationDelta = (angle - pinchRef.current.initialAngle) * (180 / Math.PI)
+    // Snap a múltiplos de 15° quando próximo (ajuda alinhamento)
+    const candidate = pinchRef.current.initialRotation + rotationDelta
+    const snapTargets = [-180, -135, -90, -45, 0, 45, 90, 135, 180]
+    let finalRotation = candidate
+    for (const t of snapTargets) {
+      if (Math.abs(candidate - t) < 5) { finalRotation = t; rotationDelta = t - pinchRef.current.initialRotation; break }
+    }
+    void rotationDelta // usado pro snap acima
+
     // Posição do tooltip: ponto médio entre os 2 dedos
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2
     const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2
     let tipLabel = ''
 
     updateLayer(pinchRef.current.layerId, l => {
+      const baseUpdate = { rotation: finalRotation }
       if (l.type === 'text' && pinchRef.current!.initialFontSizes) {
         const fontSizes = pinchRef.current!.initialFontSizes
         const newRuns = (l as TextLayer).runs.map((run, i) => ({
@@ -435,8 +483,8 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           fontSize: Math.max(8, Math.min(400, Math.round((fontSizes[i] ?? 40) * scale))),
         }))
         const maxFs = Math.max(...newRuns.map(r => r.fontSize ?? 40))
-        tipLabel = `${maxFs}px`
-        return { ...l, runs: newRuns }
+        tipLabel = `${maxFs}px${Math.abs(finalRotation) > 1 ? ` · ${Math.round(finalRotation)}°` : ''}`
+        return { ...l, ...baseUpdate, runs: newRuns }
       }
       const initW = pinchRef.current!.initialW ?? l.w
       const initH = pinchRef.current!.initialH ?? l.h
@@ -444,9 +492,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       const initY = pinchRef.current!.initialY ?? l.y
       const newW = Math.max(5, Math.min(100, initW * scale))
       const newH = Math.max(3, Math.min(100, initH * scale))
-      tipLabel = `${Math.round(newW)} × ${Math.round(newH)}`
+      tipLabel = `${Math.round(newW)} × ${Math.round(newH)}${Math.abs(finalRotation) > 1 ? ` · ${Math.round(finalRotation)}°` : ''}`
       return {
         ...l,
+        ...baseUpdate,
         x: Math.max(0, Math.min(100 - newW, initX + (initW - newW) / 2)),
         y: Math.max(0, Math.min(100 - newH, initY + (initH - newH) / 2)),
         w: newW,
@@ -566,10 +615,37 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             <X className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Fechar</span>
           </button>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#f1f1f8] truncate">Editor Canvas</p>
-            <p className="text-[11px] text-[#5a5a7a] truncate hidden sm:block">Slide {slideIdx + 1} de {slides.length} · arraste, clique, edite</p>
-            <p className="text-[10px] text-[#5a5a7a] sm:hidden">{slideIdx + 1}/{slides.length}</p>
+          <div className="min-w-0 flex items-center gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#f1f1f8] truncate">Editor Canvas</p>
+              <p className="text-[11px] text-[#5a5a7a] truncate hidden sm:block">Slide {slideIdx + 1} de {slides.length} · arraste, clique, edite</p>
+              <p className="text-[10px] text-[#5a5a7a] sm:hidden">{slideIdx + 1}/{slides.length}</p>
+            </div>
+            {/* Auto-save indicator — sutil, anima entrada/saída */}
+            <AnimatePresence mode="wait">
+              {saveStatus !== 'idle' && (
+                <motion.div
+                  key={saveStatus}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -6 }}
+                  transition={{ duration: 0.18 }}
+                  className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#13131f] border border-[#2a2a4a]"
+                >
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin text-iara-400" />
+                      <span className="text-[10px] text-[#9b9bb5]">Salvando…</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-green-400" />
+                      <span className="text-[10px] text-green-400">Salvo</span>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -1205,23 +1281,33 @@ function Thumbnail({ slide, active, imageCache, onClick, number }: {
   slide: Slide2; active: boolean; imageCache: ImageCache; onClick: () => void; number: number
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
+  const [renderizou, setRenderizou] = useState(false)
+
   useEffect(() => {
     if (!ref.current || !imageCache) return
-    renderSlide2(ref.current, slide, imageCache, {})
+    renderSlide2(ref.current, slide, imageCache, {}).then(() => setRenderizou(true))
   }, [slide, imageCache])
 
   return (
-    <button
+    <motion.button
       onClick={onClick}
+      whileTap={{ scale: 0.92 }}
       className={`relative aspect-square w-full rounded-lg overflow-hidden border-2 transition-all ${
-        active ? 'border-iara-500 scale-[1.02]' : 'border-[#1a1a2e] hover:border-[#2a2a4a]'
+        active
+          ? 'border-iara-500 shadow-[0_0_0_2px_rgba(99,102,241,0.3),0_4px_16px_rgba(99,102,241,0.4)]'
+          : 'border-[#1a1a2e] hover:border-[#2a2a4a]'
       }`}
+      style={{ scale: active ? 1.04 : 1 }}
     >
-      <canvas ref={ref} style={{ width: '100%', height: '100%' }} />
-      <span className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white tabular-nums">
+      {/* Skeleton shimmer enquanto canvas não renderiza */}
+      {!renderizou && (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#13131f] to-[#1a1a2e] animate-pulse" />
+      )}
+      <canvas ref={ref} style={{ width: '100%', height: '100%', opacity: renderizou ? 1 : 0, transition: 'opacity 200ms' }} />
+      <span className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white tabular-nums backdrop-blur-sm">
         {number}
       </span>
-    </button>
+    </motion.button>
   )
 }
 
