@@ -11,11 +11,12 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
   ChevronLeft, ChevronRight, Plus, Eye,
-  ArrowUp, ArrowDown, Share2, Loader2,
+  ArrowUp, ArrowDown, Share2, Loader2, MoreHorizontal, GripHorizontal,
 } from 'lucide-react'
 import {
   type Slide2, type Layer, type TextLayer, type PhotoLayer, type Run,
@@ -69,12 +70,40 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   const [historyIdx, setHistoryIdx] = useState(0)
   const hydrating = useRef(false)
 
-  // Drag state
+  // Drag state (1 dedo)
   const [dragState, setDragState] = useState<{
     layerId: string; startX: number; startY: number;
     origX: number; origY: number; origW: number; origH: number;
     mode: 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br'
   } | null>(null)
+
+  // Pinch state (2 dedos) — escala fontSize de TextLayer ou w/h de PhotoLayer
+  const pinchRef = useRef<{
+    layerId: string
+    initialDistance: number
+    initialFontSizes?: number[]
+    initialW?: number
+    initialH?: number
+    initialX?: number
+    initialY?: number
+  } | null>(null)
+
+  // Tooltip de pinch — mostra fontSize ou dimensões enquanto user pincha
+  const [pinchInfo, setPinchInfo] = useState<{ x: number; y: number; label: string } | null>(null)
+
+  // Snap guides — linhas que aparecem quando layer alinha com centros/bordas
+  const [snapGuides, setSnapGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] })
+
+  // Bottom sheet — 3 snap stops: peek (180px), normal (45vh), full (85vh)
+  // 0 = peek, 1 = normal, 2 = full
+  const [sheetStop, setSheetStop] = useState<0 | 1 | 2>(1)
+
+  // Haptic feedback util — vibração curta em ações (iOS / Android)
+  const haptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'light') => {
+    if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return
+    const dur = intensity === 'light' ? 8 : intensity === 'medium' ? 14 : 24
+    try { navigator.vibrate(dur) } catch { /* ignored */ }
+  }, [])
 
   // Canvas display size — RESPONSIVO: medido do container via ResizeObserver.
   // Fallback inicial: 520px desktop, ajusta no primeiro layout.
@@ -151,11 +180,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setTimeout(() => { hydrating.current = false }, 0)
   }, [historyIdx, history])
 
-  // Bloqueia pinch-to-zoom do iOS Safari — `touch-action: none` não é suficiente
-  // no Safari porque o pinch é tratado em nível de viewport. Listener com passive:false
-  // permite preventDefault e mata o gesto antes do browser zoomar a tela toda.
-  // Defensivo: só anexa se document existe E suporta os eventos. Falha silenciosa
-  // não impede o editor de carregar.
+  // Bloqueia pinch-to-zoom do iOS Safari (preventDefault no event nativo evita
+  // o zoom da viewport). Mas o React onTouchMove no canvas continua disparando,
+  // então nosso pinch-to-resize de layer selecionada funciona normalmente.
   useEffect(() => {
     if (typeof document === 'undefined') return
     let cleanup: (() => void) | undefined
@@ -217,6 +244,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setSlides(next)
     pushHistory(next)
     setSelectedLayerId(null)
+    haptic('heavy')
   }
 
   function duplicateLayer(layerId: string) {
@@ -289,6 +317,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (!layer) return
     e.stopPropagation()
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    if (selectedLayerId !== layerId) haptic('light')
     setSelectedLayerId(layerId)
     setDragState({
       layerId,
@@ -303,11 +332,32 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (!dragState) return
     const dx = ((e.clientX - dragState.startX) / canvasDisplaySize) * 100
     const dy = ((e.clientY - dragState.startY) / canvasDisplaySize) * 100
+
+    // Snap guides — só durante move (não resize). Threshold 1.5%, snap a 0.5%.
+    const SNAP_THRESHOLD = 1.8
+    const SNAP_TARGETS = [0, 50, 100]
+    const guidesV: number[] = []
+    const guidesH: number[] = []
+    let snapped = false
+
     updateLayer(dragState.layerId, l => {
       const next = { ...l }
       if (dragState.mode === 'move') {
-        next.x = Math.max(0, Math.min(100 - l.w, dragState.origX + dx))
-        next.y = Math.max(0, Math.min(100 - l.h, dragState.origY + dy))
+        let nx = Math.max(0, Math.min(100 - l.w, dragState.origX + dx))
+        let ny = Math.max(0, Math.min(100 - l.h, dragState.origY + dy))
+        // Snap em centros e bordas
+        const centerX = nx + l.w / 2
+        const centerY = ny + l.h / 2
+        for (const t of SNAP_TARGETS) {
+          if (Math.abs(centerX - t) < SNAP_THRESHOLD) { nx = t - l.w / 2; guidesV.push(t); snapped = true }
+          if (Math.abs(nx - t) < SNAP_THRESHOLD) { nx = t; guidesV.push(t); snapped = true }
+          if (Math.abs((nx + l.w) - t) < SNAP_THRESHOLD) { nx = t - l.w; guidesV.push(t); snapped = true }
+          if (Math.abs(centerY - t) < SNAP_THRESHOLD) { ny = t - l.h / 2; guidesH.push(t); snapped = true }
+          if (Math.abs(ny - t) < SNAP_THRESHOLD) { ny = t; guidesH.push(t); snapped = true }
+          if (Math.abs((ny + l.h) - t) < SNAP_THRESHOLD) { ny = t - l.h; guidesH.push(t); snapped = true }
+        }
+        next.x = nx
+        next.y = ny
       } else if (dragState.mode === 'resize-br') {
         next.w = Math.max(5, Math.min(100 - l.x, dragState.origW + dx))
         next.h = Math.max(3, Math.min(100 - l.y, dragState.origH + dy))
@@ -331,10 +381,87 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       }
       return next
     })
+
+    setSnapGuides({ v: Array.from(new Set(guidesV)), h: Array.from(new Set(guidesH)) })
+    if (snapped) haptic('light')
   }
 
   function onPointerUp() {
     setDragState(null)
+    setSnapGuides({ v: [], h: [] })
+  }
+
+  // ─── Pinch-to-resize na layer selecionada (2 dedos) ──────────
+  function onCanvasTouchStart(e: React.TouchEvent) {
+    if (e.touches.length !== 2 || !selectedLayerId) return
+    const layer = slide.layers.find(l => l.id === selectedLayerId)
+    if (!layer) return
+    const dx = e.touches[0].clientX - e.touches[1].clientX
+    const dy = e.touches[0].clientY - e.touches[1].clientY
+    const distance = Math.hypot(dx, dy)
+    pinchRef.current = {
+      layerId: selectedLayerId,
+      initialDistance: distance,
+      initialFontSizes: layer.type === 'text'
+        ? (layer as TextLayer).runs.map(r => r.fontSize ?? 40)
+        : undefined,
+      initialW: layer.w,
+      initialH: layer.h,
+      initialX: layer.x,
+      initialY: layer.y,
+    }
+    setDragState(null)
+    haptic('light')
+  }
+
+  function onCanvasTouchMove(e: React.TouchEvent) {
+    if (!pinchRef.current || e.touches.length !== 2) return
+    const dx = e.touches[0].clientX - e.touches[1].clientX
+    const dy = e.touches[0].clientY - e.touches[1].clientY
+    const distance = Math.hypot(dx, dy)
+    const scale = distance / pinchRef.current.initialDistance
+    if (!isFinite(scale) || scale <= 0) return
+
+    // Posição do tooltip: ponto médio entre os 2 dedos
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2
+    let tipLabel = ''
+
+    updateLayer(pinchRef.current.layerId, l => {
+      if (l.type === 'text' && pinchRef.current!.initialFontSizes) {
+        const fontSizes = pinchRef.current!.initialFontSizes
+        const newRuns = (l as TextLayer).runs.map((run, i) => ({
+          ...run,
+          fontSize: Math.max(8, Math.min(400, Math.round((fontSizes[i] ?? 40) * scale))),
+        }))
+        const maxFs = Math.max(...newRuns.map(r => r.fontSize ?? 40))
+        tipLabel = `${maxFs}px`
+        return { ...l, runs: newRuns }
+      }
+      const initW = pinchRef.current!.initialW ?? l.w
+      const initH = pinchRef.current!.initialH ?? l.h
+      const initX = pinchRef.current!.initialX ?? l.x
+      const initY = pinchRef.current!.initialY ?? l.y
+      const newW = Math.max(5, Math.min(100, initW * scale))
+      const newH = Math.max(3, Math.min(100, initH * scale))
+      tipLabel = `${Math.round(newW)} × ${Math.round(newH)}`
+      return {
+        ...l,
+        x: Math.max(0, Math.min(100 - newW, initX + (initW - newW) / 2)),
+        y: Math.max(0, Math.min(100 - newH, initY + (initH - newH) / 2)),
+        w: newW,
+        h: newH,
+      }
+    })
+
+    setPinchInfo({ x: midX, y: midY, label: tipLabel })
+  }
+
+  function onCanvasTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length < 2) {
+      pinchRef.current = null
+      setPinchInfo(null)
+    }
   }
 
   // ─── Export ─────────────────────────────────────────────────────
@@ -538,6 +665,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
               touchAction: 'none',
             }}
             onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
+            onTouchStart={onCanvasTouchStart}
+            onTouchMove={onCanvasTouchMove}
+            onTouchEnd={onCanvasTouchEnd}
+            onTouchCancel={onCanvasTouchEnd}
           >
             <CanvasStage
               slide={slide}
@@ -553,79 +684,127 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
               displaySize={canvasDisplaySize}
             />
 
-            {/* Navegação entre slides — só aparece se NÃO tem inspector mobile aberto, pra não atrapalhar */}
-            {!selectedLayer && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-2 rounded-full bg-[#0a0a14]/90 border border-[#1a1a2e] backdrop-blur-sm">
-                <button
-                  onClick={() => setSlideIdx(Math.max(0, slideIdx - 1))}
-                  disabled={slideIdx === 0}
-                  className="p-1.5 rounded-full hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
+            {/* Snap guides — linhas magenta sutis durante drag */}
+            <AnimatePresence>
+              {snapGuides.v.map(v => (
+                <motion.div
+                  key={`v-${v}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.7 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.08 }}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `calc(50% - ${canvasDisplaySize / 2}px + ${(v / 100) * canvasDisplaySize}px)`,
+                    top: `calc(50% - ${canvasDisplaySize / 2}px)`,
+                    width: 1,
+                    height: canvasDisplaySize,
+                    background: 'linear-gradient(180deg, transparent 0%, #ec4899 30%, #ec4899 70%, transparent 100%)',
+                    boxShadow: '0 0 8px rgba(236,72,153,0.6)',
+                  }}
+                />
+              ))}
+              {snapGuides.h.map(h => (
+                <motion.div
+                  key={`h-${h}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.7 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.08 }}
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: `calc(50% - ${canvasDisplaySize / 2}px + ${(h / 100) * canvasDisplaySize}px)`,
+                    left: `calc(50% - ${canvasDisplaySize / 2}px)`,
+                    height: 1,
+                    width: canvasDisplaySize,
+                    background: 'linear-gradient(90deg, transparent 0%, #ec4899 30%, #ec4899 70%, transparent 100%)',
+                    boxShadow: '0 0 8px rgba(236,72,153,0.6)',
+                  }}
+                />
+              ))}
+            </AnimatePresence>
+
+            {/* Pinch tooltip — pill flutuante mostrando tamanho durante pinch */}
+            <AnimatePresence>
+              {pinchInfo && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  className="fixed z-50 px-3 py-1.5 rounded-full bg-[#0a0a14]/95 border border-iara-500/60 backdrop-blur-sm pointer-events-none shadow-xl"
+                  style={{
+                    left: pinchInfo.x,
+                    top: pinchInfo.y - 50,
+                    transform: 'translate(-50%, -50%)',
+                  }}
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <span className="text-xs text-[#9b9bb5] min-w-[50px] text-center tabular-nums">{slideIdx + 1} / {slides.length}</span>
-                <button
-                  onClick={() => setSlideIdx(Math.min(slides.length - 1, slideIdx + 1))}
-                  disabled={slideIdx === slides.length - 1}
-                  className="p-1.5 rounded-full hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
+                  <span className="text-xs font-bold text-white tabular-nums">{pinchInfo.label}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Navegação slim no canto inferior direito — sempre visível, mais discreta */}
+            <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-[#0a0a14]/85 border border-[#1a1a2e] backdrop-blur-sm shadow-lg pointer-events-auto">
+              <button
+                onClick={() => { setSlideIdx(Math.max(0, slideIdx - 1)); haptic('light') }}
+                disabled={slideIdx === 0}
+                className="p-1 rounded-full hover:bg-[#1a1a2e] disabled:opacity-25 text-[#9b9bb5] active:scale-90 transition-transform"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <span className="text-[10px] text-[#9b9bb5] min-w-[28px] text-center tabular-nums font-medium">{slideIdx + 1}/{slides.length}</span>
+              <button
+                onClick={() => { setSlideIdx(Math.min(slides.length - 1, slideIdx + 1)); haptic('light') }}
+                disabled={slideIdx === slides.length - 1}
+                className="p-1 rounded-full hover:bg-[#1a1a2e] disabled:opacity-25 text-[#9b9bb5] active:scale-90 transition-transform"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
-          {/* Inspector mobile — flex-sibling abaixo do canvas (NÃO mais fixed/overlay).
-              ResizeObserver vai detectar o canvas menor e shrink ele junto. */}
-          {selectedLayer && (
-            <div className="lg:hidden flex-shrink-0 border-t-2 border-[#1a1a2e] bg-[#0a0a14] flex flex-col"
-              style={{
-                // Altura: pelo menos 200px, no máx 55% da viewport descontando safe-area
-                maxHeight: 'min(55vh, calc(100dvh - 240px))',
-                minHeight: '200px',
-              }}
-            >
-              <div className="flex items-center justify-between px-4 py-2 border-b border-[#1a1a2e] flex-shrink-0">
-                <p className="text-xs font-semibold text-[#f1f1f8]">
-                  {selectedLayer.type === 'text' ? '✏️ Editar texto' : selectedLayer.type === 'photo' ? '🖼️ Editar foto' : '🔷 Editar forma'}
-                </p>
-                <button
-                  onClick={() => { setSelectedLayerId(null); setEditingTextId(null) }}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-[#13131f] border border-[#2a2a4a] text-[#9b9bb5] hover:text-white text-[10px] font-semibold"
-                  title="Fechar"
-                >
-                  <X className="w-3 h-3" />
-                  Fechar
-                </button>
-              </div>
-              {/* Scroll body — touch-action: pan-y libera apenas scroll vertical
-                  dentro deste container; pinch e horizontal continuam bloqueados pelo root.
-                  webkit-overflow-scrolling pra momentum scroll no iOS.
-                  paddingBottom inclui safe-area-inset-bottom (notch / home indicator). */}
-              <div
-                className="overflow-y-auto flex-1 overscroll-contain"
-                style={{
-                  touchAction: 'pan-y',
-                  WebkitOverflowScrolling: 'touch',
-                  paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
-                }}
+          {/* Inspector mobile — bottom sheet estilo Canva/Figma com 3 snap stops e drag handle */}
+          <AnimatePresence>
+            {selectedLayer && (
+              <BottomSheet
+                stop={sheetStop}
+                onChangeStop={(s) => { setSheetStop(s); haptic('light') }}
+                onClose={() => { setSelectedLayerId(null); setEditingTextId(null); haptic('light') }}
+                titulo={
+                  selectedLayer.type === 'text' ? 'Texto'
+                  : selectedLayer.type === 'photo' ? 'Foto'
+                  : 'Forma'
+                }
               >
-                <Inspector
-                  slide={slide}
-                  selected={selectedLayer}
-                  onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
-                  onUpdateSlide={updateSlide}
+                {/* Toolbar contextual — ações rápidas sempre visíveis em peek */}
+                <ContextualToolbar
+                  layer={selectedLayer}
                   onDelete={() => deleteLayer(selectedLayer.id)}
                   onDuplicate={() => duplicateLayer(selectedLayer.id)}
                   onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
-                  onAddText={addTextLayer}
-                  onAddPhoto={addPhotoLayer}
-                  imagensCache={imagensCache}
-                  compact
+                  onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
+                  onExpand={() => { setSheetStop(2); haptic('medium') }}
                 />
-              </div>
-            </div>
-          )}
+                {/* Inspector full — só visível quando sheet expandido */}
+                {sheetStop >= 1 && (
+                  <Inspector
+                    slide={slide}
+                    selected={selectedLayer}
+                    onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
+                    onUpdateSlide={updateSlide}
+                    onDelete={() => deleteLayer(selectedLayer.id)}
+                    onDuplicate={() => duplicateLayer(selectedLayer.id)}
+                    onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
+                    onAddText={addTextLayer}
+                    onAddPhoto={addPhotoLayer}
+                    imagensCache={imagensCache}
+                    compact
+                  />
+                )}
+              </BottomSheet>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Inspector direita (desktop) */}
@@ -777,10 +956,13 @@ function LayerView({
     width: pxFromPct(layer.w),
     height: pxFromPct(layer.h),
     transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
-    outline: selected ? '2px solid #6366f1' : undefined,
-    outlineOffset: selected ? '2px' : undefined,
+    // Selection ring suave estilo Canva — box-shadow em vez de outline
+    boxShadow: selected
+      ? '0 0 0 2px #6366f1, 0 0 0 4px rgba(99,102,241,0.25), 0 6px 24px rgba(99,102,241,0.3)'
+      : undefined,
     cursor: editing ? 'text' : selected ? 'move' : 'pointer',
     userSelect: editing ? ('text' as const) : ('none' as const),
+    transition: 'box-shadow 120ms ease',
   }
 
   const content = (() => {
@@ -1614,6 +1796,162 @@ function FontPicker({ value, onChange }: { value: string; onChange: (id: string)
         )}
       </div>
     </div>
+  )
+}
+
+// ─── BottomSheet (3 snap stops + drag handle) ─────────────────────────
+// Inspirado em Apple/Canva/Figma. Usuário arrasta o handle pra mudar entre:
+// stop 0 = peek (180px, só toolbar contextual)
+// stop 1 = normal (45vh)
+// stop 2 = full (85vh, descontando safe-area)
+// Animação spring (não linear) — sensação de "vivo".
+
+function BottomSheet({
+  stop, onChangeStop, onClose, titulo, children,
+}: {
+  stop: 0 | 1 | 2
+  onChangeStop: (s: 0 | 1 | 2) => void
+  onClose: () => void
+  titulo: string
+  children: React.ReactNode
+}) {
+  // Heights por stop (px). Calculado dinamicamente no useMemo
+  const stops = useMemo(() => {
+    if (typeof window === 'undefined') return [180, 380, 600]
+    const vh = window.innerHeight
+    return [180, Math.min(420, vh * 0.45), Math.min(720, vh * 0.85)]
+  }, [])
+  const heightAtual = stops[stop]
+
+  return (
+    <motion.div
+      key="bottom-sheet"
+      initial={{ y: 400 }}
+      animate={{ y: 0, height: heightAtual }}
+      exit={{ y: 400 }}
+      transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+      className="lg:hidden flex-shrink-0 bg-[#0a0a14] flex flex-col rounded-t-2xl shadow-[0_-12px_32px_rgba(0,0,0,0.6)] border-t border-[#1a1a2e] relative"
+      style={{ overflow: 'hidden' }}
+    >
+      {/* Drag handle — clique pra ciclar entre stops */}
+      <div
+        onClick={() => onChangeStop(((stop + 1) % 3) as 0 | 1 | 2)}
+        className="flex items-center justify-center pt-2 pb-1 cursor-pointer select-none active:scale-95 transition-transform"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <div className="w-10 h-1 rounded-full bg-[#2a2a4a]" />
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-iara-500" />
+          <p className="text-xs font-bold text-[#f1f1f8] tracking-wide">{titulo}</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onChangeStop(stop === 2 ? 0 : ((stop + 1) as 0 | 1 | 2))}
+            className="p-1.5 rounded-md hover:bg-[#1a1a2e] text-[#6b6b8a]"
+            aria-label="Expandir/recolher"
+          >
+            {stop === 2 ? <ChevronDown /> : <ChevronUp />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-[#1a1a2e] text-[#6b6b8a]"
+            aria-label="Fechar"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Body — scroll com pan-y, hide quando peek */}
+      <div
+        className="overflow-y-auto flex-1 overscroll-contain"
+        style={{
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        {children}
+      </div>
+    </motion.div>
+  )
+}
+
+// Mini ícones inline pra evitar import extra
+function ChevronUp() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
+}
+function ChevronDown() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+}
+
+// ─── ContextualToolbar — sempre visível em peek, sem precisar expandir ─────
+function ContextualToolbar({
+  layer, onDelete, onDuplicate, onMoveZ, onUpdateLayer, onExpand,
+}: {
+  layer: Layer
+  onDelete: () => void
+  onDuplicate: () => void
+  onMoveZ: (dir: 'up' | 'down') => void
+  onUpdateLayer: (fn: (l: Layer) => Layer) => void
+  onExpand: () => void
+}) {
+  return (
+    <div className="px-3 pt-1 pb-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      {layer.type === 'text' && (
+        <>
+          <ToolbarBtn
+            label="A−"
+            onClick={() => onUpdateLayer(l => l.type === 'text' ? {
+              ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, fontSize: Math.max(12, (r.fontSize ?? 40) - 6) }))
+            } : l)}
+          />
+          <ToolbarBtn
+            label="A+"
+            onClick={() => onUpdateLayer(l => l.type === 'text' ? {
+              ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, fontSize: Math.min(300, (r.fontSize ?? 40) + 6) }))
+            } : l)}
+          />
+          <ToolbarBtn icon={<Bold className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? {
+            ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, bold: !r.bold }))
+          } : l)} />
+          <ToolbarBtn icon={<AlignLeft className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'left' } : l)} />
+          <ToolbarBtn icon={<AlignCenter className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'center' } : l)} />
+          <ToolbarBtn icon={<AlignRight className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'right' } : l)} />
+        </>
+      )}
+      <span className="w-px h-5 bg-[#1a1a2e] mx-0.5" />
+      <ToolbarBtn icon={<ArrowUp className="w-3.5 h-3.5" />} onClick={() => onMoveZ('up')} />
+      <ToolbarBtn icon={<ArrowDown className="w-3.5 h-3.5" />} onClick={() => onMoveZ('down')} />
+      <ToolbarBtn icon={<Copy className="w-3.5 h-3.5" />} onClick={onDuplicate} />
+      <ToolbarBtn icon={<Trash2 className="w-3.5 h-3.5" />} onClick={onDelete} variant="danger" />
+      <span className="w-px h-5 bg-[#1a1a2e] mx-0.5" />
+      <ToolbarBtn icon={<MoreHorizontal className="w-3.5 h-3.5" />} onClick={onExpand} label="Mais" />
+    </div>
+  )
+}
+
+function ToolbarBtn({
+  icon, label, onClick, variant = 'normal',
+}: {
+  icon?: React.ReactNode; label?: string; onClick: () => void; variant?: 'normal' | 'danger'
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2.5 py-2 rounded-lg transition-all active:scale-90 flex-shrink-0 ${
+        variant === 'danger'
+          ? 'bg-[#13131f] border border-[#2a2a4a] text-red-400 hover:bg-red-900/20'
+          : 'bg-[#13131f] border border-[#2a2a4a] text-[#c1c1d8] hover:text-white hover:border-iara-500/50'
+      }`}
+    >
+      {icon}
+      {label && <span className="text-[10px] font-bold tracking-wide">{label}</span>}
+    </button>
   )
 }
 
