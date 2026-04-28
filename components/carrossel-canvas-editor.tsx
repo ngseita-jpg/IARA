@@ -105,6 +105,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const saveTimer = useRef<{ saving?: ReturnType<typeof setTimeout>; saved?: ReturnType<typeof setTimeout> } | null>(null)
 
+  // Toast de feedback após download/compartilhamento concluir
+  const [exportToast, setExportToast] = useState<string | null>(null)
+
   // Haptic feedback util — vibração curta em ações (iOS / Android)
   const haptic = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'light') => {
     if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return
@@ -287,7 +290,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     pushHistory(next)
   }
 
-  function addTextLayer() {
+  function addTextLayer() {11111
     const tl: TextLayer = {
       id: newId('t'),
       type: 'text',
@@ -549,6 +552,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         await new Promise(r => setTimeout(r, 200))
       }
       onSalvar?.(slides)
+      haptic('medium')
+      setExportToast(`✓ ${slides.length} ${slides.length === 1 ? 'slide salvo' : 'slides salvos'} no seu dispositivo`)
+      setTimeout(() => setExportToast(null), 4000)
     } finally {
       setExportando(false)
     }
@@ -570,8 +576,11 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       }
       if (navigator.canShare?.({ files })) {
         await navigator.share({ files, title: 'Carrossel Iara' })
+        haptic('medium')
+        setExportToast('✓ Pronto! No iOS escolha "Salvar em Fotos" ou abra direto no Instagram')
+        setTimeout(() => setExportToast(null), 4500)
       } else {
-        // fallback: baixa um por um
+        // fallback desktop: baixa um por um
         for (const f of files) {
           const url = URL.createObjectURL(f)
           const a = document.createElement('a')
@@ -579,6 +588,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           URL.revokeObjectURL(url)
           await new Promise(r => setTimeout(r, 150))
         }
+        haptic('medium')
+        setExportToast(`✓ ${files.length} ${files.length === 1 ? 'imagem baixada' : 'imagens baixadas'}`)
+        setTimeout(() => setExportToast(null), 4000)
+      }
+    } catch (err) {
+      // Web Share cancelado pelo user não é erro
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setExportToast('Não consegui salvar — tente novamente')
+        setTimeout(() => setExportToast(null), 3500)
       }
     } finally {
       setExportando(false)
@@ -676,20 +694,20 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           <button
             onClick={compartilharInstagram}
             disabled={exportando}
-            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-xs font-semibold"
-            title="Compartilhar"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-[10px] sm:text-xs font-bold shadow-lg shadow-pink-900/30"
+            title="Salvar imagens no celular ou compartilhar direto"
           >
             {exportando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">Compartilhar</span>
+            <span>Salvar / Enviar</span>
           </button>
           <button
             onClick={exportarTodosPng}
             disabled={exportando}
-            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-xs font-semibold"
-            title="Baixar PNGs"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white text-[10px] sm:text-xs font-bold shadow-lg shadow-iara-900/30"
+            title="Baixar como PNG"
           >
             {exportando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">Baixar</span>
+            <span>PNG</span>
           </button>
         </div>
       </div>
@@ -913,6 +931,22 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           onFechar={() => setShowPreview(false)}
         />
       )}
+
+      {/* Toast de feedback após export — fica no topo central, claro e some sozinho */}
+      <AnimatePresence>
+        {exportToast && (
+          <motion.div
+            initial={{ y: -50, opacity: 0, scale: 0.92 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            className="fixed top-4 left-1/2 z-[100] -translate-x-1/2 px-4 py-2.5 rounded-full bg-gradient-to-r from-iara-600 to-accent-purple text-white text-xs sm:text-sm font-semibold shadow-2xl shadow-iara-900/60 max-w-[92vw] whitespace-nowrap overflow-hidden text-ellipsis"
+            style={{ pointerEvents: 'none' }}
+          >
+            {exportToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
