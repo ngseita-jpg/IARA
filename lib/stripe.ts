@@ -11,6 +11,13 @@ export const PRICE_IDS = {
   agencia:       process.env.STRIPE_PRICE_AGENCIA!,
 } as const
 
+export const PRICE_IDS_ANUAL = {
+  plus:          process.env.STRIPE_PRICE_PLUS_ANUAL!,
+  premium:       process.env.STRIPE_PRICE_PREMIUM_ANUAL!,
+  profissional:  process.env.STRIPE_PRICE_PROFISSIONAL_ANUAL!,
+  agencia:       process.env.STRIPE_PRICE_AGENCIA_ANUAL!,
+} as const
+
 export const PRICE_IDS_MARCA = {
   start:    process.env.STRIPE_PRICE_MARCA_START!,
   pro:      process.env.STRIPE_PRICE_MARCA_PRO!,
@@ -75,6 +82,9 @@ export function labelPlano(plano: string): string {
 
 export function priceIdToPlano(priceId: string): string | null {
   for (const [plano, id] of Object.entries(PRICE_IDS)) {
+    if (id === priceId) return plano
+  }
+  for (const [plano, id] of Object.entries(PRICE_IDS_ANUAL)) {
     if (id === priceId) return plano
   }
   return null

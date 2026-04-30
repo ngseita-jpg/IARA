@@ -130,6 +130,7 @@ interface Props {
 export function UpgradeModal({ open, modulo, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -148,9 +149,16 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
   const Icon = info?.icon ?? Sparkles
 
   async function handleCheckout(plano: string) {
+    setErro(null)
+
+    // Agência → email comercial
+    if (plano === 'agencia') {
+      window.location.href = 'mailto:contato@iarahubapp.com.br?subject=Quero%20o%20plano%20Ag%C3%AAncia&body=Ol%C3%A1!%20Tenho%20interesse%20no%20plano%20Ag%C3%AAncia%20do%20Iara%20Hub.%20Pode%20me%20chamar?'
+      return
+    }
+
     setLoading(plano)
     try {
-      // Tracking de início de checkout
       const precos: Record<string, number> = { plus: 59.90, premium: 129.00, profissional: 249.00, agencia: 499.00 }
       try {
         const { trackStartCheckout } = await import('@/lib/analytics-events')
@@ -160,11 +168,32 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plano }),
+        body: JSON.stringify({ plano, periodo: 'mensal' }),
       })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
+
+      if (res.status === 401) {
+        const params = new URLSearchParams({ intent: 'assinar', plano, periodo: 'mensal' })
+        window.location.href = `/register?${params.toString()}`
+        return
+      }
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        if (data.contato) { window.location.href = data.contato; return }
+        setErro(data.error ?? 'Erro ao iniciar checkout. Tente novamente.')
+        setLoading(null)
+        return
+      }
+
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setErro('Resposta inválida do servidor.')
+        setLoading(null)
+      }
     } catch {
+      setErro('Erro de conexão. Verifique sua internet e tente de novo.')
       setLoading(null)
     }
   }
@@ -272,6 +301,13 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
               </div>
             ))}
           </div>
+
+          {erro && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-900/20 border border-red-800/40 text-red-300 text-sm flex items-start gap-2">
+              <span>⚠</span>
+              <span className="leading-relaxed">{erro}</span>
+            </div>
+          )}
 
           {/* Value proposition banner */}
           <div className="rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 flex items-center gap-3 mb-4">

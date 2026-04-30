@@ -1,58 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { stripe, PRICE_IDS, PlanoStripe } from '@/lib/stripe'
+import { stripe, PRICE_IDS, PRICE_IDS_ANUAL, type PlanoStripe } from '@/lib/stripe'
+
+export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const { plano } = await req.json() as { plano: PlanoStripe }
-  const priceId = PRICE_IDS[plano]
-  if (!priceId) return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
+  const { plano, periodo = 'mensal' } = await req.json() as { plano: PlanoStripe; periodo?: 'mensal' | 'anual' }
 
-  const admin = createAdminClient()
-  const { data: perfil } = await admin
-    .from('creator_profiles')
-    .select('stripe_customer_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  let customerId = perfil?.stripe_customer_id as string | undefined
-
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email,
-      metadata: { user_id: user.id },
-    })
-    customerId = customer.id
-    await admin
-      .from('creator_profiles')
-      .update({ stripe_customer_id: customerId })
-      .eq('user_id', user.id)
+  // Agência ainda não é self-service no Stripe — tem CTA "Falar com vendas"
+  if (plano === 'agencia') {
+    return NextResponse.json({
+      error: 'Plano Agência é vendido manualmente. Fale com a gente: contato@iarahubapp.com.br',
+      contato: 'mailto:contato@iarahubapp.com.br?subject=Plano%20Ag%C3%AAncia',
+    }, { status: 400 })
   }
 
-  const origin = req.headers.get('origin') ?? 'https://iarahubapp.com.br'
+  const priceId = periodo === 'anual' ? PRICE_IDS_ANUAL[plano] : PRICE_IDS[plano]
+  if (!priceId) {
+    return NextResponse.json({
+      error: 'Plano inválido ou price ID não configurado.',
+      detalhe: `plano=${plano} periodo=${periodo}`,
+    }, { status: 400 })
+  }
 
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${origin}/bem-vindo?plano=${plano}`,
-    cancel_url: `${origin}/dashboard`,
-    metadata: { user_id: user.id, plano },
-    subscription_data: {
-      metadata: { user_id: user.id, plano },
-      trial_period_days: 3, // Estratégia 5: trial Netflix-style
-      trial_settings: {
-        end_behavior: { missing_payment_method: 'cancel' },
+  try {
+    const admin = createAdminClient()
+    const { data: perfil } = await admin
+      .from('creator_profiles')
+      .select('stripe_customer_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    let customerId = perfil?.stripe_customer_id as string | undefined
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { user_id: user.id },
+      })
+      customerId = customer.id
+      await admin
+        .from('creator_profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('user_id', user.id)
+    }
+
+    const origin = req.headers.get('origin') ?? 'https://iarahubapp.com.br'
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${origin}/bem-vindo?plano=${plano}&periodo=${periodo}`,
+      cancel_url: `${origin}/dashboard`,
+      metadata: { user_id: user.id, plano, periodo },
+      subscription_data: {
+        metadata: { user_id: user.id, plano, periodo },
+        trial_period_days: 3,
+        trial_settings: {
+          end_behavior: { missing_payment_method: 'cancel' },
+        },
       },
-    },
-    locale: 'pt-BR',
-    allow_promotion_codes: true,
-    payment_method_collection: 'always', // Sempre pede cartão, mesmo em trial
-    payment_method_types: ['card'],
-  })
+      locale: 'pt-BR',
+      allow_promotion_codes: true,
+      payment_method_collection: 'always',
+      payment_method_types: ['card'],
+    })
 
-  return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: session.url })
+  } catch (e) {
+    console.error('[stripe-checkout] erro:', e)
+    return NextResponse.json({
+      error: 'Erro ao iniciar checkout. Tente novamente em instantes.',
+      detalhe: e instanceof Error ? e.message : 'erro desconhecido',
+    }, { status: 500 })
+  }
 }

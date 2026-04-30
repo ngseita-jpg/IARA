@@ -1,11 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { Check, ChevronRight, Zap } from 'lucide-react'
+import { Check, ChevronRight, Zap, Loader2 } from 'lucide-react'
 
-const PLANS = [
+type PlanoId = 'plus' | 'premium' | 'profissional' | 'agencia'
+
+const PLANS: Array<{
+  id: PlanoId
+  name: string
+  desc: string
+  monthly: number
+  annual: number
+  cta: string
+  ctaStyle: string
+  highlight: boolean
+  badge?: string
+  items: string[]
+  locked?: string[]
+}> = [
   {
+    id: 'plus',
     name: 'Plus',
     desc: 'Pra criadores em crescimento',
     monthly: 59.9,
@@ -26,6 +40,7 @@ const PLANS = [
     locked: ['Métricas com IA'],
   },
   {
+    id: 'premium',
     name: 'Premium',
     desc: 'Melhor custo-benefício',
     monthly: 129,
@@ -48,6 +63,7 @@ const PLANS = [
     locked: [],
   },
   {
+    id: 'profissional',
     name: 'Profissional',
     desc: 'Pra quem vive de conteúdo',
     monthly: 249,
@@ -72,6 +88,7 @@ const PLANS = [
     locked: [],
   },
   {
+    id: 'agencia',
     name: 'Agência',
     desc: 'Pra quem gerencia vários clientes',
     monthly: 499,
@@ -96,6 +113,62 @@ const PLANS = [
 
 export function PricingSection() {
   const [anual, setAnual] = useState(false)
+  const [carregando, setCarregando] = useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+
+  async function assinar(plano: PlanoId) {
+    setErro(null)
+
+    // Agência → email pra time comercial
+    if (plano === 'agencia') {
+      window.location.href = 'mailto:contato@iarahubapp.com.br?subject=Quero%20o%20plano%20Ag%C3%AAncia&body=Ol%C3%A1!%20Tenho%20interesse%20no%20plano%20Ag%C3%AAncia%20do%20Iara%20Hub.%20Pode%20me%20chamar?'
+      return
+    }
+
+    setCarregando(plano)
+    try {
+      // Tracking
+      try {
+        const precos: Record<string, number> = { plus: 59.90, premium: 129.00, profissional: 249.00, agencia: 499.00 }
+        const { trackStartCheckout } = await import('@/lib/analytics-events')
+        trackStartCheckout(plano, precos[plano] ?? 0)
+      } catch { /* ignore */ }
+
+      const periodo = anual ? 'anual' : 'mensal'
+
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plano, periodo }),
+      })
+
+      // Não logado → manda pra register guardando intenção
+      if (res.status === 401) {
+        const params = new URLSearchParams({ intent: 'assinar', plano, periodo })
+        window.location.href = `/register?${params.toString()}`
+        return
+      }
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        if (data.contato) { window.location.href = data.contato; return }
+        setErro(data.error ?? 'Erro ao iniciar checkout. Tenta de novo.')
+        setCarregando(null)
+        return
+      }
+
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setErro('Resposta inválida do servidor.')
+        setCarregando(null)
+      }
+    } catch {
+      setErro('Erro de conexão. Verifique sua internet e tente de novo.')
+      setCarregando(null)
+    }
+  }
 
   return (
     <section id="planos" className="py-24 px-4 sm:px-6 bg-[#0d0d1a]">
@@ -131,12 +204,19 @@ export function PricingSection() {
               </span>
             </button>
           </div>
+
+          {erro && (
+            <div className="mt-6 max-w-md mx-auto px-4 py-3 rounded-xl bg-red-900/20 border border-red-800/40 text-red-300 text-sm">
+              ⚠ {erro}
+            </div>
+          )}
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
           {PLANS.map((plan) => {
             const price = anual ? plan.annual : plan.monthly
             const isGratis = price === 0
+            const ehCarregando = carregando === plan.id
 
             return (
               <div
@@ -181,16 +261,19 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <Link
-                  href="/register"
-                  className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-semibold transition-all mb-5 ${plan.ctaStyle}`}
+                <button
+                  onClick={() => assinar(plan.id)}
+                  disabled={!!carregando}
+                  className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-semibold transition-all mb-5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${plan.ctaStyle}`}
                 >
-                  {isGratis ? (
+                  {ehCarregando ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isGratis ? (
                     <><Zap className="w-3.5 h-3.5" />{plan.cta}</>
                   ) : (
                     <>{plan.cta} <ChevronRight className="w-3.5 h-3.5" /></>
                   )}
-                </Link>
+                </button>
 
                 <ul className="space-y-2 flex-1">
                   {plan.items.map((item) => (
@@ -215,14 +298,12 @@ export function PricingSection() {
         <div className="mt-12 rounded-3xl border border-iara-700/20 overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04), #0a0a14)' }}>
           <div className="p-6 sm:p-8 grid md:grid-cols-3 gap-6 items-center">
 
-            {/* Bloco 1 — a dor numérica (agência) */}
             <div className="text-center md:text-left">
               <p className="text-[10px] tracking-[0.3em] uppercase font-semibold text-[#6b6b8a] mb-2">Uma agência cobra</p>
               <p className="text-3xl sm:text-4xl font-black text-[#f1f1f8] leading-none tabular-nums">R$ 150<span className="text-lg text-[#6b6b8a] font-normal">/carrossel</span></p>
               <p className="text-xs text-[#5a5a7a] mt-2 leading-relaxed">Um social media júnior cobra R$ 1.800/mês pra entregar ~15 posts.</p>
             </div>
 
-            {/* Bloco central — Iara Premium */}
             <div className="text-center border-t md:border-t-0 md:border-l md:border-r border-white/5 py-5 md:py-0">
               <p className="text-[10px] tracking-[0.3em] uppercase font-semibold text-iara-400 mb-2">Iara Premium</p>
               <p className="text-4xl sm:text-5xl font-black leading-none">
@@ -237,7 +318,6 @@ export function PricingSection() {
               </p>
             </div>
 
-            {/* Bloco 3 — o ganho */}
             <div className="text-center md:text-right">
               <p className="text-[10px] tracking-[0.3em] uppercase font-semibold text-green-400/90 mb-2">Economia mensal</p>
               <p className="text-3xl sm:text-4xl font-black leading-none tabular-nums bg-gradient-to-br from-green-400 to-teal-400 bg-clip-text text-transparent">R$ 1.671</p>

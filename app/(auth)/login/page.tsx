@@ -45,12 +45,32 @@ function LoginForm() {
       return
     }
 
-    // Grava/remove cookie de auto-login baseado na escolha do usuário
     if (autoLogin) {
-      document.cookie = 'iara_auto_login=1; path=/; max-age=2592000; samesite=lax' // 30 dias
+      document.cookie = 'iara_auto_login=1; path=/; max-age=2592000; samesite=lax'
     } else {
       document.cookie = 'iara_auto_login=; path=/; max-age=0; samesite=lax'
     }
+
+    // Se o user veio da pricing com intent de assinar, dispara checkout direto
+    try {
+      const raw = localStorage.getItem('iara_intent_assinar')
+      if (raw) {
+        const intent = JSON.parse(raw) as { plano?: string; periodo?: string; ts?: number }
+        const expirado = !intent.ts || (Date.now() - intent.ts > 24 * 60 * 60 * 1000)
+        if (!expirado && intent.plano) {
+          localStorage.removeItem('iara_intent_assinar')
+          const res = await fetch('/api/stripe/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plano: intent.plano, periodo: intent.periodo ?? 'mensal' }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (data.url) { window.location.href = data.url; return }
+        } else if (expirado) {
+          localStorage.removeItem('iara_intent_assinar')
+        }
+      }
+    } catch { /* localStorage indisponível, segue fluxo normal */ }
 
     router.refresh()
     router.push('/dashboard')

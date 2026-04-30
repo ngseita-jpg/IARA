@@ -32,6 +32,23 @@ function RegisterForm() {
     if (tipo === 'marca') setTipoConta('marca')
   }, [searchParams])
 
+  // Salva intenção de assinar (vinda da pricing) pra disparar checkout após login
+  useEffect(() => {
+    if (searchParams.get('intent') === 'assinar') {
+      const plano = searchParams.get('plano')
+      const periodo = searchParams.get('periodo') ?? 'mensal'
+      if (plano) {
+        try {
+          localStorage.setItem('iara_intent_assinar', JSON.stringify({
+            plano, periodo, ts: Date.now(),
+          }))
+        } catch { /* localStorage indisponível */ }
+      }
+    }
+  }, [searchParams])
+
+  const intentPlano = searchParams.get('intent') === 'assinar' ? searchParams.get('plano') : null
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     if (password.length < 6) {
@@ -88,10 +105,15 @@ function RegisterForm() {
             </div>
           </div>
           <h2 className="text-xl font-bold text-[#f1f1f8] mb-2">Conta criada!</h2>
-          <p className="text-sm text-[#5a5a7a] mb-7 leading-relaxed">
+          <p className="text-sm text-[#5a5a7a] mb-3 leading-relaxed">
             Verifique seu e-mail para confirmar o cadastro.<br />
             Após confirmar, você já pode entrar.
           </p>
+          {intentPlano && (
+            <p className="text-xs text-iara-300 bg-iara-900/20 border border-iara-700/30 rounded-xl px-3 py-2 mb-5 leading-relaxed">
+              ✨ Após fazer login, vamos abrir o checkout do plano <strong className="capitalize">{intentPlano}</strong> automaticamente.
+            </p>
+          )}
           <Link
             href="/login"
             className="inline-flex items-center gap-2 rounded-xl py-3 px-6 text-sm font-bold text-white transition-all hover:opacity-90"
