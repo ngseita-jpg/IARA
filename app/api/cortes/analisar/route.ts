@@ -67,14 +67,20 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── PIPELINE DE TRANSCRIÇÃO ─────────────────────────────────────────
-  // 5 estratégias em cascata: youtube-transcript → HTML scrape → InnerTube
-  // (5 clientes: TVHTML5/Android/Web/iOS/iPad) → Whisper API (audio fallback)
+  // Mesmo pipeline do /api/carrossel/ler-conteudo (que já funciona em prod):
+  //  1. youtube-transcript lib (com timestamps reais, ou texto bruto)
+  //  2. HTML scrape do ytInitialPlayerResponse → captions
+  //  3. InnerTube com 4 clientes (iOS, TVHTML5, Android, Web) → captions
+  //  4. Whisper API no áudio (texto sem timestamps → distribuído proporcional)
+  //  5. Fallback final: descrição do vídeo (gera cortes narrativos)
+  // Quando texto vem sem timestamps, distribuímos proporcionalmente — IA ainda
+  // identifica trechos e user pode ajustar manualmente.
   const resultado = await fetchYouTubeTranscricao(videoId)
 
   if (!resultado || !resultado.segmentos.length) {
     return NextResponse.json({
-      error: 'Não consegui extrair a transcrição desse vídeo.',
-      detalhe: 'O YouTube está bloqueando o download. Tente um vídeo de outro canal ou tente novamente em alguns minutos.',
+      error: 'Não consegui extrair informação suficiente desse vídeo.',
+      detalhe: 'Esse vídeo pode estar privado, com region-lock ou indisponível. Tenta outro link.',
     }, { status: 422 })
   }
 
