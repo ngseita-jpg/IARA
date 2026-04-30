@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
   if (!resultado || !resultado.segmentos.length) {
     return NextResponse.json({
       error: 'Não consegui extrair informação suficiente desse vídeo.',
-      detalhe: 'Esse vídeo pode estar privado, com region-lock ou indisponível. Tenta outro link.',
+      detalhe: 'Tentamos legenda direta, transcrição automática, 6 clientes diferentes do YouTube e fallback de áudio. Possíveis causas: vídeo muito recente (menos de 1h, ainda não tem ASR), age-gate, region-lock ou conteúdo bloqueado por copyright. Tenta colar um link de um vídeo um pouco mais antigo.',
     }, { status: 422 })
   }
 
