@@ -2,10 +2,21 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Valida que next é uma rota interna (path relativo) — bloqueia open redirect
+function safeNext(raw: string | null): string {
+  const fallback = '/dashboard'
+  if (!raw) return fallback
+  // Aceita só caminhos que começam com / e não com // ou /\ (browser trata como host)
+  if (!raw.startsWith('/')) return fallback
+  if (raw.startsWith('//')) return fallback
+  if (raw.startsWith('/\\')) return fallback
+  return raw
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const next = safeNext(searchParams.get('next'))
 
   if (code) {
     const cookieStore = await cookies()

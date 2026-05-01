@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { stripe, PRICE_IDS_MARCA, PRICE_IDS_MARCA_ANUAL, type PlanoMarca } from '@/lib/stripe'
+import { checkRateLimitIp } from '@/lib/rateLimit'
+import { audit } from '@/lib/audit'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
+  const rl = await checkRateLimitIp(req, 'stripe_checkout_marca', 10, 300)
+  if (rl) return rl
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado — faça login como marca antes.' }, { status: 401 })
@@ -62,6 +67,12 @@ export async function POST(req: NextRequest) {
     allow_promotion_codes: true,
     payment_method_collection: 'always',
     payment_method_types: ['card'],
+  })
+
+  void audit(req, 'checkout_iniciado', {
+    userId: user.id,
+    statusHttp: 200,
+    meta: { plano, periodo, tipo: 'marca', session_id: session.id },
   })
 
   return NextResponse.json({ url: session.url })

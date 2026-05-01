@@ -199,14 +199,19 @@ export async function POST(req: NextRequest) {
       const emTrial = sub.status === 'trialing'
 
       if (tipo === 'marca') {
-        // Fluxo de MARCA — durante trial usa o plano real mesmo
         await setPlanoMarca(userId, planoEscolhido, periodo, subId)
       } else {
-        // Fluxo de CRIADOR — Netflix-style: acesso completo ao plano escolhido desde o dia 1.
-        // Stripe cancela automaticamente se pagamento falhar no fim do trial (trial_settings.end_behavior).
         await setPlano(userId, planoEscolhido, subId)
         await enviarBoasVindas(userId, planoEscolhido)
       }
+      // Audit (best-effort, não bloqueia webhook)
+      void supabaseAdmin.from('api_audit_log').insert({
+        user_id: userId,
+        evento: 'checkout_completo',
+        rota: '/api/stripe/webhook',
+        status_http: 200,
+        meta: { plano: planoEscolhido, periodo, tipo, sub_id: subId, em_trial: emTrial },
+      }).then(() => null, () => null)
       break
     }
 
