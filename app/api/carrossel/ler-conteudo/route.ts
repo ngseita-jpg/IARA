@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import * as cheerio from 'cheerio'
+import { checkRateLimitIp } from '@/lib/rateLimit'
 
 export const maxDuration = 60
 
@@ -326,6 +327,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  if (rl) return rl
 
   const { url } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL não informada' }, { status: 400 })

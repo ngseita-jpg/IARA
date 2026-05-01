@@ -5,6 +5,7 @@ import { verificarLimite, respostaLimiteAtingido } from '@/lib/checkLimite'
 import { verificarLimiteMarca, respostaLimiteAtingidoMarca } from '@/lib/checkLimiteMarca'
 import { NOME_PLANO, type Plano } from '@/lib/limites'
 import { fetchYouTubeTranscricao, extrairVideoId } from '@/lib/youtube-transcricao'
+import { checkRateLimitIp } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  if (rl) return rl
 
   const body = await req.json() as { url: string; modo?: Modo; num_cortes?: number }
   const modo: Modo = body.modo === 'marca' ? 'marca' : 'criador'

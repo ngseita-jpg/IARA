@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
 import { verificarLimite, respostaLimiteAtingido } from '@/lib/checkLimite'
 import { NOME_PLANO, type Plano } from '@/lib/limites'
+import { checkRateLimitIp } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -28,6 +29,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 })
+
+  const rlIp = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  if (rlIp) return rlIp
 
   const { metricas, profile } = await req.json()
 

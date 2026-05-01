@@ -2,6 +2,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
+import { checkRateLimitIp } from '@/lib/rateLimit'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -75,6 +79,9 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  if (rl) return rl
 
   const body = await req.json()
   const { tema, formato, duracao, estilo, objetivo, modo, inspiracao, conteudo_base } = body

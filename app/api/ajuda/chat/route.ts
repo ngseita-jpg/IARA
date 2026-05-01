@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { checkRateLimitIp } from '@/lib/rateLimit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -65,6 +66,11 @@ NÃO responda qualquer coisa fora do escopo do produto. Se o usuário perguntar 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Rate limit (chat de suporte é aberto pra não-logado também — proteger por IP)
+  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  if (rl) return rl
+
   const { mensagem, historico, sessao_id } = await req.json() as {
     mensagem: string
     historico?: Array<{ role: 'user' | 'assistant', content: string }>

@@ -2,6 +2,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
+import { checkRateLimitIp } from '@/lib/rateLimit'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -178,6 +182,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  if (rl) return rl
 
   const { titulo_video, descricao, imagem_base64, historico, fonte_override } = await req.json()
 
