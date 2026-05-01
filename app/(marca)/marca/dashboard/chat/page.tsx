@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { TrendingUp, Send, Loader2, RotateCcw, Lightbulb } from 'lucide-react'
+import { sanitizeBold } from '@/lib/sanitize'
 type HistoricoMsg = { role: 'user' | 'assistant'; content: string }
 
 type Mensagem = {
@@ -31,13 +32,13 @@ function MarkdownText({ text }: { text: string }) {
           return (
             <div key={i} className="flex gap-2 text-sm text-[#c9c9d8]">
               <span className="text-[#C9A84C] mt-0.5 flex-shrink-0">•</span>
-              <span dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#f1f1f8]">$1</strong>') }} />
+              <span dangerouslySetInnerHTML={{ __html: sanitizeBold(line.slice(2)) }} />
             </div>
           )
         if (line.trim() === '') return <div key={i} className="h-1" />
         return (
           <p key={i} className="text-sm text-[#c9c9d8] leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#f1f1f8]">$1</strong>') }} />
+            dangerouslySetInnerHTML={{ __html: sanitizeBold(line) }} />
         )
       })}
     </div>

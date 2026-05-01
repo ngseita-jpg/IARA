@@ -9,8 +9,12 @@ const CRON_SECRET = process.env.CRON_SECRET
  * Chamado por cron job (Vercel Cron ou externo) com Authorization: Bearer CRON_SECRET.
  */
 export async function GET(req: NextRequest) {
+  // Bloqueia se CRON_SECRET não estiver configurado (impede chamada anônima)
+  if (!CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET não configurado' }, { status: 500 })
+  }
   const auth = req.headers.get('authorization')
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
+  if (auth !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

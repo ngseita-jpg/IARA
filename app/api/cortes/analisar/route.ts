@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
   const modo: Modo = body.modo === 'marca' ? 'marca' : 'criador'
   const numCortes = Math.min(Math.max(body.num_cortes ?? 6, 3), 12)
 
-  const videoId = extrairVideoId(body.url ?? '')
+  // Cap pra evitar payload abusivo
+  const url = (body.url ?? '').slice(0, 500)
+  const videoId = extrairVideoId(url)
   if (!videoId) {
     return NextResponse.json({ error: 'URL inválida. Cole um link do YouTube completo.' }, { status: 400 })
   }
@@ -88,6 +90,13 @@ export async function POST(req: NextRequest) {
   const titulo = resultado.titulo
   const fonteUsada = resultado.fonte
   const duracaoTotal = Math.max(...segs.map(s => s.offset + s.duration))
+
+  // Cap de duração: vídeos > 4h estouram custo de IA (transcrição enorme + tokens)
+  if (duracaoTotal > 4 * 60 * 60) {
+    return NextResponse.json({
+      error: 'Vídeo muito longo (>4h). Tenta um vídeo de até 4 horas.',
+    }, { status: 400 })
+  }
 
   // Monta transcrição numerada com timestamps (a cada linha) pra Claude analisar
   const linhas: string[] = []

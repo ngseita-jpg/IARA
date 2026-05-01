@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { verificarLimiteMarca, respostaLimiteAtingidoMarca } from '@/lib/checkLimiteMarca'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -146,6 +150,10 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Rate limit por plano (Opus = caro)
+  const lim = await verificarLimiteMarca(user.id, 'briefing_mes')
+  if (!lim.ok) return respostaLimiteAtingidoMarca(lim)
+
   const body = await req.json()
   const { produto, objetivo, publicoAlvo, diferenciais, tomDesejado, budget } = body
 
@@ -154,6 +162,16 @@ export async function POST(req: NextRequest) {
       status: 400, headers: { 'Content-Type': 'application/json' },
     })
   }
+
+  // Cap dos campos de input — evita usuário enviar 100KB de texto pra inflar custo
+  const cap = (s: unknown, max: number): string =>
+    typeof s === 'string' ? s.slice(0, max) : ''
+  const produtoSafe       = cap(produto, 2000)
+  const objetivoSafe      = cap(objetivo, 1000)
+  const publicoAlvoSafe   = cap(publicoAlvo, 1000)
+  const diferenciaisSafe  = cap(diferenciais, 1500)
+  const tomDesejadoSafe   = cap(tomDesejado, 500)
+  const budgetSafe        = cap(budget, 200)
 
   const marcaContexto = `## Perfil da Marca
 Empresa: ${brand.nome_empresa ?? 'Não informada'}
@@ -168,18 +186,26 @@ Plataformas de foco: ${brand.plataformas_foco?.join(', ') ?? 'Não informado'}`
 
 ## Dados da Campanha
 
-**Produto/Serviço:** ${produto}
-**Objetivo da campanha:** ${objetivo}
-**Público-alvo:** ${publicoAlvo ?? 'Não especificado — use o segmento da marca como referência'}
-**Diferenciais/Pontos fortes:** ${diferenciais ?? 'Não especificado'}
-**Tom desejado:** ${tomDesejado ?? 'Não especificado — recomende o mais adequado'}
-**Budget disponível:** ${budget ?? 'Não informado'}
+**Produto/Serviço:** ${produtoSafe}
+**Objetivo da campanha:** ${objetivoSafe}
+**Público-alvo:** ${publicoAlvoSafe || 'Não especificado — use o segmento da marca como referência'}
+**Diferenciais/Pontos fortes:** ${diferenciaisSafe || 'Não especificado'}
+**Tom desejado:** ${tomDesejadoSafe || 'Não especificado — recomende o mais adequado'}
+**Budget disponível:** ${budgetSafe || 'Não informado'}
 
 Gere o diagnóstico completo conforme a estrutura definida.`
 
+  // Registra uso DEPOIS do limite passar (antes do stream começar)
+  // Para contar pro briefing_mes, o limite usa marca_content_history.tipo='briefing'
+  void supabase.from('marca_content_history').insert({
+    user_id: user.id,
+    tipo: 'briefing',
+    titulo: produtoSafe.slice(0, 200) || 'Campanha IA',
+  }).then(() => null, () => null)
+
   const stream = anthropic.messages.stream({
     model: 'claude-opus-4-6',
-    max_tokens: 6000,
+    max_tokens: 3000,
     system: [
       {
         type: 'text',

@@ -3,11 +3,36 @@ import { createClient } from '@/lib/supabase/server'
 
 type Params = { params: Promise<{ id: string }> }
 
+// Verifica que a vaga pertence ao brand_profile do user logado
+async function verificarOwnershipVaga(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  vagaId: string,
+): Promise<boolean> {
+  const { data: brand } = await supabase
+    .from('brand_profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!brand) return false
+  const { data: vaga } = await supabase
+    .from('vagas')
+    .select('id')
+    .eq('id', vagaId)
+    .eq('brand_id', brand.id)
+    .maybeSingle()
+  return !!vaga
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!(await verificarOwnershipVaga(supabase, user.id, id))) {
+    return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 })
+  }
 
   const { data } = await supabase
     .from('candidaturas')
@@ -40,6 +65,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!(await verificarOwnershipVaga(supabase, user.id, vagaId))) {
+    return NextResponse.json({ error: 'Vaga não encontrada' }, { status: 404 })
+  }
 
   const { candidatura_id, status } = await req.json()
 

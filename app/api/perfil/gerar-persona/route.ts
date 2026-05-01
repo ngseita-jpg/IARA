@@ -1,6 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { verificarLimite, respostaLimiteAtingido } from '@/lib/checkLimite'
+import { NOME_PLANO, type Plano } from '@/lib/limites'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -18,6 +23,17 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response(JSON.stringify({ error: 'NÃ£o autorizado' }), { status: 401 })
+
+  // Rate limit por plano (impede abuso de IA paga)
+  const admin = createAdminClient()
+  const { data: perfilPlano } = await admin
+    .from('creator_profiles')
+    .select('plano')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const plano = (perfilPlano?.plano ?? 'free') as Plano
+  const lim = await verificarLimite(supabase, user.id, 'persona', plano)
+  if (!lim.permitido) return respostaLimiteAtingido(lim.limite, lim.usado, NOME_PLANO[plano])
 
   const p = await req.json()
 
@@ -68,11 +84,17 @@ Escreva a persona agora. Use os relatos pessoais para trazer profundidade real â
       .map((b) => (b as { type: 'text'; text: string }).text)
       .join('')
 
-    // Salvar persona gerada no perfil
     await supabase
       .from('creator_profiles')
       .update({ sobre: persona, updated_at: new Date().toISOString() })
       .eq('user_id', user.id)
+
+    // Registra uso pra contar limite mensal
+    await admin.from('content_history').insert({
+      user_id: user.id,
+      tipo: 'persona',
+      titulo: 'Persona regenerada',
+    }).then(() => null, () => null)
 
     return new Response(JSON.stringify({ persona }), {
       headers: { 'Content-Type': 'application/json' },

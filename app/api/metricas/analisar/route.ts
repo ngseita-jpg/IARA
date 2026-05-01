@@ -1,7 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
+import { verificarLimite, respostaLimiteAtingido } from '@/lib/checkLimite'
+import { NOME_PLANO, type Plano } from '@/lib/limites'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -29,6 +34,22 @@ export async function POST(req: NextRequest) {
   if (!metricas || metricas.length === 0) {
     return new Response(JSON.stringify({ error: 'Nenhuma métrica para analisar' }), { status: 400 })
   }
+
+  // Cap: max 5 plataformas (alinhado com o que o app suporta — IG/YT/TT/IN/X)
+  if (Array.isArray(metricas) && metricas.length > 5) {
+    return new Response(JSON.stringify({ error: 'Máximo de 5 plataformas por análise' }), { status: 400 })
+  }
+
+  // Rate limit (Opus = caro). Free e Plus não têm; Premium=5/mês, Profissional=∞
+  const admin = createAdminClient()
+  const { data: perfilPlano } = await admin
+    .from('creator_profiles')
+    .select('plano')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const plano = (perfilPlano?.plano ?? 'free') as Plano
+  const lim = await verificarLimite(supabase, user.id, 'metricas', plano)
+  if (!lim.permitido) return respostaLimiteAtingido(lim.limite, lim.usado, NOME_PLANO[plano])
 
   // Montar contexto das métricas
   const metricasTexto = metricas.map((m: Record<string, unknown>) => {

@@ -26,6 +26,7 @@ import {
 import Link from 'next/link'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
+import { sanitizeBold } from '@/lib/sanitize'
 
 const FORMATOS = [
   { value: 'Reel (até 90s)',         iconKey: 'reel',    desc: 'Instagram / TikTok' },
@@ -704,8 +705,8 @@ export default function RoteirosPage() {
                       )
                     }
 
-                    // Bold text
-                    const boldParsed = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-[#f1f1f8]">$1</strong>')
+                    // Bold text — sanitizeBold escapa <>&" antes de aplicar markdown (anti-XSS)
+                    const boldParsed = sanitizeBold(line)
 
                     // Direções de cena entre colchetes
                     if (line.match(/^\[.+\]$/)) {

@@ -16,6 +16,8 @@ const FONTE: Record<TipoUso, { tabela: string; campo_tipo?: string; valor_tipo?:
   fotos:      { tabela: 'user_photos' },
   temas:      { tabela: 'content_history', campo_tipo: 'tipo', valor_tipo: 'temas' },
   corte:      { tabela: 'cortes_videos' },
+  metricas:   { tabela: 'analises_metricas' },
+  persona:    { tabela: 'content_history', campo_tipo: 'tipo', valor_tipo: 'persona' },
 }
 
 /**

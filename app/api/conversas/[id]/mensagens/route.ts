@@ -4,11 +4,29 @@ import { emailPropostaEnviada } from '@/lib/email'
 
 type Params = { params: Promise<{ id: string }> }
 
+// Verifica que o user é participante (creator ou brand) da conversa
+async function ehParticipante(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  conversaId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('conversas')
+    .select('creator_user_id, brand_user_id')
+    .eq('id', conversaId)
+    .maybeSingle()
+  return !!data && (data.creator_user_id === userId || data.brand_user_id === userId)
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!(await ehParticipante(supabase, user.id, id))) {
+    return NextResponse.json({ error: 'Conversa não encontrada' }, { status: 404 })
+  }
 
   const { data: msgs, error } = await supabase
     .from('mensagens')
@@ -35,8 +53,15 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  if (!(await ehParticipante(supabase, user.id, id))) {
+    return NextResponse.json({ error: 'Conversa não encontrada' }, { status: 404 })
+  }
+
   const { conteudo, tipo = 'texto', proposta_valor } = await req.json()
   if (!conteudo?.trim()) return NextResponse.json({ error: 'Conteúdo obrigatório' }, { status: 400 })
+  if (typeof conteudo === 'string' && conteudo.length > 10_000) {
+    return NextResponse.json({ error: 'Mensagem muito longa (máx 10.000 caracteres)' }, { status: 400 })
+  }
 
   if (tipo === 'proposta') {
     await supabase

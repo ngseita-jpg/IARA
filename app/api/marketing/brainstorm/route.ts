@@ -35,12 +35,26 @@ export async function POST(req: NextRequest) {
     contexto_extra?: Record<string, unknown>
   }
 
-  const objetivo = (body.objetivo ?? '').trim()
+  const objetivo = (body.objetivo ?? '').trim().slice(0, 5000)
   if (!objetivo || objetivo.length < 10) {
     return NextResponse.json({ error: 'Objetivo muito curto (mín 10 chars)' }, { status: 400 })
   }
 
   const admin = createAdminClient()
+
+  // Rate limit: max 10 sessões/dia por admin (cada sessão = 7 Sonnet + 1 Haiku, ~R$ 0,20)
+  const inicioHoje = new Date()
+  inicioHoje.setUTCHours(0, 0, 0, 0)
+  const { count: sessoesHoje } = await admin
+    .from('marketing_squad_sessoes')
+    .select('*', { count: 'exact', head: true })
+    .eq('owner_user_id', user.id)
+    .gte('created_at', inicioHoje.toISOString())
+  if ((sessoesHoje ?? 0) >= 10) {
+    return NextResponse.json({
+      error: 'Limite diário atingido (10 sessões/dia). Tenta amanhã.',
+    }, { status: 429 })
+  }
 
   // Cria sessão em status 'gerando'
   const { data: sessao, error: errSessao } = await admin

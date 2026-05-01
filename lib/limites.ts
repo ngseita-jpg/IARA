@@ -14,6 +14,8 @@ export type TipoUso =
   | 'fotos'
   | 'temas'
   | 'corte'      // vídeos do YouTube analisados pra virar cortes
+  | 'metricas'   // análise IA de métricas (Opus, caro)
+  | 'persona'    // (re)geração da persona do criador (Sonnet)
 
 // null = ilimitado
 // Free: demo mínima pós-registro (1 de cada/mês) — força conversão pro trial/pago
@@ -29,6 +31,8 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      3,
     temas:      1,
     corte:      0,   // gratuito não tem — gancho de conversão
+    metricas:   0,   // análise IA de métricas só pra pagantes (modelo Opus = caro)
+    persona:    2,   // 2 regenerações/mês — após criar perfil, pode refinar
   },
   trial: {
     roteiro:    2,
@@ -40,6 +44,8 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      5,
     temas:      2,
     corte:      1,
+    metricas:   1,
+    persona:    3,
   },
   plus: {
     roteiro:    10,
@@ -51,6 +57,8 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      25,
     temas:      7,
     corte:      3,
+    metricas:   0,   // Plus não tem métricas IA (alinhado com pricing)
+    persona:    5,
   },
   premium: {
     roteiro:    20,
@@ -62,6 +70,8 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      80,
     temas:      15,
     corte:      10,
+    metricas:   5,
+    persona:    10,
   },
   profissional: {
     roteiro:    null,
@@ -73,9 +83,10 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      null,
     temas:      null,
     corte:      null,
+    metricas:   null,
+    persona:    null,
   },
   agencia: {
-    // Igual profissional (ilimitado) — diferencial é multi-contas (até 5 perfis), tratado em código separado
     roteiro:    null,
     carrossel:  null,
     thumbnail:  null,
@@ -85,6 +96,8 @@ export const LIMITES: Record<Plano, Record<TipoUso, number | null>> = {
     fotos:      null,
     temas:      null,
     corte:      null,
+    metricas:   null,
+    persona:    null,
   },
 }
 

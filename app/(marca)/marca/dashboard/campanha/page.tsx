@@ -5,6 +5,7 @@ import {
   Zap, ArrowRight, Loader2, RefreshCw,
   Target, Users, FileText, TrendingUp, Lightbulb,
 } from 'lucide-react'
+import { sanitizeBold } from '@/lib/sanitize'
 
 const OBJETIVOS = [
   { value: 'awareness',       label: 'Reconhecimento de marca',      emoji: '📣' },
@@ -55,7 +56,7 @@ function MarkdownResult({ text }: { text: string }) {
           return (
             <li key={i} className="text-sm text-[#c9c9d8] ml-4 list-none flex gap-2">
               <span className="text-[#C9A84C] mt-1 flex-shrink-0">•</span>
-              <span dangerouslySetInnerHTML={{ __html: line.replace('- ', '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#f1f1f8]">$1</strong>') }} />
+              <span dangerouslySetInnerHTML={{ __html: sanitizeBold(line.replace('- ', '')) }} />
             </li>
           )
         }
@@ -76,8 +77,8 @@ function MarkdownResult({ text }: { text: string }) {
           return <hr key={i} className="border-[#1a1a2e] my-4" />
         }
         if (line.trim() === '') return <div key={i} className="h-1" />
-        // Inline bold
-        const processed = line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#f1f1f8] font-semibold">$1</strong>')
+        // Inline bold (sanitizado anti-XSS)
+        const processed = sanitizeBold(line, 'text-[#f1f1f8] font-semibold')
         return (
           <p key={i} className="text-sm text-[#c9c9d8] leading-relaxed"
             dangerouslySetInnerHTML={{ __html: processed }} />

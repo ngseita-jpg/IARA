@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const runtime = 'nodejs'
 export const maxDuration = 60
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -37,6 +38,29 @@ export async function POST(req: NextRequest) {
   const modo: string = body.modo ?? 'criador'
 
   if (!imagens.length) return NextResponse.json({ analises: [] })
+
+  // Cap dura: max 8 imagens por chamada (cada imagem em base64 custa muitos tokens vision)
+  if (imagens.length > 8) {
+    return NextResponse.json({ error: 'Máximo de 8 imagens por análise' }, { status: 400 })
+  }
+
+  // Free não pode chamar análise vision (modelo Sonnet vision = caro)
+  // Plus+ podem — limite efetivo é o do carrossel em si
+  if (modo === 'criador') {
+    const admin = createAdminClient()
+    const { data: perfil } = await admin
+      .from('creator_profiles')
+      .select('plano')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    const plano = perfil?.plano ?? 'free'
+    if (plano === 'free') {
+      return NextResponse.json({
+        error: 'Análise IA de imagens disponível apenas no plano Plus ou superior',
+        upgrade_url: '/#planos',
+      }, { status: 402 })
+    }
+  }
 
   const arquetiposCriador = ['cover_full', 'split_v', 'top_text', 'full_bleed', 'quote']
   const arquetiposMarca   = ['brand_cover', 'brand_story', 'brand_promo']
