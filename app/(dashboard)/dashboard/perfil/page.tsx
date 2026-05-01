@@ -954,6 +954,8 @@ function DadosPrivacidade() {
   const [exportando, setExportando] = useState(false)
   const [deletando, setDeletando] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [senha, setSenha] = useState('')
+  const [erroSenha, setErroSenha] = useState<string | null>(null)
 
   async function handleExportar() {
     setExportando(true)
@@ -976,15 +978,28 @@ function DadosPrivacidade() {
 
   async function handleDeletar() {
     if (!confirmDelete) { setConfirmDelete(true); return }
+    if (!senha) { setErroSenha('Digite sua senha'); return }
     setDeletando(true)
+    setErroSenha(null)
     try {
-      const res = await fetch('/api/usuario/deletar-conta', { method: 'DELETE' })
+      const res = await fetch('/api/usuario/deletar-conta', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha }),
+      })
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}))
+        setErroSenha(data.error ?? 'Senha incorreta')
+        setDeletando(false)
+        return
+      }
       if (!res.ok) throw new Error()
       window.location.href = '/login'
     } catch {
       alert('Erro ao deletar conta. Entre em contato: privacidade@iara.app')
       setDeletando(false)
       setConfirmDelete(false)
+      setSenha('')
     }
   }
 
@@ -1018,21 +1033,33 @@ function DadosPrivacidade() {
             Excluir minha conta
           </button>
         ) : (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-red-400">Tem certeza? Isso é irreversível.</span>
-            <button
-              onClick={handleDeletar}
-              disabled={deletando}
-              className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-medium transition-all disabled:opacity-50"
-            >
-              {deletando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Sim, excluir tudo'}
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#6b6b8a] text-xs transition-all"
-            >
-              Cancelar
-            </button>
+          <div className="flex flex-col gap-2 flex-1 max-w-md">
+            <span className="text-xs text-red-400">⚠ Isso é irreversível. Digite sua senha pra confirmar.</span>
+            <input
+              type="password"
+              value={senha}
+              onChange={e => { setSenha(e.target.value); setErroSenha(null) }}
+              placeholder="Sua senha"
+              autoFocus
+              className="rounded-lg bg-[#0a0a14] border border-red-900/40 px-3 py-2 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-red-700/60 focus:outline-none"
+            />
+            {erroSenha && <p className="text-xs text-red-400">⚠ {erroSenha}</p>}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDeletar}
+                disabled={deletando || !senha}
+                className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deletando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Sim, excluir tudo'}
+              </button>
+              <button
+                onClick={() => { setConfirmDelete(false); setSenha(''); setErroSenha(null) }}
+                disabled={deletando}
+                className="px-3 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#6b6b8a] text-xs transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
       </div>

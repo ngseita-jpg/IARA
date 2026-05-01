@@ -11,7 +11,7 @@ export async function DELETE(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  // Rate limit duro: 3 tentativas por IP em 1h (impede ataque acidental ou malicioso)
+  // Rate limit duro: 3 tentativas por IP em 1h
   const rl = await checkRateLimitIp(req, 'delete_account', 3, 3600)
   if (rl) {
     await audit(req, 'rate_limit_atingido', {
@@ -20,6 +20,31 @@ export async function DELETE(req: NextRequest) {
       meta: { bucket: 'delete_account' },
     })
     return rl
+  }
+
+  // Re-autenticação por senha — proteção contra session hijack/CSRF/laptop aberto
+  const { senha } = await req.json().catch(() => ({ senha: '' })) as { senha?: string }
+  if (!senha || typeof senha !== 'string') {
+    return NextResponse.json({ error: 'Senha obrigatória pra confirmar exclusão' }, { status: 400 })
+  }
+
+  // Valida senha em client isolado (não substitui a sessão atual)
+  const checker = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+  const { error: senhaErr } = await checker.auth.signInWithPassword({
+    email: user.email!,
+    password: senha,
+  })
+  if (senhaErr) {
+    await audit(req, 'delete_account_senha_invalida', {
+      userId: user.id,
+      statusHttp: 401,
+      meta: { motivo: senhaErr.message },
+    })
+    return NextResponse.json({ error: 'Senha incorreta' }, { status: 401 })
   }
 
   const userId = user.id
