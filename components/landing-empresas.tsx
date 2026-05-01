@@ -14,6 +14,7 @@ import {
   Search, Star, Link2, ShoppingBag, Megaphone,
   Clock, X, Briefcase, Eye, FileText,
 } from 'lucide-react'
+import { toast } from '@/lib/toast'
 
 /* ── Variants ──────────────────────────────────────────────────── */
 const fadeUp = {
@@ -173,12 +174,12 @@ function PricingMarcas() {
           window.location.href = data.redirect
           return
         }
-        alert(data.error ?? 'Erro ao iniciar checkout')
+        toast.error(data.error ?? 'Erro ao iniciar checkout')
         return
       }
       if (data.url) window.location.href = data.url
     } catch {
-      alert('Erro de conexão. Tenta de novo.')
+      toast.error('Erro de conexão. Tenta de novo.')
     } finally {
       setCarregando(null)
     }

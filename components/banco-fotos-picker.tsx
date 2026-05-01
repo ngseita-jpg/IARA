@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Images, X, Check, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { useModalA11y } from '@/hooks/useModalA11y'
 
 type Foto = {
   id: string
@@ -24,6 +25,8 @@ export function BancoFotosPicker({ multiple = false, maxSelect = 8, onConfirm, o
   const [erro, setErro] = useState<string | null>(null)
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
   const [convertendo, setConvertendo] = useState(false)
+
+  useModalA11y(true, onClose)
 
   useEffect(() => {
     fetch('/api/fotos')
@@ -88,7 +91,11 @@ export function BancoFotosPicker({ multiple = false, maxSelect = 8, onConfirm, o
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-[#6b6b8a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e] transition-colors">
+          <button
+            onClick={onClose}
+            aria-label="Fechar"
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-[#6b6b8a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e] transition-colors flex-shrink-0"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>

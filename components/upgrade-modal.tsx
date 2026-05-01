@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { X, Sparkles, Check, ArrowRight, Zap, Lock, Loader2, Crown,
   FileText, Layers, Image, Smartphone, Mic, BookOpen, Lightbulb,
 } from 'lucide-react'
+import { useModalA11y } from '@/hooks/useModalA11y'
 
 export type TipoModulo =
   | 'roteiro' | 'carrossel' | 'thumbnail' | 'stories'
@@ -132,16 +133,7 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
   const [loading, setLoading] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', handler)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', handler)
-      document.body.style.overflow = ''
-    }
-  }, [open, onClose])
+  useModalA11y(open, onClose)
 
   if (!open) return null
 
@@ -209,10 +201,11 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
         className="relative w-full sm:max-w-3xl max-h-[95vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-[#1a1a2e] shadow-2xl"
         style={{ background: 'linear-gradient(180deg, #0e0e1e 0%, #0a0a16 100%)' }}
       >
-        {/* Close */}
+        {/* Close — touch target 44×44 garantido */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl text-[#4a4a6a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e] transition-all z-10 cursor-pointer"
+          aria-label="Fechar"
+          className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-xl text-[#6b6b8a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e] transition-all z-10 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>

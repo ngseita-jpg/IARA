@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Send, Loader2, DollarSign, Check, XCircle, MessageCircle } from 'lucide-react'
+import { useModalA11y } from '@/hooks/useModalA11y'
 
 type Mensagem = {
   id: string
@@ -44,6 +45,8 @@ export function ChatModal({
   const [responding, setResponding] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  useModalA11y(true, onClose)
 
   const loadMsgs = useCallback(async () => {
     const r = await fetch(`/api/conversas/${conversaId}/mensagens`)
@@ -144,7 +147,10 @@ export function ChatModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch md:items-center justify-end md:justify-center p-0 md:p-4 bg-black/70 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-stretch md:items-center justify-end md:justify-center p-0 md:p-4 bg-black/70 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
       <div className="w-full md:max-w-lg h-full md:h-[85vh] flex flex-col rounded-none md:rounded-3xl border-0 md:border border-[#1a1a2e] bg-[#0d0d1a] shadow-2xl shadow-black/60 overflow-hidden">
 
         {/* Header */}
@@ -158,7 +164,11 @@ export function ChatModal({
               {statusLabel[status] ?? status}
             </span>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-[#5a5a7a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e] transition-all">
+          <button
+            onClick={onClose}
+            aria-label="Fechar conversa"
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-[#6b6b8a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e] transition-all flex-shrink-0"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -212,7 +222,7 @@ export function ChatModal({
                           <button
                             onClick={() => handleRespond('aceitar', msg.proposta_valor ?? undefined)}
                             disabled={responding}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-all hover:opacity-90"
+                            className="flex-1 flex items-center justify-center gap-1.5 min-h-11 py-2.5 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-all hover:opacity-90"
                             style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
                           >
                             <Check className="w-3.5 h-3.5" /> Aceitar
@@ -220,7 +230,7 @@ export function ChatModal({
                           <button
                             onClick={() => handleRespond('recusar')}
                             disabled={responding}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-red-400 border border-red-800/40 hover:bg-red-950/30 disabled:opacity-40 transition-all"
+                            className="flex-1 flex items-center justify-center gap-1.5 min-h-11 py-2.5 rounded-xl text-xs font-bold text-red-400 border border-red-800/40 hover:bg-red-950/30 disabled:opacity-40 transition-all"
                           >
                             <XCircle className="w-3.5 h-3.5" /> Recusar
                           </button>
@@ -256,22 +266,28 @@ export function ChatModal({
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#6b6b8a]">R$</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*[.,]?[0-9]*"
                   value={proposalValue}
-                  onChange={e => setProposalValue(e.target.value)}
+                  onChange={e => setProposalValue(e.target.value.replace(/[^0-9.,]/g, ''))}
                   placeholder="Valor"
-                  className="w-full rounded-xl border border-[#C9A84C]/30 bg-[#0d0d1a] pl-8 pr-3 py-2.5 text-sm text-[#f1f1f8] focus:border-[#C9A84C]/60 focus:outline-none transition-all"
+                  className="w-full rounded-xl border border-[#C9A84C]/30 bg-[#0d0d1a] pl-8 pr-3 py-3 text-sm text-[#f1f1f8] focus:border-[#C9A84C]/60 focus:outline-none transition-all"
                 />
               </div>
               <button
                 onClick={handleProposal}
                 disabled={!proposalValue || sending}
-                className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#0a0a14] disabled:opacity-40"
+                className="px-4 min-h-11 rounded-xl text-sm font-bold text-[#0a0a14] disabled:opacity-40"
                 style={{ background: 'linear-gradient(135deg, #E2C068, #C9A84C)' }}
               >
                 Enviar
               </button>
-              <button onClick={() => setShowProposalForm(false)} className="px-3 py-2.5 rounded-xl border border-[#1a1a2e] text-xs text-[#5a5a7a]">
+              <button
+                onClick={() => setShowProposalForm(false)}
+                aria-label="Cancelar proposta"
+                className="w-11 h-11 flex items-center justify-center rounded-xl border border-[#1a1a2e] text-[#6b6b8a] flex-shrink-0"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>

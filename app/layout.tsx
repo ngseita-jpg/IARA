@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Analytics } from '@/components/analytics'
+import { Toaster } from 'sonner'
 
 const interDisplay = Inter({
   subsets: ['latin'],
@@ -133,6 +134,19 @@ export default function RootLayout({
         {children}
         <Analytics />
         <CookieConsent />
+        <Toaster
+          theme="dark"
+          position="top-center"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              background: '#13131f',
+              border: '1px solid #1a1a2e',
+              color: '#f1f1f8',
+            },
+          }}
+        />
       </body>
     </html>
   )

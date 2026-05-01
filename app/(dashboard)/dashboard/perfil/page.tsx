@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { getBadgeInfo } from '@/lib/badges'
 import { getPlatformIcon } from '@/components/platform-icons'
+import { toast } from '@/lib/toast'
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
 
@@ -970,7 +971,7 @@ function DadosPrivacidade() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert('Erro ao exportar dados. Tente novamente.')
+      toast.error('Erro ao exportar dados. Tente novamente.')
     } finally {
       setExportando(false)
     }
@@ -996,7 +997,7 @@ function DadosPrivacidade() {
       if (!res.ok) throw new Error()
       window.location.href = '/login'
     } catch {
-      alert('Erro ao deletar conta. Entre em contato: privacidade@iara.app')
+      toast.error('Erro ao deletar conta', { description: 'Entre em contato: privacidade@iara.app', duration: 8000 })
       setDeletando(false)
       setConfirmDelete(false)
       setSenha('')
