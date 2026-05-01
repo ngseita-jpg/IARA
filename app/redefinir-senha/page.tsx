@@ -36,6 +36,13 @@ export default function RedefinirSenhaPage() {
       return
     }
 
+    // Audit (best-effort) — útil pra detectar tomada de conta
+    void fetch('/api/audit/evento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evento: 'senha_alterada' }),
+    }).catch(() => null)
+
     setDone(true)
     setTimeout(() => router.push('/dashboard'), 2500)
   }

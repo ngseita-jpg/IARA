@@ -22,10 +22,14 @@ const COR_EVENTO: Record<string, { bg: string; border: string; text: string }> =
   signup:                       { bg: 'bg-emerald-950/30', border: 'border-emerald-900/40', text: 'text-emerald-400' },
   checkout_iniciado:            { bg: 'bg-iara-900/30',    border: 'border-iara-700/40',    text: 'text-iara-300' },
   checkout_completo:            { bg: 'bg-emerald-950/30', border: 'border-emerald-900/40', text: 'text-emerald-400' },
+  plano_alterado:               { bg: 'bg-iara-900/30',    border: 'border-iara-700/40',    text: 'text-iara-300' },
   conta_deletada:               { bg: 'bg-red-950/30',     border: 'border-red-900/40',     text: 'text-red-400' },
   delete_account_senha_invalida:{ bg: 'bg-amber-950/30',   border: 'border-amber-900/40',   text: 'text-amber-400' },
   rate_limit_atingido:          { bg: 'bg-amber-950/30',   border: 'border-amber-900/40',   text: 'text-amber-400' },
+  login_ok:                     { bg: 'bg-emerald-950/30', border: 'border-emerald-900/40', text: 'text-emerald-400' },
   login_falha:                  { bg: 'bg-red-950/30',     border: 'border-red-900/40',     text: 'text-red-400' },
+  senha_alterada:               { bg: 'bg-amber-950/30',   border: 'border-amber-900/40',   text: 'text-amber-400' },
+  afiliado_suspeito_flagged:    { bg: 'bg-amber-950/30',   border: 'border-amber-900/40',   text: 'text-amber-400' },
 }
 
 const corEvento = (e: string) => COR_EVENTO[e] ?? { bg: 'bg-[#0f0f1e]', border: 'border-[#1a1a2e]', text: 'text-[#9b9bb5]' }

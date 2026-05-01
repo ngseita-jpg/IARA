@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -43,6 +43,23 @@ export async function GET(req: NextRequest) {
     .from('afiliados')
     .update({ suspeito: true, suspeito_em: new Date().toISOString() })
     .in('id', ids)
+
+  // Audit (best-effort) — registra cada flagging pra revisar depois
+  const admin = createAdminClient()
+  void admin.from('api_audit_log').insert(
+    suspeitos.map(s => ({
+      user_id: null,
+      evento: 'afiliado_suspeito_flagged',
+      rota: '/api/afiliados/verificar-suspeitos',
+      status_http: 200,
+      meta: {
+        afiliado_id: s.id,
+        cliques: s.cliques,
+        vendas_confirmadas: s.vendas_confirmadas,
+        idade_dias: Math.round((Date.now() - new Date(s.created_at).getTime()) / 86400000),
+      },
+    }))
+  ).then(() => null, () => null)
 
   return NextResponse.json({ ok: true, flagged: ids.length })
 }

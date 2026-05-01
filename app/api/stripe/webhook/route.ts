@@ -230,6 +230,15 @@ export async function POST(req: NextRequest) {
       const ativo = sub.status === 'active'
       const cancelado = ['canceled', 'unpaid', 'incomplete_expired'].includes(sub.status)
 
+      // Captura plano atual ANTES de alterar pra detectar mudança real
+      const tabelaPerfil = tipo === 'marca' ? 'brand_profiles' : 'creator_profiles'
+      const { data: atual } = await supabaseAdmin
+        .from(tabelaPerfil)
+        .select('plano')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const planoAntes = atual?.plano ?? 'free'
+
       if (tipo === 'marca') {
         if (cancelado) {
           await supabaseAdmin
@@ -240,7 +249,6 @@ export async function POST(req: NextRequest) {
           await setPlanoMarca(userId, planoEscolhido, periodo, sub.id)
         }
       } else {
-        // fluxo criador — Netflix-style: plano pleno durante trial.
         if (cancelado) {
           await supabaseAdmin
             .from('creator_profiles')
@@ -248,14 +256,8 @@ export async function POST(req: NextRequest) {
             .eq('user_id', userId)
           await estornarIndicacao(sub.id, `status=${sub.status}`)
         } else if (emTrial || ativo) {
-          const { data: atual } = await supabaseAdmin
-            .from('creator_profiles')
-            .select('plano')
-            .eq('user_id', userId)
-            .maybeSingle()
           const eraFreeOuTrial = !atual?.plano || atual.plano === 'free' || atual.plano === 'trial'
           await setPlano(userId, planoEscolhido, sub.id)
-          // Ativa indicação quando o usuário vira pagante (sai de free/trial) e não está mais em trial
           if (ativo && eraFreeOuTrial) {
             const valorPlano = sub.items.data[0]?.price.unit_amount
             if (valorPlano) {
@@ -263,6 +265,25 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+      }
+
+      // Audit só se o plano efetivamente mudou (evita ruído de eventos repetidos)
+      const planoDepois = cancelado ? 'free' : planoEscolhido
+      if (planoAntes !== planoDepois) {
+        void supabaseAdmin.from('api_audit_log').insert({
+          user_id: userId,
+          evento: 'plano_alterado',
+          rota: '/api/stripe/webhook',
+          status_http: 200,
+          meta: {
+            tipo,
+            plano_antes: planoAntes,
+            plano_depois: planoDepois,
+            status: sub.status,
+            sub_id: sub.id,
+            motivo: cancelado ? 'cancelamento/falha_pagamento' : (emTrial ? 'trial' : 'upgrade/renovacao'),
+          },
+        }).then(() => null, () => null)
       }
       break
     }

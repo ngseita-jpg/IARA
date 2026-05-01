@@ -41,9 +41,22 @@ function LoginForm() {
 
     if (error) {
       setError('E-mail ou senha incorretos. Tente novamente.')
+      // Audit anônimo (rate limited por IP) — útil pra detectar bruteforce
+      void fetch('/api/audit/evento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evento: 'login_falha', meta: { email_tentado: email.slice(0, 80) } }),
+      }).catch(() => null)
       setLoading(false)
       return
     }
+
+    // Sucesso — audit autenticado
+    void fetch('/api/audit/evento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evento: 'login_ok' }),
+    }).catch(() => null)
 
     if (autoLogin) {
       document.cookie = 'iara_auto_login=1; path=/; max-age=2592000; samesite=lax'
