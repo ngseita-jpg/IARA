@@ -173,6 +173,19 @@ async function enviarBoasVindas(userId: string, plano: string) {
   } catch { /* não bloqueia o webhook */ }
 }
 
+/**
+ * Extrai subscription_id de Invoice na API atual.
+ * Stripe 2024-11-20+: invoice.subscription removido,
+ * agora vive em invoice.parent.subscription_details.subscription.
+ */
+function getSubIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  const parent = invoice.parent
+  if (!parent || parent.type !== 'subscription_details') return null
+  const sub = parent.subscription_details?.subscription
+  if (!sub) return null
+  return typeof sub === 'string' ? sub : sub.id
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
@@ -181,10 +194,35 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(body, sig, secret)
-  } catch {
+  } catch (e) {
+    console.error('[stripe-webhook] signature inválida:', e instanceof Error ? e.message : 'erro')
     return NextResponse.json({ error: 'Webhook inválido' }, { status: 400 })
   }
 
+  // Wrap externo: se um handler joga erro, Stripe receberia 500 e ficaria
+  // reentregando — gera os emails de erro. Preferimos logar e retornar 200,
+  // mantendo trail no audit_log pra investigação.
+  try {
+    return await processarEvento(event)
+  } catch (e) {
+    const erroMsg = e instanceof Error ? e.message : 'erro desconhecido'
+    console.error(`[stripe-webhook] erro processando ${event.type}:`, erroMsg)
+    void supabaseAdmin.from('api_audit_log').insert({
+      user_id: null,
+      evento: 'stripe_webhook_erro',
+      rota: '/api/stripe/webhook',
+      status_http: 500,
+      meta: {
+        event_type: event.type,
+        event_id: event.id,
+        erro: erroMsg.slice(0, 500),
+      },
+    }).then(() => null, () => null)
+    return NextResponse.json({ received: true, error_logged: true })
+  }
+}
+
+async function processarEvento(event: Stripe.Event): Promise<NextResponse> {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
@@ -290,24 +328,31 @@ export async function POST(req: NextRequest) {
 
     case 'invoice.paid': {
       // Fatura recorrente paga → pode gerar comissão de afiliado
-      const invoice = event.data.object as Stripe.Invoice & { subscription?: string; billing_reason?: string }
-      const subId = invoice.subscription
+      const invoice = event.data.object as Stripe.Invoice
+      const subId = getSubIdFromInvoice(invoice)
       if (!subId) break
       // Só conta recorrências (pula a primeira, que já foi tratada em subscription.updated)
-      if (invoice.billing_reason === 'subscription_create' || invoice.billing_reason === 'subscription_cycle') {
-        if (invoice.billing_reason === 'subscription_cycle') {
-          const valorPago = (invoice.amount_paid ?? 0) / 100
-          await registrarRecorrencia(subId as string, valorPago, invoice.id ?? '')
-        }
+      if (invoice.billing_reason === 'subscription_cycle') {
+        const valorPago = (invoice.amount_paid ?? 0) / 100
+        await registrarRecorrencia(subId, valorPago, invoice.id ?? '')
       }
       break
     }
 
-    case 'charge.refunded':
     case 'invoice.payment_failed': {
-      const obj = event.data.object as Stripe.Charge | Stripe.Invoice
-      const subId = 'subscription' in obj ? (obj.subscription as string | null) : null
+      const invoice = event.data.object as Stripe.Invoice
+      const subId = getSubIdFromInvoice(invoice)
       if (subId) await estornarIndicacao(subId, event.type)
+      break
+    }
+
+    case 'charge.refunded': {
+      // Stripe API moderno: Charge não tem .invoice direto.
+      // Cancelamento de assinatura com refund chega via invoice.payment_failed
+      // + customer.subscription.deleted, que já tratam estorno de comissão.
+      // Refund avulso (sem cancelar sub) é raro — ignoramos por ora.
+      const charge = event.data.object as Stripe.Charge
+      console.log('[webhook] charge.refunded recebido:', charge.id, 'amount:', charge.amount_refunded)
       break
     }
 
