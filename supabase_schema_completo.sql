@@ -63,6 +63,9 @@ ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS voz_perfil TEXT;
 ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS voz_score_medio INT DEFAULT 0;
 ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS treinos_voz INT DEFAULT 0;
 ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS nivel INT DEFAULT 0;
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS onboarding_completo BOOLEAN DEFAULT false;
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS plano TEXT DEFAULT 'free';
+ALTER TABLE creator_profiles ADD COLUMN IF NOT EXISTS pontos INT DEFAULT 0;
 
 DROP TRIGGER IF EXISTS set_updated_at_creator_profiles ON creator_profiles;
 CREATE TRIGGER set_updated_at_creator_profiles
@@ -83,7 +86,6 @@ DROP POLICY IF EXISTS "creator_profiles_update_own" ON creator_profiles;
 CREATE POLICY "creator_profiles_update_own" ON creator_profiles
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Marcas podem ver perfis de criadores (para marketplace)
 DROP POLICY IF EXISTS "creator_profiles_select_brand" ON creator_profiles;
 CREATE POLICY "creator_profiles_select_brand" ON creator_profiles
   FOR SELECT USING (
@@ -177,12 +179,12 @@ CREATE TABLE IF NOT EXISTS brand_profiles (
   user_id             UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   nome_empresa        TEXT,
   cnpj                TEXT,
-  segmento            TEXT,
+  segmentos           TEXT[] DEFAULT '{}',
   porte               TEXT CHECK (porte IN ('startup','pequena','media','grande','agencia')),
   site                TEXT,
   instagram           TEXT,
   sobre               TEXT,
-  orcamento_medio     TEXT CHECK (orcamento_medio IN ('ate_5k','5k_20k','20k_50k','50k_mais')),
+  orcamento_medio     TEXT,
   nichos_interesse    TEXT[] DEFAULT '{}',
   plataformas_foco    TEXT[] DEFAULT '{}',
   plano               TEXT DEFAULT 'free',
@@ -202,7 +204,6 @@ DROP POLICY IF EXISTS "brand_profiles_all_own" ON brand_profiles;
 CREATE POLICY "brand_profiles_all_own" ON brand_profiles
   FOR ALL USING (auth.uid() = user_id);
 
--- Criadores podem ver perfil de marcas (para candidaturas)
 DROP POLICY IF EXISTS "brand_profiles_select_creator" ON brand_profiles;
 CREATE POLICY "brand_profiles_select_creator" ON brand_profiles
   FOR SELECT USING (
@@ -233,14 +234,12 @@ CREATE TABLE IF NOT EXISTS vagas (
 
 ALTER TABLE vagas ENABLE ROW LEVEL SECURITY;
 
--- Marcas gerenciam suas vagas
 DROP POLICY IF EXISTS "vagas_all_brand" ON vagas;
 CREATE POLICY "vagas_all_brand" ON vagas
   FOR ALL USING (
     EXISTS (SELECT 1 FROM brand_profiles WHERE id = brand_id AND user_id = auth.uid())
   );
 
--- Criadores veem vagas abertas
 DROP POLICY IF EXISTS "vagas_select_creator" ON vagas;
 CREATE POLICY "vagas_select_creator" ON vagas
   FOR SELECT USING (status = 'aberta');
@@ -261,14 +260,12 @@ CREATE TABLE IF NOT EXISTS candidaturas (
 
 ALTER TABLE candidaturas ENABLE ROW LEVEL SECURITY;
 
--- Criadores gerenciam suas candidaturas
 DROP POLICY IF EXISTS "candidaturas_all_creator" ON candidaturas;
 CREATE POLICY "candidaturas_all_creator" ON candidaturas
   FOR ALL USING (
     EXISTS (SELECT 1 FROM creator_profiles WHERE id = creator_id AND user_id = auth.uid())
   );
 
--- Marcas veem candidaturas das suas vagas
 DROP POLICY IF EXISTS "candidaturas_select_brand" ON candidaturas;
 CREATE POLICY "candidaturas_select_brand" ON candidaturas
   FOR SELECT USING (
@@ -381,21 +378,21 @@ CREATE POLICY "criadores_salvos_all_brand" ON criadores_salvos
 -- 11. METRICAS_REDES
 -- =============================================================
 CREATE TABLE IF NOT EXISTS metricas_redes (
-  id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id                 UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  plataforma              TEXT NOT NULL CHECK (plataforma IN ('instagram','youtube','tiktok','linkedin','twitter')),
-  seguidores              INT DEFAULT 0,
-  alcance_mensal          INT DEFAULT 0,
-  impressoes_mensais      INT DEFAULT 0,
-  curtidas_mensais        INT DEFAULT 0,
-  comentarios_mensais     INT DEFAULT 0,
+  id                        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id                   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  plataforma                TEXT NOT NULL CHECK (plataforma IN ('instagram','youtube','tiktok','linkedin','twitter')),
+  seguidores                INT DEFAULT 0,
+  alcance_mensal            INT DEFAULT 0,
+  impressoes_mensais        INT DEFAULT 0,
+  curtidas_mensais          INT DEFAULT 0,
+  comentarios_mensais       INT DEFAULT 0,
   compartilhamentos_mensais INT DEFAULT 0,
-  salvamentos_mensais     INT DEFAULT 0,
-  visualizacoes_mensais   INT DEFAULT 0,
-  posts_mensais           INT DEFAULT 0,
-  taxa_engajamento        NUMERIC(5,2) DEFAULT 0,
-  updated_at              TIMESTAMPTZ DEFAULT now(),
-  created_at              TIMESTAMPTZ DEFAULT now(),
+  salvamentos_mensais       INT DEFAULT 0,
+  visualizacoes_mensais     INT DEFAULT 0,
+  posts_mensais             INT DEFAULT 0,
+  taxa_engajamento          NUMERIC(5,2) DEFAULT 0,
+  updated_at                TIMESTAMPTZ DEFAULT now(),
+  created_at                TIMESTAMPTZ DEFAULT now(),
   UNIQUE (user_id, plataforma)
 );
 
@@ -585,7 +582,6 @@ CREATE TABLE IF NOT EXISTS vendas_afiliado (
 
 ALTER TABLE vendas_afiliado ENABLE ROW LEVEL SECURITY;
 
--- Marcas registram vendas
 DROP POLICY IF EXISTS "vendas_afiliado_insert_brand" ON vendas_afiliado;
 CREATE POLICY "vendas_afiliado_insert_brand" ON vendas_afiliado
   FOR INSERT WITH CHECK (
@@ -597,7 +593,6 @@ CREATE POLICY "vendas_afiliado_insert_brand" ON vendas_afiliado
     )
   );
 
--- Criadores veem suas vendas
 DROP POLICY IF EXISTS "vendas_afiliado_select_creator" ON vendas_afiliado;
 CREATE POLICY "vendas_afiliado_select_creator" ON vendas_afiliado
   FOR SELECT USING (
@@ -608,7 +603,6 @@ CREATE POLICY "vendas_afiliado_select_creator" ON vendas_afiliado
     )
   );
 
--- Marcas veem vendas dos seus produtos
 DROP POLICY IF EXISTS "vendas_afiliado_select_brand" ON vendas_afiliado;
 CREATE POLICY "vendas_afiliado_select_brand" ON vendas_afiliado
   FOR SELECT USING (
@@ -628,12 +622,11 @@ VALUES (
   'fotos-usuario',
   'fotos-usuario',
   false,
-  5242880, -- 5MB
+  5242880,
   ARRAY['image/jpeg','image/jpg','image/png','image/webp']
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Políticas de storage
 DROP POLICY IF EXISTS "fotos_upload_own" ON storage.objects;
 CREATE POLICY "fotos_upload_own" ON storage.objects
   FOR INSERT WITH CHECK (
@@ -656,7 +649,7 @@ CREATE POLICY "fotos_delete_own" ON storage.objects
   );
 
 -- =============================================================
--- ÍNDICES EXTRAS DE PERFORMANCE
+-- INDICES EXTRAS DE PERFORMANCE
 -- =============================================================
 CREATE INDEX IF NOT EXISTS creator_profiles_user_id_idx ON creator_profiles(user_id);
 CREATE INDEX IF NOT EXISTS brand_profiles_user_id_idx ON brand_profiles(user_id);
@@ -668,8 +661,28 @@ CREATE INDEX IF NOT EXISTS afiliados_cupom_idx ON afiliados(cupom_codigo);
 CREATE INDEX IF NOT EXISTS afiliados_creator_idx ON afiliados(creator_id);
 
 -- =============================================================
+-- MIGRACOES (safe para rodar em banco existente)
+-- =============================================================
+
+-- Migra segmento (TEXT) → segmentos (TEXT[])
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'brand_profiles' AND column_name = 'segmento'
+  ) THEN
+    ALTER TABLE brand_profiles RENAME COLUMN segmento TO segmentos_old;
+    ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS segmentos TEXT[] DEFAULT '{}';
+    UPDATE brand_profiles SET segmentos = ARRAY[segmentos_old] WHERE segmentos_old IS NOT NULL AND segmentos_old <> '';
+    ALTER TABLE brand_profiles DROP COLUMN segmentos_old;
+  END IF;
+END $$;
+
+ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS segmentos TEXT[] DEFAULT '{}';
+ALTER TABLE brand_profiles DROP CONSTRAINT IF EXISTS brand_profiles_orcamento_medio_check;
+
+-- =============================================================
 -- FIM DO SCRIPT
 -- Após rodar, verifique no Table Editor que todas as tabelas
 -- aparecem com as colunas corretas e RLS ativado (ícone de cadeado)
 -- =============================================================
-1

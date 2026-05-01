@@ -44,8 +44,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Máximo de 8 imagens por análise' }, { status: 400 })
   }
 
-  // Free não pode chamar análise vision (modelo Sonnet vision = caro)
-  // Plus+ podem — limite efetivo é o do carrossel em si
+  // Rate limit diário pra evitar abuso (free=10/dia, Plus+=40/dia)
+  // Análise é parte do fluxo de gerar carrossel, então não bloqueamos plano —
+  // limite efetivo é o de carrossel/mês. Esse cap diário só impede flood.
   if (modo === 'criador') {
     const admin = createAdminClient()
     const { data: perfil } = await admin
@@ -54,12 +55,26 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
     const plano = perfil?.plano ?? 'free'
-    if (plano === 'free') {
+    const capDia = plano === 'free' ? 10 : 40
+    const inicioHoje = new Date()
+    inicioHoje.setUTCHours(0, 0, 0, 0)
+    const { count } = await admin
+      .from('content_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('tipo', 'img_analise')
+      .gte('created_at', inicioHoje.toISOString())
+    if ((count ?? 0) >= capDia) {
       return NextResponse.json({
-        error: 'Análise IA de imagens disponível apenas no plano Plus ou superior',
-        upgrade_url: '/#planos',
-      }, { status: 402 })
+        error: `Limite diário de análise de imagens atingido (${capDia}/dia). Tenta amanhã ou faça upgrade.`,
+      }, { status: 429 })
     }
+    // Registra uso (best effort)
+    void admin.from('content_history').insert({
+      user_id: user.id,
+      tipo: 'img_analise',
+      titulo: `Análise ${imagens.length} img(s)`,
+    }).then(() => null, () => null)
   }
 
   const arquetiposCriador = ['cover_full', 'split_v', 'top_text', 'full_bleed', 'quote']

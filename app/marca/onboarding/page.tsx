@@ -90,6 +90,7 @@ export default function MarcaOnboardingPage() {
   const [nichosInteresse, setNichosInteresse] = useState<string[]>([])
   const [plataformasFoco, setPlataformasFoco] = useState<string[]>([])
   const [orcamentoMedio, setOrcamentoMedio] = useState('')
+  const [orcamentoCustom, setOrcamentoCustom] = useState('')
 
   function toggleNicho(nicho: string) {
     setNichosInteresse(prev =>
@@ -106,7 +107,7 @@ export default function MarcaOnboardingPage() {
   function canAdvance() {
     if (step === 0) return nomeEmpresa.trim() && segmentos.length > 0 && porte
     if (step === 1) return true
-    if (step === 2) return nichosInteresse.length > 0 && plataformasFoco.length > 0 && orcamentoMedio
+    if (step === 2) return nichosInteresse.length > 0 && plataformasFoco.length > 0 && (orcamentoMedio || orcamentoCustom.trim())
     return false
   }
 
@@ -114,17 +115,18 @@ export default function MarcaOnboardingPage() {
     setLoading(true)
     setError(null)
 
+    // Payload alinhado com schema (segmentos = TEXT[], orçamento aceita custom)
     const body = JSON.stringify({
       nome_empresa: nomeEmpresa.trim(),
       cnpj: cnpj.trim() || null,
-      segmento: JSON.stringify(segmentos),
+      segmentos,
       porte,
       site: site.trim() || null,
       instagram: instagram.trim() || null,
       sobre: sobre.trim() || null,
       nichos_interesse: nichosInteresse,
       plataformas_foco: plataformasFoco,
-      orcamento_medio: orcamentoMedio,
+      orcamento_medio: orcamentoMedio || orcamentoCustom.trim(),
       onboarding_completo: true,
     })
 
@@ -381,7 +383,7 @@ export default function MarcaOnboardingPage() {
                     <button
                       key={o.value}
                       type="button"
-                      onClick={() => setOrcamentoMedio(o.value)}
+                      onClick={() => { setOrcamentoMedio(o.value); setOrcamentoCustom('') }}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
                         orcamentoMedio === o.value
                           ? 'bg-iara-600/20 border-iara-600/40 text-iara-300'
@@ -392,6 +394,15 @@ export default function MarcaOnboardingPage() {
                       <span className={`text-xs ${orcamentoMedio === o.value ? 'text-iara-500' : 'text-[#3a3a5a]'}`}>{o.desc}</span>
                     </button>
                   ))}
+                  <div className="pt-1">
+                    <input
+                      type="text"
+                      value={orcamentoCustom}
+                      onChange={e => { setOrcamentoCustom(e.target.value); setOrcamentoMedio('') }}
+                      placeholder="Ou digite um valor personalizado..."
+                      className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-[#f1f1f8] placeholder:text-[#3a3a5a] focus:border-iara-500/60 focus:outline-none focus:ring-2 focus:ring-iara-500/15 transition-all"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

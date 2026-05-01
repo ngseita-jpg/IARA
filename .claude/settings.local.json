@@ -32,7 +32,17 @@
       "Bash(ls app/esqueci-senha/)",
       "Bash(cat app/\\\\\\(auth\\\\\\)/register/page.tsx)",
       "Bash(cat app/register/page.tsx)",
-      "Bash(start \"\" \"http://localhost:3000/preview\")"
+      "Bash(start \"\" \"http://localhost:3000/preview\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(rm \"c:/Users/ngsei/OneDrive/Área de Trabalho/IARA/app/api/posts-prontos/route.tsx\")",
+      "Bash(rmdir \"c:/Users/ngsei/OneDrive/Área de Trabalho/IARA/app/api/posts-prontos\")",
+      "Bash(rm \"c:/Users/ngsei/OneDrive/Área de Trabalho/IARA/app/\\(dashboard\\)/dashboard/posts-prontos/page.tsx\")",
+      "Bash(rmdir \"c:/Users/ngsei/OneDrive/Área de Trabalho/IARA/app/\\(dashboard\\)/dashboard/posts-prontos\")"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "vercel"
+  ]
 }
