@@ -441,13 +441,39 @@ export default function CarrosselPage() {
     a.click()
   }
 
-  function downloadTodos() {
-    Object.entries(slidePngs).forEach(([ordem, url]) => {
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `slide-${ordem}.png`
-      a.click()
-    })
+  async function downloadTodos() {
+    const pngsValidos = Object.entries(slidePngs)
+      .filter(([, url]) => url && !url.startsWith('ERROR:'))
+      .sort(([a], [b]) => Number(a) - Number(b))
+    if (!pngsValidos.length) return
+
+    setExportandoZip(true)
+    try {
+      const tituloBase = (carrossel?.slides[0]?.titulo ?? 'carrossel')
+        .toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) || 'carrossel'
+
+      const files = await Promise.all(
+        pngsValidos.map(async ([ordem, blobUrl]) => {
+          const res = await fetch(blobUrl)
+          const blob = await res.blob()
+          return { name: `${tituloBase}-slide-${ordem.padStart(2, '0')}.png`, data: blob }
+        })
+      )
+
+      const { downloadZip } = await import('@/lib/share')
+      await downloadZip(files, `${tituloBase}.zip`)
+    } catch (e) {
+      console.error('downloadTodos', e)
+      // fallback: baixa um por um
+      Object.entries(slidePngs).forEach(([ordem, url]) => {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `slide-${ordem}.png`
+        a.click()
+      })
+    } finally {
+      setExportandoZip(false)
+    }
   }
 
   async function exportarParaInstagram() {

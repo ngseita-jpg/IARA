@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { Navbar } from '@/components/navbar'
+import { UsoNotifier } from '@/components/uso-notifier'
 import Link from 'next/link'
 
 export default async function DashboardLayout({
@@ -48,6 +49,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen app-bg relative">
       <div className="fixed inset-0 app-bg-grid opacity-[0.35] pointer-events-none z-0" />
       <Navbar userEmail={user.email} />
+      <UsoNotifier />
       <main className="relative z-10 md:ml-64 pt-16 md:pt-0 min-h-screen pb-24 md:pb-0">
         <div className="p-6 md:p-8 max-w-6xl content-enter">
           {children}

@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft } from 'lucide-react'
+import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft, Lock, Eye, EyeOff, Check } from 'lucide-react'
 import { UpgradeModal } from '@/components/upgrade-modal'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { labelPlano } from '@/lib/stripe'
+import { toast } from '@/lib/toast'
+import { useModalA11y } from '@/hooks/useModalA11y'
 
 const PLANO_COLOR: Record<string, string> = {
   free:         'text-[#6b6b8a]',
@@ -31,6 +33,7 @@ export default function ContaPage() {
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [senhaOpen, setSenhaOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/perfil/conta')
@@ -143,6 +146,23 @@ export default function ContaPage() {
             )}
           </div>
 
+          {/* Mudar senha */}
+          <button
+            onClick={() => setSenhaOpen(true)}
+            className="w-full rounded-2xl border border-[#1a1a2e] bg-[#13131f] p-4 flex items-center justify-between hover:border-indigo-800/40 transition-colors group cursor-pointer"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-[#1a1a2e] flex items-center justify-center flex-shrink-0">
+                <Lock className="w-4 h-4 text-[#6b6b8a] group-hover:text-indigo-400 transition-colors" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-white">Mudar senha</p>
+                <p className="text-xs text-[#6b6b8a]">Atualizar sua senha de acesso</p>
+              </div>
+            </div>
+            <ExternalLink className="w-4 h-4 text-[#3a3a5a] group-hover:text-indigo-400 transition-colors" />
+          </button>
+
           {/* Persona link */}
           <Link
             href="/dashboard/persona"
@@ -175,6 +195,193 @@ export default function ContaPage() {
       </div>
 
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+      {senhaOpen && perfil?.email && (
+        <MudarSenhaModal
+          email={perfil.email}
+          onClose={() => setSenhaOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Modal de mudar senha (re-auth + update via Supabase auth) ────────────────
+function MudarSenhaModal({ email, onClose }: { email: string; onClose: () => void }) {
+  const [senhaAtual, setSenhaAtual] = useState('')
+  const [novaSenha, setNovaSenha] = useState('')
+  const [confirmar, setConfirmar] = useState('')
+  const [showAtual, setShowAtual] = useState(false)
+  const [showNova, setShowNova] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [sucesso, setSucesso] = useState(false)
+
+  useModalA11y(true, onClose)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setErro(null)
+
+    if (novaSenha.length < 6) {
+      setErro('Nova senha precisa ter pelo menos 6 caracteres.')
+      return
+    }
+    if (novaSenha !== confirmar) {
+      setErro('As senhas não coincidem.')
+      return
+    }
+    if (novaSenha === senhaAtual) {
+      setErro('A nova senha precisa ser diferente da atual.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      // 1. Re-autenticar com senha atual (proteção contra session hijack)
+      const { error: signErr } = await supabase.auth.signInWithPassword({ email, password: senhaAtual })
+      if (signErr) {
+        setErro('Senha atual incorreta.')
+        setLoading(false)
+        return
+      }
+      // 2. Atualizar pra nova senha
+      const { error: updErr } = await supabase.auth.updateUser({ password: novaSenha })
+      if (updErr) {
+        setErro('Erro ao atualizar senha. Tente novamente.')
+        setLoading(false)
+        return
+      }
+      // 3. Audit (best-effort)
+      void fetch('/api/audit/evento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evento: 'senha_alterada', meta: { via: 'conta' } }),
+      }).catch(() => null)
+
+      setSucesso(true)
+      toast.success('Senha alterada com sucesso')
+      setTimeout(() => onClose(), 1500)
+    } catch {
+      setErro('Erro inesperado. Tente novamente.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="relative w-full sm:max-w-md max-h-[95vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-[#1a1a2e] bg-[#0e0e1e] shadow-2xl p-6">
+        <button
+          onClick={onClose}
+          aria-label="Fechar"
+          className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-xl text-[#6b6b8a] hover:text-[#f1f1f8] hover:bg-[#1a1a2e]"
+        >
+          <span className="text-2xl leading-none">×</span>
+        </button>
+
+        <div className="mb-5">
+          <h2 className="text-lg font-bold text-white mb-1">Mudar senha</h2>
+          <p className="text-xs text-[#6b6b8a]">Confirme a senha atual antes de definir a nova.</p>
+        </div>
+
+        {sucesso ? (
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-green-900/30 border border-green-700/40 flex items-center justify-center mb-3">
+              <Check className="w-6 h-6 text-green-400" />
+            </div>
+            <p className="text-sm font-semibold text-white mb-1">Senha atualizada!</p>
+            <p className="text-xs text-[#6b6b8a]">Você continua logado nessa sessão.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#6b6b8a] mb-1.5">Senha atual</label>
+              <div className="relative">
+                <input
+                  type={showAtual ? 'text' : 'password'}
+                  value={senhaAtual}
+                  onChange={e => setSenhaAtual(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 pr-11 text-sm text-white focus:border-indigo-700/60 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAtual(v => !v)}
+                  aria-label={showAtual ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-[#6b6b8a] hover:text-white"
+                >
+                  {showAtual ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#6b6b8a] mb-1.5">Nova senha</label>
+              <div className="relative">
+                <input
+                  type={showNova ? 'text' : 'password'}
+                  value={novaSenha}
+                  onChange={e => setNovaSenha(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="new-password"
+                  placeholder="Mínimo 6 caracteres"
+                  className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 pr-11 text-sm text-white placeholder:text-[#3a3a5a] focus:border-indigo-700/60 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNova(v => !v)}
+                  aria-label={showNova ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-[#6b6b8a] hover:text-white"
+                >
+                  {showNova ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-semibold text-[#6b6b8a] mb-1.5">Confirmar nova senha</label>
+              <input
+                type={showNova ? 'text' : 'password'}
+                value={confirmar}
+                onChange={e => setConfirmar(e.target.value)}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                className="w-full rounded-xl border border-[#1a1a2e] bg-[#0a0a14] px-4 py-3 text-sm text-white focus:border-indigo-700/60 focus:outline-none"
+              />
+            </div>
+
+            {erro && (
+              <div className="px-3 py-2 rounded-xl bg-red-900/20 border border-red-800/40 text-red-300 text-xs">
+                ⚠ {erro}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1 min-h-11 rounded-xl border border-[#1a1a2e] text-sm text-[#9b9bb5] hover:bg-[#1a1a2e] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !senhaAtual || !novaSenha}
+                className="flex-1 min-h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Atualizar senha'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   )
 }

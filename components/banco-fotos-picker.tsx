@@ -112,15 +112,20 @@ export function BancoFotosPicker({ multiple = false, maxSelect = 8, onConfirm, o
               <span className="text-sm">{erro}</span>
             </div>
           ) : fotos.length === 0 ? (
-            <div className="text-center py-16">
-              <Images className="w-12 h-12 mx-auto mb-3 text-[#2a2a4a]" />
-              <p className="text-sm text-[#6b6b8a] mb-4">Seu banco está vazio.</p>
+            <div className="text-center py-12 px-4">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-[#0f0f1e] border border-[#1a1a2e] flex items-center justify-center mb-4">
+                <Images className="w-7 h-7 text-[#3a3a5a]" />
+              </div>
+              <p className="text-base font-semibold text-[#9b9bb5] mb-1">Seu banco de fotos está vazio</p>
+              <p className="text-xs text-[#5a5a7a] mb-5 max-w-sm mx-auto">
+                Salve fotos que você usa com frequência (rosto, produto, lifestyle) pra reusar nos carrosseis sem upload toda hora.
+              </p>
               <Link
                 href="/dashboard/fotos"
                 onClick={onClose}
-                className="text-sm text-iara-400 hover:text-iara-300 underline underline-offset-2"
+                className="inline-flex items-center gap-1.5 px-4 min-h-11 rounded-xl bg-gradient-to-r from-iara-600 to-accent-purple text-white text-sm font-semibold hover:opacity-90 transition-opacity"
               >
-                Adicionar fotos ao banco →
+                Adicionar fotos agora
               </Link>
             </div>
           ) : (

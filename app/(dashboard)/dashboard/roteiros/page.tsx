@@ -27,6 +27,9 @@ import Link from 'next/link'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { sanitizeBold } from '@/lib/sanitize'
+import { ShareButton } from '@/components/share-button'
+import { IaFeedback } from '@/components/ia-feedback'
+import { RefineChat } from '@/components/refine-chat'
 
 const FORMATOS = [
   { value: 'Reel (até 90s)',         iconKey: 'reel',    desc: 'Instagram / TikTok' },
@@ -630,16 +633,24 @@ export default function RoteirosPage() {
               {modo === 'hooks' ? 'Hooks gerados' : 'Roteiro gerado'}
             </label>
             {hasResult && (
-              <button
-                onClick={handleCopy}
-                className="iara-btn-secondary text-xs px-3 py-1.5"
-              >
-                {copied ? (
-                  <><Check className="w-3.5 h-3.5 text-green-400" /> Copiado!</>
-                ) : (
-                  <><Copy className="w-3.5 h-3.5" /> Copiar</>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="iara-btn-secondary text-xs px-3 min-h-9"
+                >
+                  {copied ? (
+                    <><Check className="w-3.5 h-3.5 text-green-400" /> Copiado!</>
+                  ) : (
+                    <><Copy className="w-3.5 h-3.5" /> Copiar</>
+                  )}
+                </button>
+                <ShareButton
+                  variant="subtle"
+                  text={roteiro ?? ''}
+                  title={modo === 'hooks' ? 'Hooks da Iara' : 'Roteiro da Iara'}
+                  label="Compartilhar"
+                />
+              </div>
             )}
           </div>
 
@@ -735,10 +746,25 @@ export default function RoteirosPage() {
           </div>
 
           {hasResult && !loading && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-[#5a5a7a]">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              {modo === 'hooks' ? 'Hooks gerados — escolha o melhor e grave' : 'Roteiro gerado — pronto para usar'}
-            </div>
+            <>
+              <div className="mt-3 flex items-center gap-2 text-xs text-[#5a5a7a]">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                {modo === 'hooks' ? 'Hooks gerados — escolha o melhor e grave' : 'Roteiro gerado — pronto para usar'}
+              </div>
+              {modo !== 'hooks' && (
+                <div className="mt-4">
+                  <RefineChat
+                    modulo="roteiro"
+                    conteudoAtual={roteiro}
+                    onRefinado={setRoteiro}
+                    sugestoes={['Mais curto', 'Mais punchy', 'Hook mais forte', 'Adicione um CTA', 'Tom mais brasileiro']}
+                  />
+                </div>
+              )}
+              <div className="mt-4 pt-4 border-t border-[#1a1a2e]">
+                <IaFeedback modulo="roteiro" />
+              </div>
+            </>
           )}
         </div>
       </div>
