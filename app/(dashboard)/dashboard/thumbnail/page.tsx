@@ -28,6 +28,8 @@ import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/component
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 import { SaveTemplateButton } from '@/components/save-template-button'
 import { IaFeedback } from '@/components/ia-feedback'
+import { ThumbnailEditor } from '@/components/thumbnail-editor'
+import { toast } from '@/lib/toast'
 
 type Step = 'info' | 'foto' | 'gerar'
 type MensagemChat = { role: 'user' | 'assistant'; content: string }
@@ -143,9 +145,11 @@ export default function ThumbnailPage() {
   const [variacoes, setVariacoes] = useState<{ layout: ThumbnailLayout; png: string | null }[]>([])
   const [variacaoAtiva, setVariacaoAtiva] = useState(0)
 
-  // Editor de cores (pós-geração)
-  const [destaqueCor, setDestaqueCor] = useState('#ec4899')
+  // Editor pós-geração — histórico de layouts pra undo/redo
   const [rerenderizando, setRerenderizando] = useState(false)
+  const [historicoLayouts, setHistoricoLayouts] = useState<ThumbnailLayout[]>([])
+  const [posHistorico, setPosHistorico] = useState(0)
+  const [layoutOriginal, setLayoutOriginal] = useState<ThumbnailLayout | null>(null)
 
   // Chat
   const [chat, setChat] = useState<MensagemChat[]>([])
@@ -189,39 +193,76 @@ export default function ThumbnailPage() {
     } catch { return null }
   }
 
-  // ── Editor de cores: aplica mudança e re-renderiza (sem consumir cota IA) ──
-  async function aplicarLayoutEditado(novoLayout: ThumbnailLayout) {
+  // ── Editor pós-geração: aplica mudança, re-renderiza e atualiza histórico ──
+  async function aplicarLayoutEditado(novoLayout: ThumbnailLayout, opts: { skipHistory?: boolean } = {}) {
     setLayout(novoLayout)
     setRerenderizando(true)
     const png = await renderizar(novoLayout)
     setThumbnailPng(png)
     setVariacoes(prev => prev.map((v, i) => i === variacaoAtiva ? { layout: novoLayout, png } : v))
     setRerenderizando(false)
+
+    // Adiciona ao histórico (corta tudo depois da posição atual — branch-cut tipo Photoshop)
+    if (!opts.skipHistory) {
+      setHistoricoLayouts(prev => {
+        const novoHistorico = prev.slice(0, posHistorico + 1)
+        novoHistorico.push(novoLayout)
+        // Cap em 30 entradas pra não acumular memória
+        return novoHistorico.length > 30 ? novoHistorico.slice(-30) : novoHistorico
+      })
+      setPosHistorico(p => Math.min(p + 1, 29))
+    }
   }
 
-  async function handleMudarCorTitulo(novaCor: string) {
-    if (!layout) return
-    await aplicarLayoutEditado({ ...layout, titulo_cor: novaCor })
+  async function handleUndo() {
+    if (posHistorico <= 0) return
+    const novoIdx = posHistorico - 1
+    setPosHistorico(novoIdx)
+    await aplicarLayoutEditado(historicoLayouts[novoIdx], { skipHistory: true })
   }
 
-  async function handleTogglePalavra(idx: number) {
-    if (!layout) return
-    const atuais = layout.palavras_destaque ?? []
-    const existe = atuais.some(d => d.indice === idx)
-    const novo = existe
-      ? atuais.filter(d => d.indice !== idx)
-      : [...atuais, { indice: idx, cor: destaqueCor }]
-    await aplicarLayoutEditado({ ...layout, palavras_destaque: novo })
+  async function handleRedo() {
+    if (posHistorico >= historicoLayouts.length - 1) return
+    const novoIdx = posHistorico + 1
+    setPosHistorico(novoIdx)
+    await aplicarLayoutEditado(historicoLayouts[novoIdx], { skipHistory: true })
   }
 
-  async function handleMudarCorDestaque(novaCor: string) {
-    setDestaqueCor(novaCor)
-    if (!layout) return
-    const atuais = layout.palavras_destaque ?? []
-    if (atuais.length === 0) return
-    const novo = atuais.map(d => ({ ...d, cor: novaCor }))
-    await aplicarLayoutEditado({ ...layout, palavras_destaque: novo })
+  async function handleReset() {
+    if (!layoutOriginal) return
+    if (!confirm('Voltar ao layout original gerado pela IA? Suas edições serão perdidas.')) return
+    setHistoricoLayouts([layoutOriginal])
+    setPosHistorico(0)
+    await aplicarLayoutEditado(layoutOriginal, { skipHistory: true })
+    toast.success('Voltou pro layout original')
   }
+
+  async function handleDuplicarVariacao() {
+    if (!layout) return
+    setRerenderizando(true)
+    const png = await renderizar(layout)
+    const novasVar = [...variacoes, { layout: { ...layout }, png }]
+    setVariacoes(novasVar)
+    setVariacaoAtiva(novasVar.length - 1)
+    setRerenderizando(false)
+    toast.success('Variação salva — pode editar essa cópia separadamente')
+  }
+
+  // Atalhos teclado: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z = redo
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!layout) return
+      const meta = e.metaKey || e.ctrlKey
+      if (meta && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) handleRedo()
+        else handleUndo()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout, posHistorico, historicoLayouts])
 
   // ── Gerar principal ──────────────────────────────────────
   async function handleGerar() {
@@ -249,6 +290,9 @@ export default function ThumbnailPage() {
 
       const l: ThumbnailLayout = data.layout
       setLayout(l)
+      setLayoutOriginal(l)             // guarda original pra reset
+      setHistoricoLayouts([l])
+      setPosHistorico(0)
       setHistoricoClaude([
         { role: 'user', content: `Thumbnail: ${tituloVideo}` },
         { role: 'assistant', content: data.assistant_message },
@@ -300,6 +344,9 @@ export default function ThumbnailPage() {
       const idx = novasVar.length - 1
       setVariacaoAtiva(idx)
       setLayout(l)
+      setLayoutOriginal(l)
+      setHistoricoLayouts([l])
+      setPosHistorico(0)
       setThumbnailPng(png)
       setHistoricoClaude([...hist, { role: 'assistant', content: data.assistant_message }])
     } catch { /* silencioso */ }
@@ -325,6 +372,9 @@ export default function ThumbnailPage() {
       if (!res.ok) throw new Error(data.error)
       const l: ThumbnailLayout = data.layout
       setLayout(l)
+      setLayoutOriginal(l)             // chat IA = novo ponto de partida
+      setHistoricoLayouts([l])
+      setPosHistorico(0)
       setHistoricoClaude([...hist, { role: 'assistant', content: data.assistant_message }])
       setChat(prev => [...prev, { role: 'assistant', content: l.raciocinio || 'Thumbnail atualizada!' }])
       setThumbnailPng(null)
@@ -373,6 +423,9 @@ export default function ThumbnailPage() {
           onCarregar={(item: HistoricoItem) => {
             const l = item.conteudo as ThumbnailLayout
             setLayout(l)
+            setLayoutOriginal(l)
+            setHistoricoLayouts([l])
+            setPosHistorico(0)
             setTituloVideo(item.titulo)
             if (item.parametros.descricao) setDescricao(item.parametros.descricao as string)
             setStep('gerar')
@@ -712,105 +765,20 @@ export default function ThumbnailPage() {
                   ) : null}
                 </div>
 
-                {/* Editor de cores — edição sem custo de IA */}
-                {thumbnailPng && (
-                  <div className="p-4 rounded-xl bg-[#0f0f20] border border-[#1a1a2e]">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="text-xs font-medium text-iara-400 uppercase tracking-wider">Editor de cores</p>
-                        <p className="text-[10px] text-[#5a5a7a] mt-0.5">Edite livremente — não consome cota</p>
-                      </div>
-                      {rerenderizando && <Loader2 className="w-3.5 h-3.5 animate-spin text-iara-400" />}
-                    </div>
-
-                    {/* Cor base do título */}
-                    <div className="mb-5">
-                      <p className="text-xs text-[#9b9bb5] mb-2 font-medium">Cor base do título</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="color"
-                          value={layout.titulo_cor}
-                          onChange={e => handleMudarCorTitulo(e.target.value)}
-                          className="w-9 h-9 rounded-lg border border-[#2a2a4a] bg-transparent cursor-pointer"
-                        />
-                        <span className="text-[10px] font-mono text-[#6b6b8a] min-w-[60px]">{layout.titulo_cor}</span>
-                        <div className="flex gap-1.5 ml-1">
-                          {['#ffffff', '#000000', '#fbbf24', '#ec4899', '#a855f7', '#3b82f6', '#10b981', '#ef4444'].map(c => (
-                            <button
-                              key={c}
-                              onClick={() => handleMudarCorTitulo(c)}
-                              style={{ background: c }}
-                              className={`w-6 h-6 rounded-full border transition-all ${
-                                layout.titulo_cor.toLowerCase() === c ? 'border-white scale-110' : 'border-white/20 hover:scale-110'
-                              }`}
-                              aria-label={`Cor ${c}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Destaques por palavra */}
-                    <div>
-                      <p className="text-xs text-[#9b9bb5] mb-2 font-medium">
-                        Destacar palavras específicas <span className="text-[10px] text-[#4a4a6a] font-normal">(clique para alternar)</span>
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {layout.titulo.split(/\s+/).filter(Boolean).map((palavra, idx) => {
-                          const destacada = layout.palavras_destaque?.find(d => d.indice === idx)
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => handleTogglePalavra(idx)}
-                              disabled={rerenderizando}
-                              className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-                              style={destacada ? {
-                                background: destacada.cor + '22',
-                                color: destacada.cor,
-                                boxShadow: `0 0 0 1.5px ${destacada.cor}`,
-                              } : {
-                                background: '#1a1a2e',
-                                color: '#c1c1d8',
-                              }}
-                            >
-                              {palavra}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="color"
-                          value={destaqueCor}
-                          onChange={e => handleMudarCorDestaque(e.target.value)}
-                          className="w-9 h-9 rounded-lg border border-[#2a2a4a] bg-transparent cursor-pointer"
-                        />
-                        <span className="text-[10px] font-mono text-[#6b6b8a] min-w-[60px]">{destaqueCor}</span>
-                        <div className="flex gap-1.5 ml-1">
-                          {['#ec4899', '#fbbf24', '#a855f7', '#06b6d4', '#10b981', '#ef4444', '#f97316', '#ffffff'].map(c => (
-                            <button
-                              key={c}
-                              onClick={() => handleMudarCorDestaque(c)}
-                              style={{ background: c }}
-                              className={`w-6 h-6 rounded-full border transition-all ${
-                                destaqueCor.toLowerCase() === c ? 'border-white scale-110' : 'border-white/20 hover:scale-110'
-                              }`}
-                              aria-label={`Destaque ${c}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      {(layout.palavras_destaque?.length ?? 0) > 0 && (
-                        <button
-                          onClick={() => aplicarLayoutEditado({ ...layout, palavras_destaque: [] })}
-                          disabled={rerenderizando}
-                          className="mt-3 text-[10px] text-[#5a5a7a] hover:text-red-400 transition-colors disabled:opacity-50"
-                        >
-                          × Remover todos os destaques
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                {/* Editor avançado pós-geração — 6 abas + undo/redo */}
+                {thumbnailPng && layout && layoutOriginal && (
+                  <ThumbnailEditor
+                    layout={layout}
+                    layoutOriginal={layoutOriginal}
+                    rerenderizando={rerenderizando}
+                    onChange={(novo) => aplicarLayoutEditado(novo)}
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                    onReset={handleReset}
+                    onDuplicar={handleDuplicarVariacao}
+                    podeUndo={posHistorico > 0}
+                    podeRedo={posHistorico < historicoLayouts.length - 1}
+                  />
                 )}
 
                 {/* Variações */}
@@ -834,6 +802,9 @@ export default function ThumbnailPage() {
                           onClick={() => {
                             setVariacaoAtiva(i)
                             setLayout(v.layout)
+                            setLayoutOriginal(v.layout)
+                            setHistoricoLayouts([v.layout])
+                            setPosHistorico(0)
                             setThumbnailPng(v.png)
                           }}
                           className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${
