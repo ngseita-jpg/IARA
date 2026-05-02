@@ -30,6 +30,7 @@ import { sanitizeBold } from '@/lib/sanitize'
 import { ShareButton } from '@/components/share-button'
 import { IaFeedback } from '@/components/ia-feedback'
 import { RefineChat } from '@/components/refine-chat'
+import { SaveTemplateButton } from '@/components/save-template-button'
 
 const FORMATOS = [
   { value: 'Reel (até 90s)',         iconKey: 'reel',    desc: 'Instagram / TikTok' },
@@ -649,6 +650,12 @@ export default function RoteirosPage() {
                   text={roteiro ?? ''}
                   title={modo === 'hooks' ? 'Hooks da Iara' : 'Roteiro da Iara'}
                   label="Compartilhar"
+                />
+                <SaveTemplateButton
+                  variant="subtle"
+                  modulo="roteiro"
+                  defaultNome={tema ? `${tema.slice(0, 50)}` : 'Meu template de roteiro'}
+                  parametros={{ tema, formato, duracao, estilo, objetivo, modo }}
                 />
               </div>
             )}

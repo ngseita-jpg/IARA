@@ -1,3 +1,17 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/trial-emails",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/uso-alertas",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/afiliados/verificar-suspeitos",
+      "schedule": "0 9 * * 1"
+    }
+  ]
 }

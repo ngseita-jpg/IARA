@@ -375,3 +375,118 @@ export async function emailPropostaRecusada({
   `
   await send(brandEmail, `Proposta recusada por ${creatorNome}`, base(`${creatorNome} recusou a proposta para "${vagaTitulo}"`, body))
 }
+
+// ─── Sequência pós-trial (D+1, D+2 antes do fim) ──────────────────────────────
+
+export async function emailTrialDicaD1({
+  userEmail, userNome, plano,
+}: {
+  userEmail: string
+  userNome: string | null
+  plano: string
+}) {
+  const nome = userNome?.split(' ')[0] || 'Criador'
+  const body = `
+    ${h1(`${nome}, vamos tirar valor do trial?`)}
+    ${p('Você ativou o trial ontem — perfeito. Agora um conselho rápido pra você sentir o valor de verdade nas próximas 48h:')}
+    <ul style="margin:0 0 20px;padding-left:20px;font-size:15px;line-height:1.8;color:#4a4a6a;">
+      <li>Configure sua <strong>Persona IA</strong> em 3 minutos — sem isso, a Iara escreve genérico</li>
+      <li>Gere seu primeiro <strong>roteiro completo</strong> (não só hooks) — sente a diferença de tom</li>
+      <li>Faça um <strong>carrossel de 6 slides</strong> com paleta automática — em 60 segundos</li>
+      <li>Atalho da casa: ${strong('Faísca Criativa')} pra destravar 5 ideias quando ficar travado</li>
+    </ul>
+    ${quote('Quem usa 3 módulos no trial converte 4× mais — não é fé, é estatística.')}
+    ${p('Tem dúvida? Responda esse email — eu pessoalmente leio e respondo.')}
+    ${btn('https://iarahubapp.com.br/dashboard', 'Voltar pra plataforma →')}
+  `
+  await send(
+    userEmail,
+    `${nome}, dica rápida pra extrair valor do seu trial`,
+    base(`Como tirar o máximo do trial ${plano} nas próximas 48h`, body),
+  )
+}
+
+export async function emailTrialFimD2({
+  userEmail, userNome, plano, terminaEm,
+}: {
+  userEmail: string
+  userNome: string | null
+  plano: string
+  terminaEm: string  // ex: "amanhã às 14h"
+}) {
+  const nome = userNome?.split(' ')[0] || 'Criador'
+  const PLANO_INFO: Record<string, { label: string; preco: string }> = {
+    plus:         { label: 'Plus',         preco: 'R$ 59,90/mês' },
+    premium:      { label: 'Premium',      preco: 'R$ 129,00/mês' },
+    profissional: { label: 'Profissional', preco: 'R$ 249,00/mês' },
+    agencia:      { label: 'Agência',      preco: 'R$ 499,00/mês' },
+  }
+  const info = PLANO_INFO[plano] ?? { label: 'Premium', preco: 'R$ 129,00/mês' }
+
+  const body = `
+    ${h1(`Seu trial termina ${terminaEm}`)}
+    ${p(`Olá, ${strong(nome)}!`)}
+    ${p(`Seu trial do plano ${strong(info.label)} acaba ${terminaEm}. Se quiser continuar usando, ${strong('não precisa fazer nada')} — a cobrança de ${info.preco} acontece automaticamente.`)}
+    ${p(`Se quiser cancelar, faz em ${strong('3 cliques no painel')} — sem cobrança nenhuma, zero pegadinha.`)}
+    <table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="margin:20px 0;">
+      <tr>
+        <td style="background:linear-gradient(135deg,#5b3fa0,#3d2080);border-radius:12px;padding:24px;text-align:center;">
+          <p style="margin:0 0 6px;font-size:13px;color:#ddd6fe;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Plano que você está testando</p>
+          <p style="margin:0 0 4px;font-size:24px;font-weight:800;color:#ffffff;">Iara ${info.label}</p>
+          <p style="margin:0;font-size:14px;color:#c8b6e8;">${info.preco}</p>
+        </td>
+      </tr>
+    </table>
+    ${p(strong('Vale a pena continuar?') + ' Esse é o momento. Você já testou — agora é decisão.')}
+    ${btn('https://iarahubapp.com.br/dashboard', 'Voltar pra plataforma →')}
+    ${p('Se quiser cancelar, é só ir em ' + strong('Conta → Gerenciar assinatura') + '.')}
+  `
+  await send(
+    userEmail,
+    `⏰ Seu trial termina ${terminaEm}`,
+    base(`Trial do ${info.label} termina ${terminaEm} — decida com calma`, body),
+  )
+}
+
+// ─── Notificação de uso 80% ───────────────────────────────────────────────────
+
+export async function emailUso80Pct({
+  userEmail, userNome, modulo, usado, limite, plano,
+}: {
+  userEmail: string
+  userNome: string | null
+  modulo: string
+  usado: number
+  limite: number
+  plano: string
+}) {
+  const nome = userNome?.split(' ')[0] || 'Criador'
+  const labels: Record<string, string> = {
+    roteiro:   'Roteiros',
+    carrossel: 'Carrosseis',
+    thumbnail: 'Thumbnails',
+    stories:   'Stories',
+    oratorio:  'Análises de oratória',
+    midia_kit: 'Mídia Kits',
+    temas:     'Faísca Criativa',
+    fotos:     'Fotos no banco',
+    metricas:  'Análises de métricas',
+  }
+  const moduloLabel = labels[modulo] ?? modulo
+  const restante = limite - usado
+  const pct = Math.round((usado / limite) * 100)
+
+  const body = `
+    ${h1(`Você está em ${pct}% do limite mensal`)}
+    ${p(`Olá, ${strong(nome)}!`)}
+    ${p(`Já usou ${strong(`${usado} de ${limite} ${moduloLabel}`)} esse mês — sobram ${strong(`${restante}`)} pra usar até virar o mês.`)}
+    ${p(`Se você quer continuar criando sem parar, vale fazer upgrade pra um plano maior. ${strong('Premium')} dobra todos os limites e libera Métricas com IA — por R$ 129/mês.`)}
+    ${btn('https://iarahubapp.com.br/conta', 'Ver opções de upgrade →')}
+    ${p(`Não quer upgrade? Sem problema — seu limite reseta dia 1 do mês que vem. Você pode salvar suas melhores gerações como ${strong('favoritos')} no histórico pra reusar.`)}
+  `
+  await send(
+    userEmail,
+    `${nome}, você usou ${pct}% dos seus ${moduloLabel} esse mês`,
+    base(`${usado}/${limite} ${moduloLabel} usados — considere upgrade`, body),
+  )
+}

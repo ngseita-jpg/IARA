@@ -7,6 +7,9 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
+import { SaveTemplateButton } from '@/components/save-template-button'
+import { ShareButton } from '@/components/share-button'
+import { IaFeedback } from '@/components/ia-feedback'
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
 
@@ -413,13 +416,33 @@ export default function StoriesPage() {
               ))}
             </div>
 
-            {/* ação: copiar todos */}
-            <button
-              onClick={copiarTudo}
-              className="flex items-center gap-2 text-sm text-[#9b9bb5] hover:text-iara-400 transition-colors px-4 py-2 rounded-xl border border-[#1a1a2e] hover:border-iara-700/40 hover:bg-iara-900/20"
-            >
-              <Copy className="w-4 h-4" /> Copiar todos os textos
-            </button>
+            {/* ações: copiar + share + template */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={copiarTudo}
+                className="flex items-center gap-2 text-sm text-[#9b9bb5] hover:text-iara-400 transition-colors px-4 min-h-11 rounded-xl border border-[#1a1a2e] hover:border-iara-700/40 hover:bg-iara-900/20"
+              >
+                <Copy className="w-4 h-4" /> Copiar textos
+              </button>
+              <ShareButton
+                variant="default"
+                text={slides.map(s => `${s.numero}. ${s.texto_principal}${s.texto_secundario ? `\n${s.texto_secundario}` : ''}`).join('\n\n')}
+                title="Sequência de stories"
+                label="Compartilhar"
+              />
+              <SaveTemplateButton
+                variant="default"
+                modulo="stories"
+                defaultNome={tema ? tema.slice(0, 50) : 'Meu template de stories'}
+                parametros={{ tipo, tema, num_slides: 7 }}
+              />
+            </div>
+          </div>
+        )}
+
+        {temSlides && !gerando && (
+          <div className="mt-4 pt-4 border-t border-[#1a1a2e] flex justify-center">
+            <IaFeedback modulo="stories" />
           </div>
         )}
 

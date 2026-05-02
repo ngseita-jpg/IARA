@@ -26,6 +26,8 @@ import Link from 'next/link'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
+import { SaveTemplateButton } from '@/components/save-template-button'
+import { IaFeedback } from '@/components/ia-feedback'
 
 type Step = 'info' | 'foto' | 'gerar'
 type MensagemChat = { role: 'user' | 'assistant'; content: string }
@@ -856,13 +858,27 @@ export default function ThumbnailPage() {
                   </div>
                 )}
 
-                {/* Botão download */}
+                {/* Ações: download + share + template */}
                 {thumbnailPng && (
-                  <button onClick={handleDownload}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent-purple hover:opacity-90 text-white font-medium text-sm transition-all">
-                    <Download className="w-4 h-4" />
-                    Baixar thumbnail (PNG 1280×720)
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={handleDownload}
+                      className="flex-1 min-w-[160px] flex items-center justify-center gap-2 px-4 min-h-11 rounded-xl bg-accent-purple hover:opacity-90 text-white font-medium text-sm transition-all">
+                      <Download className="w-4 h-4" />
+                      Baixar PNG
+                    </button>
+                    <SaveTemplateButton
+                      variant="default"
+                      modulo="thumbnail"
+                      defaultNome={(layout?.titulo ?? tituloVideo)?.slice(0, 50) || 'Meu template de thumbnail'}
+                      parametros={{ tituloVideo, ...(layout ?? {}) }}
+                    />
+                  </div>
+                )}
+
+                {thumbnailPng && (
+                  <div className="pt-3 mt-1 border-t border-[#1a1a2e]">
+                    <IaFeedback modulo="thumbnail" />
+                  </div>
                 )}
 
                 {/* Chat */}

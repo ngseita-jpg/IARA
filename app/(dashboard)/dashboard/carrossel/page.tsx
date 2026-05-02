@@ -37,6 +37,8 @@ import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 import { CarrosselCanvasEditor } from '@/components/carrossel-canvas-editor'
+import { SaveTemplateButton } from '@/components/save-template-button'
+import { IaFeedback } from '@/components/ia-feedback'
 import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'
 import type { Slide2 } from '@/lib/carrossel-canvas-types'
 import { preloadImages, slide2ToPngUrl, type ImageCache } from '@/lib/carrossel-canvas-renderer'
@@ -1359,6 +1361,15 @@ export default function CarrosselPage() {
                       <Download className="w-4 h-4" />
                       PNG avulsos
                     </button>
+                    <SaveTemplateButton
+                      variant="subtle"
+                      modulo="carrossel"
+                      defaultNome={carrossel?.slides[0]?.titulo?.slice(0, 50) ?? 'Meu template de carrossel'}
+                      parametros={{ numSlides, instrucoes, modo, plataforma, showWatermark }}
+                    />
+                    <div className="ml-auto">
+                      <IaFeedback modulo="carrossel" />
+                    </div>
                   </div>
                 </div>
 

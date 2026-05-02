@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Check, User, Trophy,
 } from 'lucide-react'
 import Link from 'next/link'
+import { MidiaKitPublicoButton } from '@/components/midia-kit-publico-button'
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
 
@@ -395,6 +396,7 @@ export default function MidiaKitPage() {
                   {formAberto ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   {formAberto ? 'Fechar formulário' : 'Editar dados'}
                 </button>
+                <MidiaKitPublicoButton />
                 <button
                   onClick={handleImprimir}
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-iara-600 to-accent-purple text-white text-sm font-semibold hover:opacity-90 transition-opacity"
