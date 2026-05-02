@@ -29,6 +29,7 @@ import {
   Gift,
   Megaphone,
   Scissors,
+  CreditCard,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { UsoSidebar } from '@/components/uso-sidebar'
@@ -74,6 +75,22 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
     const iv = setInterval(check, 30000)
     return () => clearInterval(iv)
   }, [])
+
+  // Body scroll lock + ESC fechar quando menu mobile aberto
+  useEffect(() => {
+    if (!mobileOpen) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [mobileOpen])
+
+  // Fecha menu ao mudar de rota
+  useEffect(() => { setMobileOpen(false) }, [pathname])
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -162,12 +179,14 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
           {userEmail && (
             <p className="px-3 text-xs text-[#5a5a7a] truncate mb-2">{userEmail}</p>
           )}
+          {/* Minha Conta — destacado, gerenciar plano + assinatura */}
           <Link
             href="/conta"
-            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/25 hover:text-[#f1f1f8] transition-all duration-200 group"
+            className="flex items-center gap-3 px-3 py-3 w-full rounded-xl text-sm font-semibold text-iara-300 bg-iara-900/15 border border-iara-700/30 hover:bg-iara-900/30 hover:border-iara-600/50 transition-all duration-200 group mb-1"
           >
-            <User className="w-4 h-4 text-[#5a5a7a] group-hover:text-[#9b9bb5]" />
-            Minha Conta
+            <CreditCard className="w-4 h-4 text-iara-400" />
+            <span className="flex-1">Minha Conta</span>
+            <ChevronRight className="w-3.5 h-3.5 text-iara-500/60 group-hover:translate-x-0.5 transition-transform" />
           </Link>
           <Link
             href="/ajuda"
@@ -186,9 +205,17 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
         </div>
       </aside>
 
-      {/* Mobile topbar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40"
-        style={{ background: 'rgba(10,10,20,0.96)', backdropFilter: 'blur(20px)', boxShadow: '0 1px 0 rgba(99,102,241,0.08)' }}>
+      {/* Mobile topbar — respeita safe-area-inset-top (status bar do iOS/Android) */}
+      <header
+        className="md:hidden flex items-center justify-between px-4 py-3 border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40"
+        style={{
+          background: 'rgba(10,10,20,0.96)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 1px 0 rgba(99,102,241,0.08)',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          paddingLeft:  'calc(env(safe-area-inset-left, 0px) + 16px)',
+          paddingRight: 'calc(env(safe-area-inset-right, 0px) + 16px)',
+        }}>
         <Link href="/dashboard">
           <IaraLogo size="sm" layout="horizontal" />
         </Link>
@@ -259,9 +286,16 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
         </div>
       </nav>
 
-      {/* Mobile menu overlay (Mais) */}
+      {/* Mobile menu overlay (Mais) — scrollable + safe-area aware */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-[#0a0a14]/95 backdrop-blur-sm pt-16 pb-20" onClick={() => setMobileOpen(false)}>
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-[#0a0a14]/95 backdrop-blur-sm overflow-y-auto overscroll-contain"
+          style={{
+            paddingTop:    'calc(env(safe-area-inset-top, 0px) + 4rem)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)',
+          }}
+          onClick={() => setMobileOpen(false)}
+        >
           <nav className="flex flex-col gap-1 p-4" onClick={e => e.stopPropagation()}>
             <p className="text-xs text-[#5a5a7a] font-semibold uppercase tracking-wider px-4 mb-2">Todos os módulos</p>
             {navItems.map((item) => {
@@ -311,25 +345,27 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
               )
             })}
             <div className="border-t border-[#1a1a2e] mt-2 pt-4 space-y-1">
+              {/* Minha Conta — destacado em cima do Sair */}
               <Link
                 href="/conta"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/30"
+                className="flex items-center gap-3 px-4 min-h-12 w-full rounded-xl text-sm font-semibold text-iara-300 bg-iara-900/15 border border-iara-700/30 hover:bg-iara-900/30"
               >
-                <User className="w-4 h-4" />
-                Minha Conta
+                <CreditCard className="w-4 h-4 text-iara-400" />
+                <span className="flex-1">Minha Conta</span>
+                <ChevronRight className="w-3.5 h-3.5 text-iara-500/60" />
               </Link>
               <Link
                 href="/ajuda"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/30"
+                className="flex items-center gap-3 px-4 min-h-12 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-iara-900/30"
               >
                 <HelpCircle className="w-4 h-4" />
                 Ajuda
               </Link>
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400"
+                className="flex items-center gap-3 px-4 min-h-12 w-full rounded-xl text-sm font-medium text-[#9b9bb5] hover:bg-red-900/20 hover:text-red-400"
               >
                 <LogOut className="w-4 h-4" />
                 Sair

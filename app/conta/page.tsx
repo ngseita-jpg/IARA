@@ -78,11 +78,23 @@ export default function ContaPage() {
   const temAssinatura = !!perfil?.stripe_customer_id && plano !== 'free'
 
   return (
-    <div className="min-h-screen px-4 py-8 md:py-12" style={{ background: '#08080f' }}>
+    <div
+      className="min-h-screen px-4 md:py-12"
+      style={{
+        background: '#08080f',
+        // Safe area pra status bar e home indicator no PWA standalone
+        paddingTop:    'calc(env(safe-area-inset-top, 0px) + 2rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
+      }}
+    >
       <div className="max-w-lg mx-auto">
 
         <div className="flex items-center gap-3 mb-8">
-          <Link href="/dashboard" className="p-2 rounded-xl text-[#6b6b8a] hover:text-white hover:bg-[#1a1a2e] transition-colors">
+          <Link
+            href="/dashboard"
+            aria-label="Voltar pro dashboard"
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-[#6b6b8a] hover:text-white hover:bg-[#1a1a2e] transition-colors flex-shrink-0"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
