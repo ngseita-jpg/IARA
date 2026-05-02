@@ -29,6 +29,10 @@ import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 import { SaveTemplateButton } from '@/components/save-template-button'
 import { IaFeedback } from '@/components/ia-feedback'
 import { ThumbnailEditor } from '@/components/thumbnail-editor'
+import { ThumbnailExportButton } from '@/components/thumbnail-export-button'
+import { ThumbnailMockupButton } from '@/components/thumbnail-mockup'
+import { AntesDepoisSlider } from '@/components/antes-depois-slider'
+import { ThumbnailDragOverlay } from '@/components/thumbnail-drag-overlay'
 import { toast } from '@/lib/toast'
 
 type Step = 'info' | 'foto' | 'gerar'
@@ -150,6 +154,9 @@ export default function ThumbnailPage() {
   const [historicoLayouts, setHistoricoLayouts] = useState<ThumbnailLayout[]>([])
   const [posHistorico, setPosHistorico] = useState(0)
   const [layoutOriginal, setLayoutOriginal] = useState<ThumbnailLayout | null>(null)
+  const [pngOriginal, setPngOriginal] = useState<string | null>(null)  // pra slider antes/depois
+  const [antesDepoisAberto, setAntesDepoisAberto] = useState(false)
+  const [dragModeAtivo, setDragModeAtivo] = useState(false)
 
   // Chat
   const [chat, setChat] = useState<MensagemChat[]>([])
@@ -304,6 +311,7 @@ export default function ThumbnailPage() {
       setRenderizando(true)
       const png = await renderizar(l)
       setThumbnailPng(png)
+      setPngOriginal(png)            // baseline pra antes/depois
       setVariacoes([{ layout: l, png }])
       setVariacaoAtiva(0)
     } catch (e: unknown) {
@@ -345,6 +353,7 @@ export default function ThumbnailPage() {
       setVariacaoAtiva(idx)
       setLayout(l)
       setLayoutOriginal(l)
+      setPngOriginal(png)
       setHistoricoLayouts([l])
       setPosHistorico(0)
       setThumbnailPng(png)
@@ -380,6 +389,7 @@ export default function ThumbnailPage() {
       setThumbnailPng(null)
       const png = await renderizar(l)
       setThumbnailPng(png)
+      setPngOriginal(png)
       // Atualiza variação ativa
       setVariacoes(prev => {
         const nova = [...prev]
@@ -430,7 +440,12 @@ export default function ThumbnailPage() {
             if (item.parametros.descricao) setDescricao(item.parametros.descricao as string)
             setStep('gerar')
             setRenderizando(true)
-            renderizar(l).then(png => { setThumbnailPng(png); setVariacoes([{ layout: l, png }]); setRenderizando(false) })
+            renderizar(l).then(png => {
+              setThumbnailPng(png)
+              setPngOriginal(png)
+              setVariacoes([{ layout: l, png }])
+              setRenderizando(false)
+            })
           }}
         />
 
@@ -744,26 +759,72 @@ export default function ThumbnailPage() {
                   </div>
                 </div>
 
-                {/* Thumbnail preview */}
+                {/* Thumbnail preview com drag overlay opcional */}
                 <div className="relative">
                   {(renderizando && !thumbnailPng) ? (
                     <div className="aspect-video rounded-xl bg-[#0f0f20] border border-[#1a1a2e] flex items-center justify-center">
                       <Loader2 className="w-8 h-8 text-accent-purple animate-spin" />
                     </div>
                   ) : thumbnailPng ? (
-                    <div className="relative group">
+                    <div className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={thumbnailPng} alt="Thumbnail" className="w-full rounded-xl border border-[#1a1a2e]" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                        <button onClick={handleDownload}
-                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black font-semibold text-sm hover:bg-gray-100">
-                          <Download className="w-4 h-4" />Baixar PNG
-                        </button>
-                      </div>
-                      <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-lg text-xs text-white">1280 × 720</div>
+                      <img
+                        src={thumbnailPng}
+                        alt="Thumbnail"
+                        className="w-full rounded-xl border border-[#1a1a2e] block"
+                        draggable={false}
+                      />
+                      <div className="absolute top-3 left-3 bg-black/60 px-2 py-1 rounded-lg text-xs text-white pointer-events-none">1280 × 720</div>
+
+                      {/* Drag-and-drop overlay (opcional) */}
+                      {layout && (
+                        <ThumbnailDragOverlay
+                          ativo={dragModeAtivo}
+                          ancoraAtual={layout.texto_ancora}
+                          onAncoraMudar={(nova) => aplicarLayoutEditado({ ...layout, texto_ancora: nova })}
+                          disabled={rerenderizando}
+                        />
+                      )}
+
+                      {rerenderizando && (
+                        <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center pointer-events-none">
+                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        </div>
+                      )}
                     </div>
                   ) : null}
                 </div>
+
+                {/* Barra de ações sob o preview: drag toggle, mockup, antes/depois */}
+                {thumbnailPng && layout && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setDragModeAtivo(v => !v)}
+                      aria-pressed={dragModeAtivo}
+                      title="Arrastar bloco de texto pra outra zona (snap nas 9 âncoras)"
+                      className={`flex items-center gap-2 px-4 min-h-11 rounded-xl text-sm font-medium transition-all ${
+                        dragModeAtivo
+                          ? 'bg-iara-600/30 border border-iara-500/50 text-iara-200'
+                          : 'bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:border-iara-700/40 hover:text-white'
+                      }`}
+                    >
+                      <span>{dragModeAtivo ? '✓' : '✥'}</span>
+                      {dragModeAtivo ? 'Modo arrastar ON' : 'Arrastar texto'}
+                    </button>
+
+                    <ThumbnailMockupButton thumbnailPng={thumbnailPng} tituloVideo={tituloVideo} />
+
+                    {pngOriginal && pngOriginal !== thumbnailPng && (
+                      <button
+                        onClick={() => setAntesDepoisAberto(true)}
+                        className="flex items-center gap-2 px-4 min-h-11 rounded-xl border border-[#1a1a2e] text-[#9b9bb5] hover:text-white hover:border-iara-700/40 text-sm font-medium transition-all"
+                      >
+                        <span className="text-base">⇄</span>
+                        Antes / Depois
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Editor avançado pós-geração — 6 abas + undo/redo */}
                 {thumbnailPng && layout && layoutOriginal && (
@@ -803,6 +864,7 @@ export default function ThumbnailPage() {
                             setVariacaoAtiva(i)
                             setLayout(v.layout)
                             setLayoutOriginal(v.layout)
+                            setPngOriginal(v.png)
                             setHistoricoLayouts([v.layout])
                             setPosHistorico(0)
                             setThumbnailPng(v.png)
@@ -830,13 +892,13 @@ export default function ThumbnailPage() {
                 )}
 
                 {/* Ações: download + share + template */}
-                {thumbnailPng && (
+                {thumbnailPng && layout && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <button onClick={handleDownload}
-                      className="flex-1 min-w-[160px] flex items-center justify-center gap-2 px-4 min-h-11 rounded-xl bg-accent-purple hover:opacity-90 text-white font-medium text-sm transition-all">
-                      <Download className="w-4 h-4" />
-                      Baixar PNG
-                    </button>
+                    <ThumbnailExportButton
+                      layout={layout}
+                      imagemBase64={imagemBase64}
+                      tituloVideo={tituloVideo}
+                    />
                     <SaveTemplateButton
                       variant="default"
                       modulo="thumbnail"
@@ -923,6 +985,56 @@ export default function ThumbnailPage() {
           }}
         />
       )}
+
+      {/* Modal antes/depois */}
+      {antesDepoisAberto && pngOriginal && thumbnailPng && (
+        <AntesDepoisModal
+          antes={pngOriginal}
+          depois={thumbnailPng}
+          onClose={() => setAntesDepoisAberto(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function AntesDepoisModal({
+  antes, depois, onClose,
+}: {
+  antes: string
+  depois: string
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="relative w-full sm:max-w-3xl max-h-[95vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-iara-700/30 bg-[#0e0e1e] shadow-2xl p-5">
+        <button
+          onClick={onClose}
+          aria-label="Fechar"
+          className="absolute top-3 right-3 z-10 w-11 h-11 flex items-center justify-center rounded-xl text-[#6b6b8a] hover:text-white hover:bg-[#1a1a2e]"
+        >
+          <span className="text-2xl leading-none">×</span>
+        </button>
+        <div className="mb-4">
+          <h2 className="text-base font-bold text-white mb-1">Comparar antes / depois</h2>
+          <p className="text-xs text-[#6b6b8a]">Arraste o slider pra ver a diferença das suas edições.</p>
+        </div>
+        <AntesDepoisSlider antesPng={antes} depoisPng={depois} />
+      </div>
     </div>
   )
 }

@@ -116,9 +116,23 @@ function buildBackground(l: ThumbnailLayout): React.CSSProperties {
   return { background: `linear-gradient(${dir}, ${l.fundo_cor1}, ${l.fundo_cor2 ?? l.fundo_cor1})` }
 }
 
+// Tamanhos de output suportados
+type Formato = 'youtube' | 'instagram_quadrado' | 'story'
+const TAMANHOS: Record<Formato, { width: number; height: number; escala_fonte: number }> = {
+  youtube:            { width: 1280, height: 720,  escala_fonte: 1.0 },   // 16:9 padrão
+  instagram_quadrado: { width: 1080, height: 1080, escala_fonte: 1.1 },   // 1:1 feed
+  story:              { width: 1080, height: 1920, escala_fonte: 1.4 },   // 9:16 stories/reels capa
+}
+
 // ── Handler ──────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  const { layout, imagem_base64 }: { layout: ThumbnailLayout; imagem_base64?: string } = await req.json()
+  const { layout, imagem_base64, formato = 'youtube' }: {
+    layout: ThumbnailLayout
+    imagem_base64?: string
+    formato?: Formato
+  } = await req.json()
+
+  const tamanho = TAMANHOS[formato] ?? TAMANHOS.youtube
 
   const fonte = layout.fonte ?? 'inter'
   const fontData = await loadFont(req.url, fonte)
@@ -131,10 +145,11 @@ export async function POST(req: NextRequest) {
   const fotoStyle = fotoZonaToStyle(layout.foto_zona, hasBg)
   const pos = anchoraToFlex(layout.texto_ancora)
   const tAlign = textAlign(pos.ai)
-  const fs = Math.max(48, Math.min(180, layout.tamanho_titulo ?? 100))
+  // Escala fonte conforme formato (story precisa fonte maior porque é vertical)
+  const fs = Math.max(48, Math.min(220, (layout.tamanho_titulo ?? 100) * tamanho.escala_fonte))
   const bgStyle = buildBackground(layout)
   const badgePos = badgePosToStyle(layout.badge_posicao)
-  const maxTextW = Math.round(1280 * ((layout.texto_largura_pct ?? 85) / 100))
+  const maxTextW = Math.round(tamanho.width * ((layout.texto_largura_pct ?? 85) / 100))
 
   // Sombra no texto
   const textShadow = layout.titulo_sombra
@@ -336,8 +351,8 @@ export async function POST(req: NextRequest) {
       </div>
     ),
     {
-      width: 1280,
-      height: 720,
+      width: tamanho.width,
+      height: tamanho.height,
       fonts: fontOptions,
     }
   )
