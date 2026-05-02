@@ -440,6 +440,15 @@
   border-radius: 4px;
 }
 
+/* Bounce suave pra emoji do onboarding */
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.animate-bounce-soft {
+  animation: bounce-soft 2.2s ease-in-out infinite;
+}
+
 /* Reduced motion — fallback completo */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

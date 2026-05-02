@@ -4,6 +4,7 @@ import './globals.css'
 import { CookieConsent } from '@/components/cookie-consent'
 import { Analytics } from '@/components/analytics'
 import { Toaster } from 'sonner'
+import { ServiceWorkerRegister } from '@/components/sw-register'
 
 const interDisplay = Inter({
   subsets: ['latin'],
@@ -75,7 +76,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0a0a14',
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)',  color: '#08080f' },
+    { media: '(prefers-color-scheme: light)', color: '#08080f' },
+  ],
+  viewportFit: 'cover',  // respeita notch (iPhone)
 }
 
 const jsonLd = {
@@ -125,6 +131,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`dark ${interDisplay.variable} ${editorial.variable}`}>
       <head>
+        {/* iOS PWA — torna o app instalável e em fullscreen quando aberto da home */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Iara Hub" />
+        <link rel="apple-touch-icon" href="/apple-icon" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -134,6 +145,7 @@ export default function RootLayout({
         {children}
         <Analytics />
         <CookieConsent />
+        <ServiceWorkerRegister />
         <Toaster
           theme="dark"
           position="top-center"
