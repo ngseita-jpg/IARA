@@ -5,10 +5,10 @@ import {
   Type, Palette, Layout as LayoutIcon, Image as ImageIcon, Sparkles,
   Tag, Undo2, Redo2, RotateCcw, Save, Loader2, Check,
   AlignLeft, AlignCenter, AlignRight,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
 } from 'lucide-react'
 import type { ThumbnailLayout } from '@/app/api/thumbnail/gerar/route'
 import { toast } from '@/lib/toast'
+import { FotoFundoDragger } from '@/components/foto-fundo-dragger'
 
 type Aba = 'texto' | 'estilo' | 'layout' | 'fundo' | 'foto' | 'extras'
 
@@ -63,14 +63,6 @@ const ZONAS_FOTO: { id: ThumbnailLayout['foto_zona']; label: string }[] = [
   { id: 'base_50',      label: 'Base 50%' },
 ]
 
-const POS_FOTO: { id: 'center'|'top'|'bottom'|'left'|'right'; label: string }[] = [
-  { id: 'center', label: 'Centro' },
-  { id: 'top',    label: 'Topo' },
-  { id: 'bottom', label: 'Base' },
-  { id: 'left',   label: 'Esquerda' },
-  { id: 'right',  label: 'Direita' },
-]
-
 const PALETA_PRIMARIA = ['#ffffff', '#000000', '#fbbf24', '#ec4899', '#a855f7', '#3b82f6', '#10b981', '#ef4444', '#f97316', '#06b6d4']
 
 type Props = {
@@ -84,12 +76,14 @@ type Props = {
   onDuplicar: () => void                  // salva como nova variação
   podeUndo: boolean
   podeRedo: boolean
+  imagemBase64?: string | null            // pra preview do drag de foto
 }
 
 export function ThumbnailEditor({
   layout, layoutOriginal, rerenderizando,
   onChange, onUndo, onRedo, onReset, onDuplicar,
   podeUndo, podeRedo,
+  imagemBase64,
 }: Props) {
   const [aba, setAba] = useState<Aba>('texto')
 
@@ -181,7 +175,7 @@ export function ThumbnailEditor({
         {aba === 'estilo' && <AbaEstilo layout={layout} update={update} disabled={rerenderizando} />}
         {aba === 'layout' && <AbaLayout layout={layout} update={update} disabled={rerenderizando} />}
         {aba === 'fundo'  && <AbaFundo  layout={layout} update={update} disabled={rerenderizando} />}
-        {aba === 'foto'   && <AbaFoto   layout={layout} update={update} disabled={rerenderizando} layoutOriginal={layoutOriginal} />}
+        {aba === 'foto'   && <AbaFoto   layout={layout} update={update} disabled={rerenderizando} layoutOriginal={layoutOriginal} imagemBase64={imagemBase64} />}
         {aba === 'extras' && <AbaExtras layout={layout} update={update} disabled={rerenderizando} />}
       </div>
     </div>
@@ -645,11 +639,12 @@ function AbaFundo({ layout, update, disabled }: {
   )
 }
 
-function AbaFoto({ layout, update, disabled, layoutOriginal }: {
+function AbaFoto({ layout, update, disabled, layoutOriginal, imagemBase64 }: {
   layout: ThumbnailLayout
   update: (p: Partial<ThumbnailLayout>) => void
   disabled: boolean
   layoutOriginal: ThumbnailLayout
+  imagemBase64?: string | null
 }) {
   const temFoto = layout.foto_zona !== 'nenhuma'
 
@@ -663,7 +658,7 @@ function AbaFoto({ layout, update, disabled, layoutOriginal }: {
 
   return (
     <div>
-      <Section titulo="Posição da foto" sub="Quanto da tela a foto ocupa e onde">
+      <Section titulo="Quanto da tela a foto ocupa" sub="Templates rápidos — escolha um e ajuste o foco abaixo">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {ZONAS_FOTO.map(z => (
             <button
@@ -684,34 +679,13 @@ function AbaFoto({ layout, update, disabled, layoutOriginal }: {
 
       {temFoto && (
         <>
-          <Section titulo="Foco da foto" sub="Onde a foto vai centralizar (útil pra rosto cortado)">
-            <div className="grid grid-cols-5 gap-2 max-w-md">
-              {POS_FOTO.map(p => {
-                const Icon = p.id === 'top' ? ArrowUp
-                  : p.id === 'bottom' ? ArrowDown
-                  : p.id === 'left' ? ArrowLeft
-                  : p.id === 'right' ? ArrowRight
-                  : Check
-                const ativo = (layout.foto_object_pos ?? 'center') === p.id
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => update({ foto_object_pos: p.id })}
-                    disabled={disabled}
-                    aria-label={p.label}
-                    title={p.label}
-                    className={`aspect-square flex items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
-                      ativo
-                        ? 'border-iara-500 bg-iara-900/30 text-iara-300'
-                        : 'border-[#1a1a2e] bg-[#0f0f1e] text-[#5a5a7a] hover:border-iara-700/40'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-[10px] text-[#5a5a7a] mt-2">{POS_FOTO.find(p => p.id === (layout.foto_object_pos ?? 'center'))?.label}</p>
+          <Section titulo="Posição livre da foto" sub="Arraste o ponto de foco no preview, ou use os sliders pra ajuste fino">
+            <FotoFundoDragger
+              fotoSrc={imagemBase64 ?? null}
+              valor={layout.foto_object_pos ?? 'center'}
+              onChange={(novo) => update({ foto_object_pos: novo })}
+              disabled={disabled}
+            />
           </Section>
 
           <Section titulo="Overlay sobre a foto" sub="Escurece a foto pra texto ficar legível em cima">

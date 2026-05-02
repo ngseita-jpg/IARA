@@ -996,7 +996,7 @@ function CanvasStage({
 
   return (
     <div
-      className="relative shadow-2xl rounded-xl overflow-hidden"
+      className="relative shadow-2xl rounded-xl overflow-hidden touch-none select-none"
       style={{
         width: displaySize, height: displaySize,
         ...bgStyle,
@@ -1156,9 +1156,12 @@ function LayerView({
   })()
 
   // Wrapper que captura pointerDown
+  // CRÍTICO: stopPropagation no onClick também — senão o click bubla pro canvas
+  // wrapper que faz onSelectLayer(null), desselecionando ao soltar o mouse.
   return (
     <div
       onPointerDown={(e) => !editing && onPointerDown(e, layer.id, 'move')}
+      onClick={(e) => e.stopPropagation()}
       onDoubleClick={onDoubleClick}
       style={{ position: 'absolute', top: 0, left: 0 }}
     >
@@ -1167,21 +1170,48 @@ function LayerView({
   )
 }
 
-// Handles de resize nos 4 cantos
+// Handles de resize nos 4 cantos.
+// Visual: bolinha 16px. Hit area: 32px (touch-friendly), expandida via padding invisível.
+// touch-action none + select-none pra evitar que o navegador interprete como scroll/seleção de texto.
 function ResizeHandles({ onPointerDown }: { onPointerDown: (e: React.PointerEvent, mode: 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br') => void }) {
   const handle = (mode: 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br', pos: { top?: number; left?: number; right?: number; bottom?: number; cursor: string }) => (
     <div
-      onPointerDown={e => { e.stopPropagation(); onPointerDown(e, mode) }}
+      onPointerDown={e => {
+        e.stopPropagation()
+        e.preventDefault()
+        // Captura o pointer no PRÓPRIO handle pra não perder se sair do bounding box
+        ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+        onPointerDown(e, mode)
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className="touch-none select-none"
       style={{
         position: 'absolute',
-        width: 12, height: 12,
-        backgroundColor: '#6366f1',
-        border: '2px solid #fff',
-        borderRadius: 3,
-        zIndex: 10,
-        ...pos,
+        // Hit area de 32px (touch-friendly), padding invisível
+        width: 32, height: 32,
+        cursor: pos.cursor,
+        zIndex: 20,
+        // Posicionamento ajustado pelo offset do hit-area
+        ...(pos.top !== undefined  ? { top:  (pos.top  ?? 0) - 16 + 6 } : {}),
+        ...(pos.bottom !== undefined ? { bottom: (pos.bottom ?? 0) - 16 + 6 } : {}),
+        ...(pos.left !== undefined ? { left: (pos.left ?? 0) - 16 + 6 } : {}),
+        ...(pos.right !== undefined ? { right: (pos.right ?? 0) - 16 + 6 } : {}),
+        // Centraliza visual no centro do hit area
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
-    />
+    >
+      {/* Visual da bolinha */}
+      <div style={{
+        width: 16, height: 16,
+        backgroundColor: '#6366f1',
+        border: '3px solid #fff',
+        borderRadius: '50%',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        pointerEvents: 'none',
+      }} />
+    </div>
   )
   return (
     <>

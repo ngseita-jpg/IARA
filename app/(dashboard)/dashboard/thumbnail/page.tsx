@@ -839,6 +839,7 @@ export default function ThumbnailPage() {
                     onDuplicar={handleDuplicarVariacao}
                     podeUndo={posHistorico > 0}
                     podeRedo={posHistorico < historicoLayouts.length - 1}
+                    imagemBase64={imagemBase64}
                   />
                 )}
 
