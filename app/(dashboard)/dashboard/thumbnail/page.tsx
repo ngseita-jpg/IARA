@@ -28,7 +28,13 @@ import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/component
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
 import { SaveTemplateButton } from '@/components/save-template-button'
 import { IaFeedback } from '@/components/ia-feedback'
-import { ThumbnailEditor } from '@/components/thumbnail-editor'
+import dynamic from 'next/dynamic'
+// Editor de thumbnail (~810 linhas) carrega so quando user vai pra step 'gerar'
+// — fora do bundle inicial da rota
+const ThumbnailEditor = dynamic(() => import('@/components/thumbnail-editor').then(m => m.ThumbnailEditor), {
+  ssr: false,
+  loading: () => <div className="text-sm text-[#6b6b8a] py-8 text-center">Carregando editor…</div>,
+})
 import { ThumbnailExportButton } from '@/components/thumbnail-export-button'
 import { ThumbnailMockupButton } from '@/components/thumbnail-mockup'
 import { AntesDepoisSlider } from '@/components/antes-depois-slider'

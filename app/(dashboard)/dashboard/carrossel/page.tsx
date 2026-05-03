@@ -37,7 +37,13 @@ import type { CarrosselData, Slide } from '@/app/api/carrossel/gerar/route'
 import type { ImagemAnalise } from '@/app/api/carrossel/analisar-imagens/route'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
 import { BancoFotosPicker } from '@/components/banco-fotos-picker'
-import { CarrosselCanvasEditor } from '@/components/carrossel-canvas-editor'
+import dynamic from 'next/dynamic'
+// Canvas editor (~2135 linhas — maior componente do app). Carrega so quando
+// user clica "editar" — economiza ~150KB no bundle inicial da rota.
+const CarrosselCanvasEditor = dynamic(() => import('@/components/carrossel-canvas-editor').then(m => m.CarrosselCanvasEditor), {
+  ssr: false,
+  loading: () => <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 text-sm text-white">Carregando editor…</div>,
+})
 import { SaveTemplateButton } from '@/components/save-template-button'
 import { IaFeedback } from '@/components/ia-feedback'
 import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'

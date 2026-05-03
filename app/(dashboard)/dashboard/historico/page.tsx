@@ -55,7 +55,19 @@ function formatDate(iso: string) {
 
 function extractText(conteudo: unknown): string {
   if (typeof conteudo === 'string') return conteudo.slice(0, 300)
-  if (typeof conteudo === 'object' && conteudo !== null) return JSON.stringify(conteudo).slice(0, 300)
+  if (typeof conteudo === 'object' && conteudo !== null) {
+    // JSON.stringify de carrossel inteiro (10 slides com base64) trava o
+    // scroll. Pega so propriedades curtas conhecidas e cai pro stringify
+    // truncado em ultimo caso.
+    const obj = conteudo as Record<string, unknown>
+    const t = (obj.titulo ?? obj.tema ?? obj.texto ?? obj.assunto ?? obj.tituloVideo)
+    if (typeof t === 'string') return t.slice(0, 300)
+    // Fallback: stringify so as chaves top-level (sem recursar em base64)
+    try {
+      const keys = Object.keys(obj).slice(0, 4).join(', ')
+      return `{ ${keys} }`
+    } catch { return '' }
+  }
   return ''
 }
 
