@@ -73,7 +73,9 @@ export async function POST(req: NextRequest) {
       },
       locale: 'pt-BR',
       allow_promotion_codes: true,
-      payment_method_collection: 'always',
+      // 'if_required': se cupom 100% cobre tudo, Stripe não exige cartão
+      // (essencial pra influencers com cupom integral)
+      payment_method_collection: 'if_required',
       payment_method_types: ['card'],
     })
 

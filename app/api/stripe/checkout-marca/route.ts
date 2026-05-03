@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
     },
     locale: 'pt-BR',
     allow_promotion_codes: true,
-    payment_method_collection: 'always',
+    // 'if_required': cupom 100% não exige cartão (pra brand sponsors/parceiros)
+    payment_method_collection: 'if_required',
     payment_method_types: ['card'],
   })
 

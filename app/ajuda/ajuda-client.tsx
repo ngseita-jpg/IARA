@@ -31,7 +31,7 @@ const FAQ: FaqItem[] = [
   { cat: 'Pagamento', q: 'O plano anual tem desconto?',
     a: 'Sim — 25% de desconto no anual em qualquer plano. Cobrado uma vez no ano.' },
   { cat: 'Pagamento', q: 'Tem teste grátis ou período de garantia?',
-    a: 'Temos plano Free permanente (sem cartão, sem prazo) pra você testar o produto. Nos planos pagos não há reembolso, mas cancela a qualquer momento sem multa.' },
+    a: 'Plano Free permanente (sem prazo, com limites) pra você conhecer o produto. Planos pagos têm trial de 3 dias — você cancela antes do 4º dia pra zero cobrança. Sem reembolso após cobrança, mas cancelamento é instantâneo sem multa.' },
   { cat: 'Pagamento', q: 'Vocês emitem nota fiscal?',
     a: 'Todos os pagamentos são processados pelo Stripe Brasil e o recibo fica no seu email + portal de assinatura. Para NF específica do seu CNPJ, abre um ticket que resolvemos.' },
 

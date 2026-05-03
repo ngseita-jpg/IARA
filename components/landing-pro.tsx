@@ -167,7 +167,7 @@ export function LandingPro({ nicho }: { nicho: NichoPro }) {
             transition={{ duration: 0.6, delay: 0.6 }}
             className="text-xs text-[#5a5a7a] mt-5"
           >
-            Sem cartão pra testar · Cancela quando quiser · LGPD compliant
+            3 dias grátis · Cancele antes pra zero cobrança · LGPD compliant
           </motion.p>
         </div>
       </section>
