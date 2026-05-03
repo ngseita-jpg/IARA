@@ -28,10 +28,17 @@ export function CursorHalo() {
       x.set(e.clientX)
       y.set(e.clientY)
     }
+    // Guarda valor anterior pra evitar setState quando nao mudou.
+    // Antes: cada mouseover sobre clickable disparava setState mesmo ja com hovering=true,
+    // causando re-render do componente em cada move sobre area interativa.
+    const hoveringRef = { current: false }
     const over = (e: MouseEvent) => {
       const target = e.target as HTMLElement
-      const interactive = target.closest('a, button, [data-cursor="hover"], input, textarea, label')
-      setHovering(!!interactive)
+      const interactive = !!target.closest('a, button, [data-cursor="hover"], input, textarea, label')
+      if (interactive !== hoveringRef.current) {
+        hoveringRef.current = interactive
+        setHovering(interactive)
+      }
     }
     window.addEventListener('mousemove', move, { passive: true })
     window.addEventListener('mouseover', over, { passive: true })

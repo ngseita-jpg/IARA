@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Check,
   Trophy, Loader2, X, Target, Sparkles, Trash2,
@@ -92,9 +92,11 @@ export default function CalendarioPage() {
     titulo: '', plataforma: '', tipo_conteudo: 'post', meta_id: '',
   })
 
-  const weekDays = getWeekDays(weekRef)
-  const inicio = toLocalDateStr(weekDays[0])
-  const fim = toLocalDateStr(weekDays[6])
+  // useMemo evita recriar weekDays/inicio/fim em todo render. Antes, qualquer
+  // setState nao relacionado mudava as refs e disparava loadData (deps inicio/fim).
+  const weekDays = useMemo(() => getWeekDays(weekRef), [weekRef])
+  const inicio = useMemo(() => toLocalDateStr(weekDays[0]), [weekDays])
+  const fim = useMemo(() => toLocalDateStr(weekDays[6]), [weekDays])
 
   const loadData = useCallback(async () => {
     setLoading(true)

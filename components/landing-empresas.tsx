@@ -551,7 +551,7 @@ export function LandingEmpresas() {
   useMotionValueEvent(scrollY, 'change', v => setNavScrolled(v > 40))
   useEffect(() => {
     const fn = (e: MouseEvent) => { mouseX.set(e.clientX); mouseY.set(e.clientY) }
-    window.addEventListener('mousemove', fn)
+    window.addEventListener('mousemove', fn, { passive: true })
     return () => window.removeEventListener('mousemove', fn)
   }, [mouseX, mouseY])
 
