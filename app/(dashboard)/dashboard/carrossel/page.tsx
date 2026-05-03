@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Layers,
   Link as LinkIcon,
@@ -43,6 +43,24 @@ import { IaFeedback } from '@/components/ia-feedback'
 import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'
 import type { Slide2 } from '@/lib/carrossel-canvas-types'
 import { preloadImages, slide2ToPngUrl, type ImageCache } from '@/lib/carrossel-canvas-renderer'
+import { useDraftAutosave, loadDraft, useUnsavedWarning } from '@/hooks/useDraftAutosave'
+import { toast } from '@/lib/toast'
+
+type CarrosselDraft = {
+  step: Step
+  modoConteudo: 'url' | 'texto'
+  url: string
+  textoManual: string
+  leitura: LeituraConteudo | null
+  numSlides: number
+  instrucoes: string
+  modo: 'criador' | 'marca'
+  plataforma: string
+  carrossel: CarrosselData | null
+  showWatermark: boolean
+  fonteCarrossel: 'inter' | 'oswald' | 'playfair'
+  incluirEncerramento: boolean
+}
 
 function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
   return new Promise((resolve) => {
@@ -78,37 +96,41 @@ type LeituraConteudo = {
 }
 
 export default function CarrosselPage() {
+  // Restaura draft do ultimo trabalho (TTL 24h) — imagens e PNGs nao entram
+  // (volumosos demais, usuario reenvia/re-renderiza)
+  const draft = typeof window !== 'undefined' ? loadDraft<CarrosselDraft>('carrossel-v1') : null
+
   // Steps
-  const [step, setStep] = useState<Step>('conteudo')
+  const [step, setStep] = useState<Step>(draft?.step ?? 'conteudo')
 
   // Step 1: conteúdo
-  const [modoConteudo, setModoConteudo] = useState<'url' | 'texto'>('url')
-  const [url, setUrl] = useState('')
-  const [textoManual, setTextoManual] = useState('')
-  const [leitura, setLeitura] = useState<LeituraConteudo | null>(null)
+  const [modoConteudo, setModoConteudo] = useState<'url' | 'texto'>(draft?.modoConteudo ?? 'url')
+  const [url, setUrl] = useState(draft?.url ?? '')
+  const [textoManual, setTextoManual] = useState(draft?.textoManual ?? '')
+  const [leitura, setLeitura] = useState<LeituraConteudo | null>(draft?.leitura ?? null)
   const [lendo, setLendo] = useState(false)
   const [erroLeitura, setErroLeitura] = useState<string | null>(null)
 
-  // Step 2: imagens
-  const [imagens, setImagens] = useState<string[]>([]) // base64
+  // Step 2: imagens (volatil — base64 grandes, nao restauramos)
+  const [imagens, setImagens] = useState<string[]>([])
   const [imagensPreview, setImagensPreview] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [analiseImagens, setAnaliseImagens] = useState<ImagemAnalise[]>([])
   const [analisando, setAnalisando] = useState(false)
 
   // Step 3: config
-  const [numSlides, setNumSlides] = useState(6)
-  const [instrucoes, setInstrucoes] = useState('')
-  const [modo, setModo] = useState<'criador' | 'marca'>('criador')
-  const [plataforma, setPlataforma] = useState<string>('instagram')
+  const [numSlides, setNumSlides] = useState(draft?.numSlides ?? 6)
+  const [instrucoes, setInstrucoes] = useState(draft?.instrucoes ?? '')
+  const [modo, setModo] = useState<'criador' | 'marca'>(draft?.modo ?? 'criador')
+  const [plataforma, setPlataforma] = useState<string>(draft?.plataforma ?? 'instagram')
 
   // Step 4: preview + geração
   const [gerando, setGerando] = useState(false)
-  const [carrossel, setCarrossel] = useState<CarrosselData | null>(null)
-  const [slidePngs, setSlidePngs] = useState<Record<number, string>>({}) // ordem -> dataURL
+  const [carrossel, setCarrossel] = useState<CarrosselData | null>(draft?.carrossel ?? null)
+  const [slidePngs, setSlidePngs] = useState<Record<number, string>>({})
   const [renderizando, setRenderizando] = useState<Record<number, boolean>>({})
   const [erroGeracao, setErroGeracao] = useState<string | null>(null)
-  const [showWatermark, setShowWatermark] = useState(true)
+  const [showWatermark, setShowWatermark] = useState(draft?.showWatermark ?? true)
   const [raciocinioAberto, setRaciocinioAberto] = useState(false)
 
   // Chat de ajustes
@@ -119,8 +141,24 @@ export default function CarrosselPage() {
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
   const [bancoAberto, setBancoAberto] = useState(false)
-  const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>('inter')
-  const [incluirEncerramento, setIncluirEncerramento] = useState(true)
+  const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>(draft?.fonteCarrossel ?? 'inter')
+  const [incluirEncerramento, setIncluirEncerramento] = useState(draft?.incluirEncerramento ?? true)
+
+  // Auto-save (sem imagens base64 / PNGs renderizados — pesa muito)
+  useDraftAutosave('carrossel-v1', {
+    step, modoConteudo, url, textoManual, leitura, numSlides, instrucoes, modo,
+    plataforma, carrossel, showWatermark, fonteCarrossel, incluirEncerramento,
+  })
+  useUnsavedWarning(gerando || analisando)
+
+  // Notifica recuperacao de draft
+  useEffect(() => {
+    if (draft && (draft.carrossel || draft.url || draft.textoManual)) {
+      const tem = draft.carrossel ? 'carrossel' : 'rascunho'
+      toast.info(`Recuperei seu último ${tem} de carrossel`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Step refinar
   const [refinamento, setRefinamento] = useState<RefinamentoResponse | null>(null)
