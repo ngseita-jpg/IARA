@@ -33,6 +33,18 @@ import { ThumbnailExportButton } from '@/components/thumbnail-export-button'
 import { ThumbnailMockupButton } from '@/components/thumbnail-mockup'
 import { AntesDepoisSlider } from '@/components/antes-depois-slider'
 import { ThumbnailDragOverlay } from '@/components/thumbnail-drag-overlay'
+import { useDraftAutosave, loadDraft, useUnsavedWarning } from '@/hooks/useDraftAutosave'
+
+type ThumbDraft = {
+  step: 'info' | 'foto' | 'gerar'
+  tituloVideo: string
+  descricao: string
+  fontePref: ThumbnailLayout['fonte'] | 'ia_decide'
+  layout: ThumbnailLayout | null
+  thumbnailPng: string | null
+  variacoes: { layout: ThumbnailLayout; png: string | null }[]
+  variacaoAtiva: number
+}
 import { toast } from '@/lib/toast'
 
 type Step = 'info' | 'foto' | 'gerar'
@@ -114,7 +126,11 @@ function resizeImage(dataUrl: string, maxDim = 1280, quality = 0.85): Promise<st
 }
 
 export default function ThumbnailPage() {
-  const [step, setStep] = useState<Step>('info')
+  // Restaura draft (TTL 24h) — gerar thumbnail e' caro/lento, perda dolorosa
+  // OBS: imagemBase64 NAO entra no draft — pode ser >5MB e estourar quota
+  const draft = typeof window !== 'undefined' ? loadDraft<ThumbDraft>('thumbnail-v1') : null
+
+  const [step, setStep] = useState<Step>(draft?.step ?? 'info')
 
   // Carrega Google Fonts (apenas para preview do seletor, fontes reais do renderer vêm do public/)
   useEffect(() => {
@@ -128,26 +144,40 @@ export default function ThumbnailPage() {
   }, [])
 
   // Step 1
-  const [tituloVideo, setTituloVideo] = useState('')
-  const [descricao, setDescricao] = useState('')
-  const [fontePref, setFontePref] = useState<ThumbnailLayout['fonte'] | 'ia_decide'>('ia_decide')
+  const [tituloVideo, setTituloVideo] = useState(draft?.tituloVideo ?? '')
+  const [descricao, setDescricao] = useState(draft?.descricao ?? '')
+  const [fontePref, setFontePref] = useState<ThumbnailLayout['fonte'] | 'ia_decide'>(draft?.fontePref ?? 'ia_decide')
 
-  // Step 2
+  // Step 2 — imagem volatil, nao restauramos (e' grande demais pro localStorage)
   const [imagemBase64, setImagemBase64] = useState<string | null>(null)
   const [imagemPreview, setImagemPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Geração
   const [gerando, setGerando] = useState(false)
-  const [layout, setLayout] = useState<ThumbnailLayout | null>(null)
-  const [thumbnailPng, setThumbnailPng] = useState<string | null>(null)
+  const [layout, setLayout] = useState<ThumbnailLayout | null>(draft?.layout ?? null)
+  const [thumbnailPng, setThumbnailPng] = useState<string | null>(draft?.thumbnailPng ?? null)
   const [renderizando, setRenderizando] = useState(false)
   const [erroGeracao, setErroGeracao] = useState<string | null>(null)
 
   // Variações
   const [gerandoVariacao, setGerandoVariacao] = useState(false)
-  const [variacoes, setVariacoes] = useState<{ layout: ThumbnailLayout; png: string | null }[]>([])
-  const [variacaoAtiva, setVariacaoAtiva] = useState(0)
+  const [variacoes, setVariacoes] = useState<{ layout: ThumbnailLayout; png: string | null }[]>(draft?.variacoes ?? [])
+  const [variacaoAtiva, setVariacaoAtiva] = useState(draft?.variacaoAtiva ?? 0)
+
+  // Auto-save (sem imagemBase64 — pesa demais)
+  useDraftAutosave('thumbnail-v1', {
+    step, tituloVideo, descricao, fontePref, layout, thumbnailPng, variacoes, variacaoAtiva,
+  })
+  useUnsavedWarning(gerando || renderizando || gerandoVariacao)
+
+  // Notifica recuperacao de draft (geracao de thumb e' cara, nao podemos perder)
+  useEffect(() => {
+    if (draft && (draft.thumbnailPng || draft.layout)) {
+      toast.info('Recuperei seu último thumbnail. A foto enviada precisa ser carregada de novo.')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Editor pós-geração — histórico de layouts pra undo/redo
   const [rerenderizando, setRerenderizando] = useState(false)

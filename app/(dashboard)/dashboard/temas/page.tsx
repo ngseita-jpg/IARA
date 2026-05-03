@@ -5,6 +5,7 @@ import {
   Lightbulb, Send, Sparkles, RefreshCw,
   Copy, Check, Flame, ChevronRight, Zap,
 } from 'lucide-react'
+import { useDraftAutosave, loadDraft, useUnsavedWarning, clearDraft } from '@/hooks/useDraftAutosave'
 
 /* ─────────────────────────── types ────────────────────────────────── */
 
@@ -241,12 +242,23 @@ const OPENING: Message = {
 /* ─────────────────────────── PAGE ─────────────────────────────────── */
 
 export default function TemasPage() {
-  const [messages, setMessages] = useState<Message[]>([OPENING])
-  const [input, setInput] = useState('')
+  // Restaura conversa anterior (TTL 24h) — chat com IA, perda dolorosa
+  const draft = typeof window !== 'undefined'
+    ? loadDraft<{ messages: Message[]; input: string }>('temas-v1')
+    : null
+
+  const [messages, setMessages] = useState<Message[]>(
+    (draft?.messages && draft.messages.length > 0) ? draft.messages : [OPENING]
+  )
+  const [input, setInput] = useState(draft?.input ?? '')
   const [loading, setLoading] = useState(false)
   const [limitReached, setLimitReached] = useState(false)
   const [limite, setLimite] = useState<number | null>(null)
   const [sessionSaved, setSessionSaved] = useState(false)
+
+  // Auto-save: salva conversa + input atual
+  useDraftAutosave('temas-v1', { messages, input }, { enabled: !loading })
+  useUnsavedWarning(loading)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const hasIdeas = messages.some(m => m.ideas && m.ideas.length > 0)
@@ -380,6 +392,7 @@ export default function TemasPage() {
     setMessages([OPENING])
     setInput('')
     setLoading(false)
+    clearDraft('temas-v1')   // descarta conversa anterior do auto-save
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 

@@ -31,6 +31,20 @@ import { ShareButton } from '@/components/share-button'
 import { IaFeedback } from '@/components/ia-feedback'
 import { RefineChat } from '@/components/refine-chat'
 import { SaveTemplateButton } from '@/components/save-template-button'
+import { useDraftAutosave, loadDraft, useUnsavedWarning } from '@/hooks/useDraftAutosave'
+
+type RoteirosDraft = {
+  tema: string
+  formato: string
+  duracao: string
+  estilo: string
+  objetivo: string
+  modo: 'roteiro' | 'hooks'
+  roteiro: string
+  modoEntrada: 'url' | 'texto' | 'tema'
+  urlConteudo: string
+  textoConteudo: string
+}
 
 const FORMATOS = [
   { value: 'Reel (até 90s)',         iconKey: 'reel',    desc: 'Instagram / TikTok' },
@@ -76,13 +90,16 @@ const OBJETIVOS = [
 type Modo = 'roteiro' | 'hooks'
 
 export default function RoteirosPage() {
-  const [tema, setTema] = useState('')
-  const [formato, setFormato] = useState('')
-  const [duracao, setDuracao] = useState('')
-  const [estilo, setEstilo] = useState('')
-  const [objetivo, setObjetivo] = useState('')
-  const [modo, setModo] = useState<Modo>('roteiro')
-  const [roteiro, setRoteiro] = useState('')
+  // Restaura draft do ultimo trabalho (TTL 24h) — evita perda em F5/fechar tab
+  const draft = typeof window !== 'undefined' ? loadDraft<RoteirosDraft>('roteiros-v1') : null
+
+  const [tema, setTema] = useState(draft?.tema ?? '')
+  const [formato, setFormato] = useState(draft?.formato ?? '')
+  const [duracao, setDuracao] = useState(draft?.duracao ?? '')
+  const [estilo, setEstilo] = useState(draft?.estilo ?? '')
+  const [objetivo, setObjetivo] = useState(draft?.objetivo ?? '')
+  const [modo, setModo] = useState<Modo>(draft?.modo ?? 'roteiro')
+  const [roteiro, setRoteiro] = useState(draft?.roteiro ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -94,12 +111,31 @@ export default function RoteirosPage() {
 
   // Fonte de conteúdo
   type ModoEntrada = 'url' | 'texto' | 'tema'
-  const [modoEntrada, setModoEntrada] = useState<ModoEntrada>('tema')
-  const [urlConteudo, setUrlConteudo] = useState('')
-  const [textoConteudo, setTextoConteudo] = useState('')
+  const [modoEntrada, setModoEntrada] = useState<ModoEntrada>(draft?.modoEntrada ?? 'tema')
+  const [urlConteudo, setUrlConteudo] = useState(draft?.urlConteudo ?? '')
+  const [textoConteudo, setTextoConteudo] = useState(draft?.textoConteudo ?? '')
   const [leitura, setLeitura] = useState<{ titulo: string; conteudo: string; aviso?: string } | null>(null)
   const [lendo, setLendo] = useState(false)
   const [erroLeitura, setErroLeitura] = useState<string | null>(null)
+
+  // Auto-save: snapshot continuo em localStorage (debounce 500ms)
+  useDraftAutosave('roteiros-v1', {
+    tema, formato, duracao, estilo, objetivo, modo, roteiro,
+    modoEntrada, urlConteudo, textoConteudo,
+  })
+
+  // Bloqueia fechar tab/F5 enquanto gera (perda critica)
+  useUnsavedWarning(loading)
+
+  // Avisa que recuperamos a geracao anterior
+  useEffect(() => {
+    if (draft && (draft.roteiro || draft.tema)) {
+      import('@/lib/toast').then(({ toast }) => {
+        toast.info('Recuperei seu último rascunho de roteiro')
+      }).catch(() => null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Salva no histórico quando o streaming termina
   const roteiroRef = useRef('')

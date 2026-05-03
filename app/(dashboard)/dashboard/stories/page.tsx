@@ -10,6 +10,15 @@ import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/component
 import { SaveTemplateButton } from '@/components/save-template-button'
 import { ShareButton } from '@/components/share-button'
 import { IaFeedback } from '@/components/ia-feedback'
+import { useDraftAutosave, loadDraft, useUnsavedWarning } from '@/hooks/useDraftAutosave'
+
+type StoriesDraft = {
+  tipo: string
+  tema: string
+  contexto: string
+  slides: unknown[]
+  dicaGeral: string
+}
 
 // ─── tipos ────────────────────────────────────────────────────────────────────
 
@@ -139,13 +148,16 @@ function SlidePreview({ slide, total }: { slide: StorySlide; total: number }) {
 // ─── página principal ─────────────────────────────────────────────────────────
 
 export default function StoriesPage() {
-  const [tipo, setTipo] = useState('educativo')
-  const [tema, setTema] = useState('')
-  const [contexto, setContexto] = useState('')
+  // Restaura draft (TTL 24h) — evita perder geracao em F5/fechar tab
+  const draft = typeof window !== 'undefined' ? loadDraft<StoriesDraft>('stories-v1') : null
+
+  const [tipo, setTipo] = useState(draft?.tipo ?? 'educativo')
+  const [tema, setTema] = useState(draft?.tema ?? '')
+  const [contexto, setContexto] = useState(draft?.contexto ?? '')
   const [gerando, setGerando] = useState(false)
 
-  const [slides, setSlides] = useState<StorySlide[]>([])
-  const [dicaGeral, setDicaGeral] = useState('')
+  const [slides, setSlides] = useState<StorySlide[]>((draft?.slides as StorySlide[]) ?? [])
+  const [dicaGeral, setDicaGeral] = useState(draft?.dicaGeral ?? '')
   const [slideAtual, setSlideAtual] = useState(0)
 
   const [erro, setErro] = useState('')
@@ -153,9 +165,22 @@ export default function StoriesPage() {
   const [abaAtiva, setAbaAtiva] = useState<'configurar' | 'preview'>('configurar')
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
 
+  useDraftAutosave('stories-v1', { tipo, tema, contexto, slides, dicaGeral })
+  useUnsavedWarning(gerando)
+
   useEffect(() => {
     if (slides.length > 0) setAbaAtiva('preview')
   }, [slides.length])
+
+  // Notifica recuperacao de draft
+  useEffect(() => {
+    if (draft && (draft.slides?.length || draft.tema)) {
+      import('@/lib/toast').then(({ toast }) => {
+        toast.info('Recuperei seu último rascunho de stories')
+      }).catch(() => null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleGerar() {
     if (!tema.trim()) return
