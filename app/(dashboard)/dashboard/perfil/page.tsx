@@ -978,7 +978,12 @@ function DadosPrivacidade() {
   }
 
   async function handleDeletar() {
-    if (!confirmDelete) { setConfirmDelete(true); return }
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      // Auto-cancela depois de 10s se user esquecer (evita confirm visualmente "preso")
+      setTimeout(() => setConfirmDelete(prev => deletando ? prev : false), 10_000)
+      return
+    }
     if (!senha) { setErroSenha('Digite sua senha'); return }
     setDeletando(true)
     setErroSenha(null)

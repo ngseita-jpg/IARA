@@ -81,9 +81,16 @@ export default function CriadorAfiliadosPage() {
   }
 
   async function copiar(text: string, key: string) {
-    await navigator.clipboard.writeText(text)
-    setCopiado(key)
-    setTimeout(() => setCopiado(null), 2000)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiado(key)
+      const { toast } = await import('@/lib/toast')
+      toast.success('Copiado pra área de transferência')
+      setTimeout(() => setCopiado(null), 2000)
+    } catch {
+      const { toast } = await import('@/lib/toast')
+      toast.error('Não consegui copiar — selecione e copie manualmente')
+    }
   }
 
   function flash(msg: string) {

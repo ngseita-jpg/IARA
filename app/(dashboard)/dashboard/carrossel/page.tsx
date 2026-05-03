@@ -206,14 +206,26 @@ export default function CarrosselPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imagens: imgs, modo }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+
+      // Erros 4xx merecem feedback (limite atingido, plano insuficiente, etc)
+      if (!res.ok && res.status >= 400 && res.status < 500) {
+        const { toast } = await import('@/lib/toast')
+        toast.warning(data.error ?? 'Análise de imagens não disponível agora', {
+          description: data.upgrade_url ? 'Carrossel será gerado mesmo assim, sem análise visual.' : undefined,
+        })
+        return
+      }
+
       if (data.analises?.length) {
         setAnaliseImagens(data.analises)
         // Garante que numSlides >= número de imagens
         setNumSlides((prev) => Math.max(prev, imgs.length))
       }
     } catch {
-      // Análise falhou silenciosamente — geração continua sem ela
+      // Erro de rede/servidor — geração continua, mas avisa
+      const { toast } = await import('@/lib/toast')
+      toast.info('Análise visual indisponível — vamos gerar o carrossel mesmo assim')
     } finally {
       setAnalisando(false)
     }
@@ -1538,14 +1550,16 @@ export default function CarrosselPage() {
                       value={msgChat}
                       onChange={(e) => setMsgChat(e.target.value)}
                       placeholder="Ex: Muda o tom para mais informal, adiciona CTA no último slide..."
-                      className="flex-1 bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-2.5 text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500"
+                      disabled={enviandoChat}
+                      className="flex-1 bg-[#0f0f20] border border-[#1a1a2e] rounded-xl px-4 py-2.5 text-base sm:text-sm text-[#f1f1f8] placeholder-[#3a3a5a] focus:outline-none focus:border-iara-500 disabled:opacity-60"
                     />
                     <button
                       type="submit"
                       disabled={!msgChat.trim() || enviandoChat}
-                      className="px-4 py-2.5 rounded-xl bg-iara-600 hover:bg-iara-500 disabled:opacity-40 text-white transition-all"
+                      aria-label="Enviar mensagem"
+                      className="px-4 min-h-11 rounded-xl bg-iara-600 hover:bg-iara-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all flex items-center justify-center"
                     >
-                      <Send className="w-4 h-4" />
+                      {enviandoChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </button>
                   </form>
                 </div>

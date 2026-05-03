@@ -135,10 +135,22 @@ export default function FotosPage() {
 
       {/* Feedback */}
       {erro && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-900/20 border border-red-700/30 text-red-400 mb-6">
+        <div role="alert" aria-live="polite" className="flex items-center gap-3 p-4 rounded-xl bg-red-900/20 border border-red-700/30 text-red-400 mb-6">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm">{erro}</span>
-          <button onClick={() => setErro(null)} className="ml-auto"><X className="w-4 h-4" /></button>
+          <span className="text-sm flex-1">{erro}</span>
+          <button
+            onClick={() => { setErro(null); carregarFotos() }}
+            className="px-3 min-h-9 rounded-lg border border-red-700/40 text-red-300 hover:bg-red-900/30 text-xs font-semibold transition-colors"
+          >
+            Tentar novamente
+          </button>
+          <button
+            onClick={() => setErro(null)}
+            aria-label="Fechar aviso"
+            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-red-900/20"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
       {sucesso && (

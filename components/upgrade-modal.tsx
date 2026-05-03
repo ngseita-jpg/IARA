@@ -279,16 +279,16 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
                   ))}
                 </ul>
 
-                {/* CTA */}
+                {/* CTA — min-h-11 garante touch target WCAG 44px */}
                 <button
                   onClick={() => handleCheckout(plan.id)}
                   disabled={!!loading}
-                  className={`flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer ${plan.ctaBg} ${plan.ctaText}`}
+                  className={`flex items-center justify-center gap-1.5 w-full min-h-11 px-3 rounded-xl text-xs font-bold transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer ${plan.ctaBg} ${plan.ctaText}`}
                   style={plan.ctaGradient ? { background: plan.ctaGradient } : undefined}
                 >
                   {loading === plan.id
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <><span>{plan.cta}</span><ArrowRight className="w-3 h-3" /></>
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <><span>{plan.cta}</span><ArrowRight className="w-3.5 h-3.5" /></>
                   }
                 </button>
               </div>

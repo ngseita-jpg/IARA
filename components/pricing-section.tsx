@@ -159,6 +159,9 @@ export function PricingSection() {
       }
 
       if (data.url) {
+        // Toast: redirect demora 1-2s, sem feedback user pensa que travou
+        const { toast } = await import('@/lib/toast')
+        toast.info('Abrindo checkout seguro do Stripe...')
         window.location.href = data.url
       } else {
         setErro('Resposta inválida do servidor.')

@@ -105,11 +105,10 @@ export function CarrosselEditorSlide({ slide, setSlide, onFechar, onAplicar, tem
   const temFotoNoSlide = temFoto && slide.imagem_index !== undefined
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onFechar}>
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onFechar() }}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-none" />
       <div
         className="relative w-full max-w-xl bg-[#0d0d1a] border border-[#1a1a2e] rounded-2xl shadow-2xl max-h-[90vh] flex flex-col"
-        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#1a1a2e]">
@@ -117,7 +116,11 @@ export function CarrosselEditorSlide({ slide, setSlide, onFechar, onAplicar, tem
             <p className="text-sm font-semibold text-[#f1f1f8]">Editar slide {slide.ordem}</p>
             <p className="text-xs text-[#5a5a7a] mt-0.5">Ajuste texto, cores, fonte e foto — sem gastar créditos</p>
           </div>
-          <button onClick={onFechar} className="p-1.5 rounded-lg hover:bg-[#1a1a2e] text-[#6b6b8a] transition-colors">
+          <button
+            onClick={onFechar}
+            aria-label="Fechar editor de slide"
+            className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#1a1a2e] text-[#6b6b8a] hover:text-white transition-colors flex-shrink-0"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>

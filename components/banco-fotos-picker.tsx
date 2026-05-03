@@ -75,7 +75,7 @@ export function BancoFotosPicker({ multiple = false, maxSelect = 8, onConfirm, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div
         className="w-full max-w-2xl bg-[#0d0d1a] border border-[#1e1e3a] rounded-2xl shadow-2xl flex flex-col max-h-[85vh]"
         onClick={e => e.stopPropagation()}
