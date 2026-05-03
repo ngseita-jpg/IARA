@@ -4,7 +4,11 @@
 //
 // Versionado: bumpe CACHE_NAME quando quiser invalidar cache antigo.
 
-const CACHE_NAME = 'iara-hub-v1'
+// IMPORTANTE: bumpar a cada batch de fixes pra invalidar cache antigo nos PWAs.
+// Sem isso, usuarios com app instalado continuam servindo JS antigo via cache
+// e nao veem fixes (ex: /conta nao carregava porque o SW devolvia o client
+// antigo sem tratamento de erro).
+const CACHE_NAME = 'iara-hub-v2-2026-05-03'
 const PRECACHE = [
   '/',
   '/login',

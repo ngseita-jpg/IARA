@@ -28,13 +28,26 @@ export async function GET() {
 
       // Auto-heal: usuário sem profile (ex: cadastro como marca, ou registro
       // antigo antes do trigger). Cria profile mínimo pra UI não quebrar.
+      // Usa upsert pra ser idempotente em caso de race condition.
       if (!profile && !dbErr) {
-        const { data: created } = await admin
+        const { data: created, error: upsertErr } = await admin
           .from('creator_profiles')
-          .insert({ user_id: user.id, plano: 'free' })
+          .upsert({ user_id: user.id, plano: 'free' }, { onConflict: 'user_id', ignoreDuplicates: false })
           .select('plano, nome_artistico, stripe_customer_id')
           .maybeSingle()
-        profile = created
+
+        if (upsertErr) {
+          console.error('[api/perfil/conta] auto-heal upsert erro:', upsertErr.message)
+          // Re-tenta SELECT — talvez outro request criou no meio tempo
+          const { data: retry } = await admin
+            .from('creator_profiles')
+            .select('plano, nome_artistico, stripe_customer_id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          profile = retry
+        } else {
+          profile = created
+        }
       }
     } catch (e) {
       // Se admin client falhar (env var ausente, etc), retorna defaults — UI carrega

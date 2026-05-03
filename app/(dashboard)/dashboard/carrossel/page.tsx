@@ -206,28 +206,36 @@ export default function CarrosselPage() {
   // ───────────────────────────────────────────
   // Step 2: upload de imagens
   // ───────────────────────────────────────────
-  const handleFiles = useCallback((files: FileList | null) => {
+  const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files) return
     const selected = Array.from(files).slice(0, 8 - imagens.length)
-    let pendentes = selected.length
-    const novos: string[] = new Array(selected.length)
-    const novosPreview: string[] = new Array(selected.length)
 
-    selected.forEach((file, idx) => {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const raw = e.target?.result as string
-        const resized = await resizeImage(raw)
-        novos[idx] = resized.replace(/^data:image\/\w+;base64,/, '')
-        novosPreview[idx] = resized
-        pendentes--
-        if (pendentes === 0) {
-          setImagens((prev) => [...prev, ...novos])
-          setImagensPreview((prev) => [...prev, ...novosPreview])
+    // Promise.all: ordem garantida pelo array de promises e error handling decente
+    // (antes: contador `pendentes` permitia race com 1 erro silencioso quebrar tudo)
+    const results = await Promise.all(selected.map((file) =>
+      new Promise<{ raw: string; resized: string } | null>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          try {
+            const raw = e.target?.result as string
+            const resized = await resizeImage(raw)
+            resolve({ raw, resized })
+          } catch { resolve(null) }
         }
-      }
-      reader.readAsDataURL(file)
-    })
+        reader.onerror = () => resolve(null)
+        reader.readAsDataURL(file)
+      })
+    ))
+
+    const novos: string[] = []
+    const novosPreview: string[] = []
+    for (const r of results) {
+      if (!r) continue
+      novos.push(r.resized.replace(/^data:image\/\w+;base64,/, ''))
+      novosPreview.push(r.resized)
+    }
+    setImagens((prev) => [...prev, ...novos])
+    setImagensPreview((prev) => [...prev, ...novosPreview])
   }, [imagens.length])
 
   function handleDrop(e: React.DragEvent) {
@@ -561,14 +569,10 @@ export default function CarrosselPage() {
         return
       }
 
-      // Fallback desktop: baixa um por um
-      for (const file of files) {
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(file)
-        a.download = file.name
-        a.click()
-        await new Promise(r => setTimeout(r, 200))
-      }
+      // Fallback desktop: ZIP unico (era 8 downloads sequenciais c/ setTimeout
+      // 200ms cada — 1.6s travando UI; alguns navegadores blockeiam multi-download)
+      const { downloadZip } = await import('@/lib/share')
+      await downloadZip(files.map(f => ({ name: f.name, data: f })), `${tituloBase}.zip`)
     } finally {
       setExportandoZip(false)
     }

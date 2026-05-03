@@ -301,20 +301,25 @@ export default function ThumbnailPage() {
   }
 
   // Atalhos teclado: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z = redo
+  // Refs evitam recriar o listener em cada keystroke (handlers mudam de
+  // referencia em todo render porque dependem de state).
+  const handlersRef = useRef({ undo: handleUndo, redo: handleRedo, hasLayout: false })
+  handlersRef.current.undo = handleUndo
+  handlersRef.current.redo = handleRedo
+  handlersRef.current.hasLayout = !!layout
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (!layout) return
+      if (!handlersRef.current.hasLayout) return
       const meta = e.metaKey || e.ctrlKey
       if (meta && e.key.toLowerCase() === 'z') {
         e.preventDefault()
-        if (e.shiftKey) handleRedo()
-        else handleUndo()
+        if (e.shiftKey) handlersRef.current.redo()
+        else handlersRef.current.undo()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, posHistorico, historicoLayouts])
+  }, [])
 
   // ── Gerar principal ──────────────────────────────────────
   async function handleGerar() {
