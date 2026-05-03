@@ -1,23 +1,59 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
+export const runtime = 'nodejs'
+
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const admin = createAdminClient()
-  const { data: profile } = await admin
-    .from('creator_profiles')
-    .select('plano, nome_artistico, stripe_customer_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
+    let profile: { plano: string | null; nome_artistico: string | null; stripe_customer_id: string | null } | null = null
+    try {
+      const admin = createAdminClient()
+      const { data, error: dbErr } = await admin
+        .from('creator_profiles')
+        .select('plano, nome_artistico, stripe_customer_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-  return NextResponse.json({
-    email: user.email,
-    full_name: user.user_metadata?.full_name ?? null,
-    plano: profile?.plano ?? 'free',
-    nome_artistico: profile?.nome_artistico ?? null,
-    stripe_customer_id: profile?.stripe_customer_id ?? null,
-  })
+      if (dbErr) {
+        console.error('[api/perfil/conta] supabase erro:', dbErr.message)
+      } else {
+        profile = data
+      }
+
+      // Auto-heal: usuário sem profile (ex: cadastro como marca, ou registro
+      // antigo antes do trigger). Cria profile mínimo pra UI não quebrar.
+      if (!profile && !dbErr) {
+        const { data: created } = await admin
+          .from('creator_profiles')
+          .insert({ user_id: user.id, plano: 'free' })
+          .select('plano, nome_artistico, stripe_customer_id')
+          .maybeSingle()
+        profile = created
+      }
+    } catch (e) {
+      // Se admin client falhar (env var ausente, etc), retorna defaults — UI carrega
+      console.error('[api/perfil/conta] admin client erro:', e instanceof Error ? e.message : e)
+    }
+
+    return NextResponse.json({
+      email: user.email,
+      full_name: user.user_metadata?.full_name ?? null,
+      plano: profile?.plano ?? 'free',
+      nome_artistico: profile?.nome_artistico ?? null,
+      stripe_customer_id: profile?.stripe_customer_id ?? null,
+    })
+  } catch (e) {
+    // Último guard: nunca retornar 500 silencioso pra essa rota crítica
+    console.error('[api/perfil/conta] erro fatal:', e instanceof Error ? e.message : e)
+    return NextResponse.json(
+      { error: 'Erro temporário ao carregar conta. Tente novamente.' },
+      { status: 503 },
+    )
+  }
 }

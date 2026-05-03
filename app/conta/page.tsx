@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft, Lock, Eye, EyeOff, Check } from 'lucide-react'
+import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft, Lock, Eye, EyeOff, Check, AlertCircle, RefreshCw } from 'lucide-react'
 import { UpgradeModal } from '@/components/upgrade-modal'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -31,29 +31,52 @@ export default function ContaPage() {
   const router = useRouter()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [loading, setLoading] = useState(true)
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [senhaOpen, setSenhaOpen] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/perfil/conta')
-      .then(r => {
-        if (r.status === 401) { router.push('/login'); return null }
-        return r.json()
-      })
-      .then(data => {
-        if (data) setPerfil(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+  const carregar = useCallback(async () => {
+    setLoading(true)
+    setErroCarregar(null)
+    try {
+      const r = await fetch('/api/perfil/conta', { cache: 'no-store' })
+      if (r.status === 401) {
+        router.push('/login')
+        return
+      }
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}))
+        throw new Error(body.error || `Erro ${r.status} ao carregar conta`)
+      }
+      const data = await r.json()
+      if (!data || typeof data !== 'object') {
+        throw new Error('Resposta inválida do servidor')
+      }
+      setPerfil(data)
+    } catch (e) {
+      setErroCarregar(e instanceof Error ? e.message : 'Erro ao carregar conta')
+    } finally {
+      setLoading(false)
+    }
   }, [router])
+
+  useEffect(() => {
+    carregar()
+  }, [carregar])
 
   async function handlePortal() {
     setPortalLoading(true)
     try {
       const res = await fetch('/api/stripe/portal', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.url) {
+        toast.error(data.error || 'Não foi possível abrir o portal. Tente em alguns segundos.')
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      toast.error('Falha de conexão. Verifique sua internet.')
     } finally {
       setPortalLoading(false)
     }
@@ -70,6 +93,48 @@ export default function ContaPage() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#08080f' }}>
         <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+      </div>
+    )
+  }
+
+  if (erroCarregar) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{
+          background: '#08080f',
+          paddingTop:    'calc(env(safe-area-inset-top, 0px) + 2rem)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 2rem)',
+        }}
+      >
+        <div className="max-w-sm w-full text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-red-950/30 border border-red-900/40 flex items-center justify-center">
+            <AlertCircle className="w-6 h-6 text-red-400" />
+          </div>
+          <h1 className="text-lg font-bold text-white mb-2">Não consegui carregar sua conta</h1>
+          <p className="text-sm text-[#9b9bb5] mb-6">{erroCarregar}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={carregar}
+              className="w-full min-h-11 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold flex items-center justify-center gap-2 hover:opacity-90"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Tentar de novo
+            </button>
+            <Link
+              href="/dashboard"
+              className="w-full min-h-11 rounded-xl border border-[#1a1a2e] text-sm text-[#9b9bb5] hover:bg-[#1a1a2e] flex items-center justify-center"
+            >
+              Voltar pro dashboard
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="w-full min-h-11 rounded-xl text-xs text-[#6b6b8a] hover:text-red-400"
+            >
+              Sair da conta
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
