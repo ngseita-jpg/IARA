@@ -12,6 +12,7 @@ import {
   Download,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Send,
   X,
   RefreshCw,
@@ -108,6 +109,7 @@ export default function CarrosselPage() {
   const [renderizando, setRenderizando] = useState<Record<number, boolean>>({})
   const [erroGeracao, setErroGeracao] = useState<string | null>(null)
   const [showWatermark, setShowWatermark] = useState(true)
+  const [raciocinioAberto, setRaciocinioAberto] = useState(false)
 
   // Chat de ajustes
   const [chat, setChat] = useState<MensagemChat[]>([])
@@ -1313,11 +1315,32 @@ export default function CarrosselPage() {
                   ))}
                 </div>
 
-                {/* Header com raciocínio + download all */}
-                <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#0f0f20] border border-iara-700/20">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-iara-400 uppercase tracking-wider mb-1">Raciocínio da Iara</p>
-                    <p className="text-sm text-[#9b9bb5]">{carrossel.raciocinio}</p>
+                {/* Header com raciocínio (collapsible) + download all */}
+                <div className="flex items-start justify-between gap-4 p-3 rounded-xl bg-[#0f0f20] border border-iara-700/20">
+                  <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => setRaciocinioAberto(v => !v)}
+                      aria-expanded={raciocinioAberto}
+                      className="w-full flex items-start gap-2 text-left group"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-iara-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-iara-400 uppercase tracking-widest mb-0.5">Estratégia da Iara</p>
+                        {!raciocinioAberto ? (
+                          <p className="text-xs text-[#9b9bb5] line-clamp-2 leading-relaxed">
+                            {carrossel.raciocinio}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-[#c9c9d8] leading-relaxed whitespace-pre-line">
+                            {carrossel.raciocinio}
+                          </p>
+                        )}
+                        <span className="inline-flex items-center gap-0.5 mt-1 text-[10px] font-semibold text-iara-400 hover:text-iara-300 transition-colors">
+                          {raciocinioAberto ? 'Ver menos' : 'Ler mais'}
+                          <ChevronDown className={`w-3 h-3 transition-transform ${raciocinioAberto ? 'rotate-180' : ''}`} />
+                        </span>
+                      </div>
+                    </button>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {Object.values(slidePngs).some(p => p.startsWith('ERROR:')) && (
