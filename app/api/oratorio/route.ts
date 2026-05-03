@@ -165,6 +165,10 @@ Avalie nas 5 dimensões e retorne SOMENTE JSON válido (sem markdown, sem texto 
   return new Response(
     JSON.stringify({
       analysis,
+      // Esses campos vêm da IA mas não são salvos no DB (não há coluna).
+      // Retornamos no top pra UI mostrar imediatamente.
+      ponto_forte:    analysisData.ponto_forte ?? '',
+      ponto_melhorar: analysisData.ponto_melhorar ?? '',
       pontos_ganhos: PONTOS_ACOES.ANALISE_VOZ,
       pontos_total: novosPoints,
       nivel: novoNivel,
