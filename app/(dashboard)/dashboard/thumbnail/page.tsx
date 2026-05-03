@@ -235,8 +235,17 @@ export default function ThumbnailPage() {
     setLayout(novoLayout)
     setRerenderizando(true)
     const png = await renderizar(novoLayout)
-    setThumbnailPng(png)
-    setVariacoes(prev => prev.map((v, i) => i === variacaoAtiva ? { layout: novoLayout, png } : v))
+    // Revoga blob anterior antes de substituir — evita vazar memoria
+    // (sessao de 30 ajustes = 30 PNGs ~500KB-1MB cada presos no heap)
+    setThumbnailPng(prev => {
+      if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev)
+      return png
+    })
+    setVariacoes(prev => prev.map((v, i) => {
+      if (i !== variacaoAtiva) return v
+      if (v.png && v.png.startsWith('blob:')) URL.revokeObjectURL(v.png)
+      return { layout: novoLayout, png }
+    }))
     setRerenderizando(false)
 
     // Adiciona ao histórico (corta tudo depois da posição atual — branch-cut tipo Photoshop)

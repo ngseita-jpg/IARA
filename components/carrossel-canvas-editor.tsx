@@ -10,7 +10,7 @@
  * - Export final: renderiza no canvas escondido em 1080×1080 e baixa PNG
  */
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
@@ -165,7 +165,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (hydrating.current) return
     setHistory(prev => {
       const trimmed = prev.slice(0, historyIdx + 1)
-      trimmed.push(JSON.parse(JSON.stringify(next)))
+      trimmed.push(structuredClone(next))
       return trimmed.slice(-30)
     })
     setHistoryIdx(prev => Math.min(prev + 1, 29))
@@ -185,7 +185,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (historyIdx === 0) return
     hydrating.current = true
     const prev = history[historyIdx - 1]
-    setSlides(JSON.parse(JSON.stringify(prev)))
+    setSlides(structuredClone(prev))
     setHistoryIdx(historyIdx - 1)
     setTimeout(() => { hydrating.current = false }, 0)
   }, [historyIdx, history])
@@ -194,7 +194,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (historyIdx >= history.length - 1) return
     hydrating.current = true
     const next = history[historyIdx + 1]
-    setSlides(JSON.parse(JSON.stringify(next)))
+    setSlides(structuredClone(next))
     setHistoryIdx(historyIdx + 1)
     setTimeout(() => { hydrating.current = false }, 0)
   }, [historyIdx, history])
@@ -290,7 +290,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     pushHistory(next)
   }
 
-  function addTextLayer() {11111
+  function addTextLayer() {
     const tl: TextLayer = {
       id: newId('t'),
       type: 'text',
@@ -1056,7 +1056,11 @@ type LayerViewProps = {
   onStopEdit: () => void
 }
 
-function LayerView({
+// React.memo: sem isso, qualquer drag re-clonava `slides` e fazia TODAS as
+// layers re-renderizarem. Em slide com 8+ layers virava 50-200ms de jank por
+// frame de movimento. O comparador raso de memo faz cada layer so re-renderizar
+// se o seu proprio objeto mudou.
+const LayerView = React.memo(function LayerView({
   layer, selected, editing, imagensCache, pxFromPct, displaySize, onPointerDown, onDoubleClick, onUpdateText, onStopEdit,
 }: LayerViewProps) {
   const common = {
@@ -1168,7 +1172,7 @@ function LayerView({
       {content}
     </div>
   )
-}
+})
 
 // Handles de resize nos 4 cantos.
 // Visual: bolinha 16px. Hit area: 32px (touch-friendly), expandida via padding invisível.

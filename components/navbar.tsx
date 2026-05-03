@@ -72,8 +72,25 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
     const check = () =>
       fetch('/api/conversas/nao-lidas').then(r => r.ok ? r.json() : { count: 0 }).then(d => setUnread(d.count ?? 0))
     check()
-    const iv = setInterval(check, 30000)
-    return () => clearInterval(iv)
+    // Polling so quando aba esta visivel — economiza requests/bateria com tab em background
+    let iv: ReturnType<typeof setInterval> | null = null
+    const startPolling = () => {
+      if (iv) return
+      iv = setInterval(check, 30000)
+    }
+    const stopPolling = () => {
+      if (iv) { clearInterval(iv); iv = null }
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'visible') { check(); startPolling() }
+      else stopPolling()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    if (document.visibilityState === 'visible') startPolling()
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      stopPolling()
+    }
   }, [])
 
   // Body scroll lock + ESC fechar quando menu mobile aberto

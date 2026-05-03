@@ -39,14 +39,11 @@ export function FotoFundoDragger({
     setY(p.y)
   }, [valor])
 
-  // Aplica mudança ao parent (debounced via animationFrame pra fluidez)
-  const rafRef = useRef<number | null>(null)
-  const aplicar = useCallback((nx: number, ny: number) => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    rafRef.current = requestAnimationFrame(() => {
-      onChange(`${Math.round(nx)}% ${Math.round(ny)}%`)
-    })
-  }, [onChange])
+  // Estrategia: durante o drag, atualiza so o estado visual local (instantaneo).
+  // Comita pro parent (que dispara fetch /api/thumbnail/renderizar) APENAS no
+  // pointerup. Antes era um onChange por RAF = 60 requests/seg, fila saturava
+  // e UI travava.
+  const pendingRef = useRef<{ x: number; y: number } | null>(null)
 
   const updateFromClient = useCallback((clientX: number, clientY: number) => {
     const el = containerRef.current
@@ -56,8 +53,31 @@ export function FotoFundoDragger({
     const ny = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
     setX(nx)
     setY(ny)
-    aplicar(nx, ny)
-  }, [aplicar])
+    pendingRef.current = { x: nx, y: ny }
+  }, [])
+
+  const commit = useCallback(() => {
+    arrastandoRef.current = false
+    if (pendingRef.current) {
+      const { x: nx, y: ny } = pendingRef.current
+      onChange(`${Math.round(nx)}% ${Math.round(ny)}%`)
+      pendingRef.current = null
+    }
+  }, [onChange])
+
+  // Pros sliders e atalhos rapidos (botoes 3x3): debounce 250ms — evita
+  // disparar fetch a cada tick do slider mas nao trava o UI dos atalhos.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const aplicar = useCallback((nx: number, ny: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onChange(`${Math.round(nx)}% ${Math.round(ny)}%`)
+    }, 250)
+  }, [onChange])
+
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+  }, [])
 
   // Mouse drag (desktop)
   useEffect(() => {
@@ -65,14 +85,13 @@ export function FotoFundoDragger({
       if (!arrastandoRef.current) return
       updateFromClient(e.clientX, e.clientY)
     }
-    function onUp() { arrastandoRef.current = false }
     window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('mouseup', commit)
     return () => {
       window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('mouseup', commit)
     }
-  }, [updateFromClient])
+  }, [updateFromClient, commit])
 
   // Touch drag (mobile)
   useEffect(() => {
@@ -82,14 +101,13 @@ export function FotoFundoDragger({
       const t = e.touches[0]
       if (t) updateFromClient(t.clientX, t.clientY)
     }
-    function onEnd() { arrastandoRef.current = false }
     window.addEventListener('touchmove', onMove, { passive: false })
-    window.addEventListener('touchend', onEnd)
+    window.addEventListener('touchend', commit)
     return () => {
       window.removeEventListener('touchmove', onMove)
-      window.removeEventListener('touchend', onEnd)
+      window.removeEventListener('touchend', commit)
     }
-  }, [updateFromClient])
+  }, [updateFromClient, commit])
 
   return (
     <div className="space-y-3">

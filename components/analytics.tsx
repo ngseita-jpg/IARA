@@ -18,8 +18,7 @@ export function Analytics() {
     setConsent(readConsent())
     const onStorage = () => setConsent(readConsent())
     window.addEventListener('storage', onStorage)
-    const iv = setInterval(onStorage, 2000)
-    return () => { window.removeEventListener('storage', onStorage); clearInterval(iv) }
+    return () => { window.removeEventListener('storage', onStorage) }
   }, [])
 
   if (consent !== 'accepted') return null
