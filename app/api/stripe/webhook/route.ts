@@ -11,6 +11,7 @@ const supabaseAdmin = createClient(
 )
 
 export const runtime = 'nodejs'
+export const maxDuration = 30   // webhook chama Stripe + Supabase + email — sob carga 10s default estoura
 
 async function setPlano(userId: string, plano: string, subscriptionId: string) {
   // Atualiza plano primeiro — query separada para não falhar se a coluna stripe ainda não existir
