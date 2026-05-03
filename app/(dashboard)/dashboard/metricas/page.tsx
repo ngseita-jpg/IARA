@@ -465,6 +465,24 @@ export default function MetricasPage() {
 
   useEffect(() => { fetchData(); fetchConnections() }, [fetchData])
 
+  // Mostra toast quando volta de redirect com erro de OAuth
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const err = params.get('error')
+    if (err === 'config_missing') {
+      showToast('Conexão automática ainda não disponível pra essa rede. Use "Adicionar rede" pra inserir manualmente.', 'erro')
+    } else if (err === 'oauth_denied') {
+      showToast('Você cancelou a autorização. Tente novamente quando quiser.', 'erro')
+    } else if (err) {
+      showToast(`Não consegui conectar: ${err}. Use entrada manual abaixo.`, 'erro')
+    }
+    if (err) {
+      // Limpa o query param pra não disparar toast de novo no F5
+      window.history.replaceState({}, '', '/dashboard/metricas')
+    }
+  }, [])
+
   async function handleSave(data: Record<string, unknown>) {
     const res = await fetch('/api/metricas', {
       method: 'POST',

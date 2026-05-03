@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { RefreshCw, Link2, Unlink, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { RefreshCw, Link2, Unlink, CheckCircle2, AlertCircle, ExternalLink, Clock } from 'lucide-react'
 import { getPlatformIcon } from '@/components/platform-icons'
 
 interface Connection {
@@ -106,6 +106,14 @@ export function SocialConnect({
   const [openSetup, setOpenSetup] = useState<string | null>(null)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [disconnecting, setDisconnecting] = useState<string | null>(null)
+  const [oauthStatus, setOauthStatus] = useState<Record<string, boolean> | null>(null)
+
+  useEffect(() => {
+    fetch('/api/oauth/status', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setOauthStatus(d) })
+      .catch(() => setOauthStatus({}))
+  }, [])
 
   function getConnection(platformId: string) {
     return connections.find((c) => c.platform === platformId) ?? null
@@ -188,6 +196,21 @@ export function SocialConnect({
                   >
                     <Unlink className="w-3.5 h-3.5" />
                   </button>
+                </div>
+              ) : oauthStatus && oauthStatus[plat.id] === false ? (
+                // Provider OAuth ainda não foi cadastrado — botão "Em breve"
+                // (evita redirect-loop silencioso pra /metricas?error=config_missing)
+                <div className="space-y-2">
+                  <div
+                    className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium border border-[#1a1a2e] text-[#6b6b8a] cursor-not-allowed"
+                    title="Conexão automática em breve. Por enquanto, clique em 'Adicionar rede' acima e insira suas métricas manualmente."
+                  >
+                    <Clock className="w-3 h-3" />
+                    Em breve · use entrada manual
+                  </div>
+                  <p className="text-[10px] text-center text-[#5a5a7a] leading-snug px-1">
+                    Aprovação OAuth do {plat.label} em andamento. Use o botão <span className="text-iara-400 font-semibold">Adicionar rede</span> acima.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
