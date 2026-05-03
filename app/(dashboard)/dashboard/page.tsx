@@ -39,7 +39,7 @@ const modules = [
   { icon: Lightbulb,  label: 'Faísca Criativa',        desc: 'Chat com IA que extrai o melhor de você e gera ideias de temas incríveis com hook e ângulo prontos.',  href: '/dashboard/temas',      gradient: 'from-iara-600/25 to-accent-purple/15',   border: 'border-iara-600/40', highlight: true },
   { icon: FileText,   label: 'Gerador de Roteiros',    desc: 'Roteiros completos com hook, desenvolvimento e CTA no seu estilo.',        href: '/dashboard/roteiros',   gradient: 'from-iara-600/20 to-accent-purple/10',   border: 'border-iara-700/30' },
   { icon: Layers,     label: 'Gerador de Carrossel',   desc: 'Cole um link ou texto — a Iara monta o carrossel completo com imagens.',   href: '/dashboard/carrossel',  gradient: 'from-accent-pink/15 to-accent-purple/10', border: 'border-accent-pink/20' },
-  { icon: Scissors,   label: 'Cortes do YouTube',      desc: 'Cole um vídeo, a Iara identifica os melhores trechos e corta MP4 pronto pra Reels/Shorts/TikTok.', href: '/dashboard/cortes', gradient: 'from-accent-pink/20 to-accent-purple/15', border: 'border-accent-pink/30', highlight: true },
+  { icon: Scissors,   label: 'Cortes do YouTube',      desc: 'EM BREVE — em construção avançada. Vai pegar vídeo longo e devolver cortes prontos pra Reels/Shorts/TikTok.', href: '/dashboard/cortes', gradient: 'from-amber-900/15 to-orange-900/10', border: 'border-amber-700/30', emBreve: true },
   { icon: Smartphone, label: 'Gerador de Stories',     desc: 'Sequência de 7 slides com hook, virada e CTA no seu tom de voz.',          href: '/dashboard/stories',    gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
   { icon: Image,      label: 'Gerador de Thumbnail',   desc: 'Thumbnails de alto CTR para YouTube e Reels em segundos.',                 href: '/dashboard/thumbnail',  gradient: 'from-teal-900/20 to-accent-purple/10',   border: 'border-teal-800/20' },
   { icon: BookOpen,   label: 'Mídia Kit com IA',       desc: 'Kit profissional com perfil, métricas e voz. Exporta em PDF.',             href: '/dashboard/midia-kit',  gradient: 'from-amber-900/20 to-iara-600/10',       border: 'border-amber-800/20' },
@@ -342,17 +342,23 @@ export default async function DashboardPage() {
           {modules.map((mod) => {
             const Icon = mod.icon
             const isHighlight = (mod as { highlight?: boolean }).highlight
+            const emBreve = (mod as { emBreve?: boolean }).emBreve
             return (
-              <Link key={mod.label} href={mod.href} className={`block group ${isHighlight ? 'md:col-span-2 lg:col-span-1' : ''}`}>
-                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150 ${isHighlight ? 'relative overflow-hidden' : ''}`}>
-                  {isHighlight && (
+              <Link key={mod.label} href={mod.href} className={`block group ${isHighlight ? 'md:col-span-2 lg:col-span-1' : ''} ${emBreve ? 'opacity-80' : ''}`}>
+                <div className={`h-full rounded-2xl p-5 border ${mod.border} bg-gradient-to-br ${mod.gradient} hover:scale-[1.01] hover:shadow-xl hover:shadow-black/30 active:scale-[0.99] transition-all duration-150 relative overflow-hidden`}>
+                  {isHighlight && !emBreve && (
                     <div className="absolute top-0 right-0 px-2.5 py-1 rounded-bl-xl text-[10px] font-bold text-iara-300 bg-iara-900/60 border-b border-l border-iara-700/40">
                       NOVO
                     </div>
                   )}
+                  {emBreve && (
+                    <div className="absolute top-0 right-0 px-2.5 py-1 rounded-bl-xl text-[10px] font-black text-[#0a0a14] bg-gradient-to-r from-amber-500 to-orange-500 tracking-widest uppercase shadow-lg">
+                      Em breve
+                    </div>
+                  )}
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-9 h-9 rounded-xl bg-[#0a0a14]/60 flex items-center justify-center ${isHighlight ? 'shadow-lg shadow-iara-900/40' : ''}`}>
-                      <Icon className={`w-4 h-4 ${isHighlight ? 'text-iara-300' : 'text-iara-400'}`} />
+                      <Icon className={`w-4 h-4 ${emBreve ? 'text-amber-400' : isHighlight ? 'text-iara-300' : 'text-iara-400'}`} />
                     </div>
                     <ArrowRight className="w-4 h-4 text-[#3a3a5a] group-hover:text-iara-400 group-hover:translate-x-0.5 transition-all" />
                   </div>

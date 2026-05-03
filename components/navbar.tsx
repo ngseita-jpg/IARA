@@ -41,7 +41,7 @@ const navItems: { label: string; href: string; icon: React.ElementType; badge?: 
   { label: 'Roteiros',        href: '/dashboard/roteiros',     icon: FileText },
   { label: 'Carrossel',       href: '/dashboard/carrossel',    icon: Layers },
   { label: 'Thumbnail',       href: '/dashboard/thumbnail',    icon: Image },
-  { label: 'Cortes YouTube',  href: '/dashboard/cortes',       icon: Scissors, badge: 'Novo' },
+  { label: 'Cortes YouTube',  href: '/dashboard/cortes',       icon: Scissors, badge: 'Em breve' },
   { label: 'Banco de Fotos',  href: '/dashboard/fotos',        icon: Images },
   { label: 'Stories',         href: '/dashboard/stories',      icon: Smartphone },
   { label: 'Mídia Kit',       href: '/dashboard/midia-kit',    icon: BookOpen },

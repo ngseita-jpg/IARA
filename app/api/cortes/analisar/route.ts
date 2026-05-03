@@ -6,6 +6,7 @@ import { verificarLimiteMarca, respostaLimiteAtingidoMarca } from '@/lib/checkLi
 import { NOME_PLANO, type Plano } from '@/lib/limites'
 import { fetchYouTubeTranscricao, extrairVideoId } from '@/lib/youtube-transcricao'
 import { checkRateLimitIp } from '@/lib/rateLimit'
+import { isFeatureEnabled } from '@/lib/feature-flags'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -34,6 +35,16 @@ function fmtTempo(seg: number): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Feature flag: Cortes do YouTube está em pausa enquanto não temos
+  // API paga de transcrição confiável (ver lib/feature-flags.ts).
+  if (!isFeatureEnabled('CORTES_YT')) {
+    return NextResponse.json({
+      error: 'Esse módulo está em manutenção',
+      detalhe: 'Estamos preparando uma versão muito mais robusta dos Cortes do YouTube. Em breve, voltaremos com algo melhor.',
+      em_breve: true,
+    }, { status: 503 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
