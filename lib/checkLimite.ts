@@ -49,55 +49,68 @@ export async function contarUsoMensal(
  * Verifica se o usuário pode gerar.
  * Retorna { permitido: true } ou { permitido: false, limite, usado, plano }
  *
- * AUTO-HEAL: se vai negar mas user tem stripe_customer_id, busca subscription
- * real na Stripe e atualiza o plano. Resolve o cenario "paguei plano pro mas
- * webhook nao chegou e bati no limite" (2026-05-04).
+ * IMPORTANTE: o parametro `plano` e' apenas hint inicial — sempre re-valida
+ * lendo o plano atual do DB com admin client (bypassa RLS/cache que podia
+ * dar valor stale). Resolve casos de "perfil ilimitado mas backend bateu
+ * limite" (2026-05-04).
+ *
+ * AUTO-HEAL: se plano lido e' free/trial mas user tem stripe_customer_id,
+ * busca subscription real na Stripe e atualiza. Resolve "paguei mas webhook
+ * nao chegou" (2026-05-04).
  */
 export async function verificarLimite(
   supabase: SupabaseClient,
   userId: string,
   tipo: TipoUso,
-  plano: Plano = 'free'
+  _planoHint: Plano = 'free'
 ): Promise<
   | { permitido: true }
   | { permitido: false; limite: number; usado: number; plano: string }
 > {
-  let planoEfetivo: Plano = plano
+  // SEMPRE le o plano atual do DB com admin (single source of truth)
+  let planoEfetivo: Plano = _planoHint
+  let stripeCustomerId: string | null = null
+  try {
+    const { createAdminClient } = await import('./supabase/server')
+    const admin = createAdminClient()
+    const { data: profile } = await admin
+      .from('creator_profiles')
+      .select('plano, stripe_customer_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (profile?.plano) planoEfetivo = profile.plano as Plano
+    stripeCustomerId = profile?.stripe_customer_id ?? null
+  } catch (e) {
+    console.error('[verificarLimite] erro lendo profile:', e instanceof Error ? e.message : e)
+  }
+
   let limite = getLimite(planoEfetivo, tipo)
 
-  // ilimitado
+  // ilimitado (profissional/agencia/marca-scale, etc)
   if (limite === null) return { permitido: true }
 
   const usado = await contarUsoMensal(supabase, userId, tipo)
   if (usado < limite) return { permitido: true }
 
-  // Bateu o limite. Antes de retornar 429, tenta auto-heal: se user tem
-  // stripe_customer_id, busca subscription real na Stripe e re-tenta.
-  try {
-    const { data: profile } = await supabase
-      .from('creator_profiles')
-      .select('stripe_customer_id, plano')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    if (profile?.stripe_customer_id && (profile.plano === 'free' || profile.plano === 'trial' || !profile.plano)) {
+  // Bateu o limite. Auto-heal: se tem customer_id e plano free/trial,
+  // sincroniza com Stripe e re-tenta.
+  if (stripeCustomerId && (planoEfetivo === 'free' || planoEfetivo === 'trial')) {
+    try {
       const { sincronizarPlanoStripe } = await import('./syncPlano')
       const { createAdminClient } = await import('./supabase/server')
       const admin = createAdminClient()
-      const planoReal = await sincronizarPlanoStripe(admin, userId, profile.stripe_customer_id)
-      if (planoReal && planoReal !== profile.plano) {
+      const planoReal = await sincronizarPlanoStripe(admin, userId, stripeCustomerId)
+      if (planoReal && planoReal !== planoEfetivo) {
         planoEfetivo = planoReal as Plano
         limite = getLimite(planoEfetivo, tipo)
-        // Plano agora pode ser ilimitado ou ter limite maior
         if (limite === null) return { permitido: true }
         if (usado < limite) return { permitido: true }
       }
+    } catch (e) {
+      console.error('[verificarLimite] auto-heal falhou:', e instanceof Error ? e.message : e)
     }
-  } catch (e) {
-    console.error('[verificarLimite] auto-heal falhou:', e instanceof Error ? e.message : e)
   }
 
-  // limite ja foi checado como != null acima — narrowing pra TS
   return { permitido: false, limite: limite ?? 0, usado, plano: planoEfetivo }
 }
 
