@@ -6,7 +6,7 @@ import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft, Lock,
 import { UpgradeModal } from '@/components/upgrade-modal'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { labelPlano } from '@/lib/stripe'
+import { labelPlano } from '@/lib/plano-labels'
 import { toast } from '@/lib/toast'
 import { useModalA11y } from '@/hooks/useModalA11y'
 
