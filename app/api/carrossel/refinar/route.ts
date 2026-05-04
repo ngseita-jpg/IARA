@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const maxDuration = 30
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  const rl = await checkRateLimitUser(req, user.id, 'ia_geral')
   if (rl) return rl
 
   const body = await req.json()

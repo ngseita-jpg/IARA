@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { verificarLimiteMarca, verificarFeatureMarca, respostaLimiteAtingidoMarca } from '@/lib/checkLimiteMarca'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const maxDuration = 60
 
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  const rl = await checkRateLimitUser(req, user.id, 'ia_geral')
   if (rl) return rl
 
   // 1. Feature flag (plano libera Chat IA?)

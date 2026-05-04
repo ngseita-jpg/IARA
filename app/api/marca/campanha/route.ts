@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { verificarLimiteMarca, respostaLimiteAtingidoMarca } from '@/lib/checkLimiteMarca'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const rlIp = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  const rlIp = await checkRateLimitUser(req, user.id, 'ia_geral')
   if (rlIp) return rlIp
 
   // Rate limit por plano (Opus = caro)

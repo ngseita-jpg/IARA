@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ImagemAnalise } from '../analisar-imagens/route'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const maxDuration = 60
 
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   // Rate limit IP — 60 chamadas IA combinadas/hora/IP (anti-bot)
-  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  const rl = await checkRateLimitUser(req, user.id, 'ia_geral')
   if (rl) return rl
   console.log('[carrossel/gerar] step 3: req.json, content-length:', req.headers.get('content-length'))
   let body: Record<string, unknown>

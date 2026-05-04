@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
   // Mesmo bucket de IA — protege contra abuso
-  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  const rl = await checkRateLimitUser(req, user.id, 'ia_geral')
   if (rl) return rl
 
   const key = process.env.OPENAI_API_KEY

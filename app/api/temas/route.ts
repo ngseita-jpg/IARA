@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  const rl = await checkRateLimitUser(req, user?.id ?? null, 'ia_geral')
   if (rl) return rl
 
   const { messages } = await req.json() as {

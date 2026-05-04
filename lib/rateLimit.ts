@@ -69,3 +69,52 @@ export async function checkRateLimitIp(
   }
   return null
 }
+
+/**
+ * Rate limit por USUARIO (preferido pra rotas IA autenticadas).
+ *
+ * Por que NAO usar IP: multiplos users atras do mesmo NAT (familia, escritorio,
+ * escola, wifi publico) dividem a cota. Usuario "ilimitado" perdia o ilimitado
+ * porque o IP estourava. 60/h batia em ~12 carrosseis (cada um usa 5 reqs).
+ *
+ * Estrategia atual:
+ *   - autenticado (userId): cota generosa por user (ex: 300/h, ~5/min) — humano
+ *     real nao bate, bot bate na hora.
+ *   - anonimo (sem login): limite IP rigido (proteção real contra scraper).
+ *
+ * O `verificarLimite` por plano (lib/checkLimite.ts) ainda regula uso por mes
+ * conforme o plano pago — esse rate limit so previne abuso de curta janela.
+ */
+export async function checkRateLimitUser(
+  req: NextRequest,
+  userId: string | null,
+  bucket: string,
+  options: { maxAuth?: number; maxAnon?: number; windowSec?: number } = {},
+): Promise<Response | null> {
+  const { maxAuth = 300, maxAnon = 30, windowSec = 3600 } = options
+
+  // Anonimo: limita rigido por IP (defesa contra scraper/bot)
+  if (!userId) {
+    return checkRateLimitIp(req, `${bucket}:anon`, maxAnon, windowSec)
+  }
+
+  // Autenticado: limita generoso por user_id (humano real nao bate)
+  const { ok, remaining } = await rateLimit(`user:${userId}:${bucket}`, maxAuth, windowSec)
+  if (!ok) {
+    return new Response(
+      JSON.stringify({
+        error: 'Você está gerando muito rápido. Aguarda 1 minuto e tenta de novo.',
+        retry_after_sec: 60,
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+          'X-RateLimit-Remaining': String(remaining),
+        },
+      },
+    )
+  }
+  return null
+}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { checkRateLimitIp } from '@/lib/rateLimit'
+import { checkRateLimitUser } from '@/lib/rateLimit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Rate limit (chat de suporte é aberto pra não-logado também — proteger por IP)
-  const rl = await checkRateLimitIp(req, 'ia_geral', 60, 3600)
+  // Rate limit: user_id se logado, IP se anonimo (chat de suporte e' aberto pra anonimo)
+  const rl = await checkRateLimitUser(req, user?.id ?? null, 'ia_geral')
   if (rl) return rl
 
   const { mensagem, historico, sessao_id } = await req.json() as {
