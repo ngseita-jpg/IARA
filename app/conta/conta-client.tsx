@@ -184,6 +184,24 @@ export function ContaClient() {
 
   const plano = perfil?.plano ?? 'free'
   const temAssinatura = !!perfil?.stripe_customer_id && plano !== 'free'
+  const temCustomerSemPlano = !!perfil?.stripe_customer_id && (plano === 'free' || plano === 'trial')
+
+  async function handleSyncPlano() {
+    try {
+      toast.info('Verificando seu plano na Stripe…')
+      const res = await fetch('/api/perfil/sync-plano', { method: 'POST' })
+      const data = await res.json()
+      if (data.atualizado) {
+        toast.success(data.mensagem)
+        // Recarrega perfil pra refletir novo plano na UI
+        await carregar()
+      } else {
+        toast.info(data.mensagem || 'Sem mudanças')
+      }
+    } catch {
+      toast.error('Não consegui verificar agora. Tenta de novo em alguns segundos.')
+    }
+  }
 
   return (
     <div
@@ -265,6 +283,22 @@ export function ContaClient() {
               </button>
             )}
           </div>
+
+          {/* Sync de plano — visivel quando user tem stripe_customer_id mas plano = free/trial */}
+          {temCustomerSemPlano && (
+            <button
+              onClick={handleSyncPlano}
+              className="w-full rounded-2xl border border-amber-800/40 bg-amber-950/20 p-4 flex items-center gap-4 hover:bg-amber-950/30 transition-colors group cursor-pointer text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-900/30 border border-amber-800/30 flex items-center justify-center flex-shrink-0">
+                <RefreshCw className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-300">Pagou e ainda aparece como Gratuito?</p>
+                <p className="text-xs text-amber-300/70 mt-0.5">Toque pra sincronizar com a Stripe agora.</p>
+              </div>
+            </button>
+          )}
 
           {/* Mudar senha */}
           <button
