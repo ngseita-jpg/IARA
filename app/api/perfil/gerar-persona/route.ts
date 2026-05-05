@@ -79,7 +79,10 @@ Escreva a persona agora. Use os relatos pessoais para trazer profundidade real ‚
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 600,
+      // 600 -> 1500 tokens: persona detalhada (nicho + tom + plataformas +
+      // objetivos + voz + sobre) precisa espa√ßo pra ser util. Antes truncava
+      // no meio da analise de voz.
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
 

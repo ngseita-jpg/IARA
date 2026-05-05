@@ -97,8 +97,11 @@ Avalie nas 5 dimensões e retorne SOMENTE JSON válido (sem markdown, sem texto 
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      // Sonnet 4.6 (era Haiku 4.5): analise de oratoria precisa qualidade
+      // alta pra dar feedback util sobre ritmo, dicção, energia, hooks.
+      // Haiku entregava feedback raso/generico — usuario nao melhorava.
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     })
 

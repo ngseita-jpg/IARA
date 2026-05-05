@@ -124,7 +124,10 @@ ${produtosStats.map(p => `- ${p.titulo}: ${p.totalVendas} vendas, ${p.totalCliqu
     try {
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 800,
+        // 800 -> 1800 tokens: analise de ROI rica precisa espaco pra
+        // resumo + 2 pontos fortes + 3 oportunidades + recomendacoes.
+        // 800 truncava no meio das oportunidades.
+        max_tokens: 1800,
         system: `Você é a Iara, analista de ROI de marketing de influência para marcas brasileiras.
 Analise os dados fornecidos e entregue:
 1. **Resumo executivo** (2-3 frases): situação atual da marca na plataforma

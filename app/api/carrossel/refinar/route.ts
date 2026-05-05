@@ -63,8 +63,11 @@ Retorne APENAS JSON, sem markdown:
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
+      // Sonnet 4.6 (era Haiku 4.5): refinar carrossel e' a 2a chance do user
+      // ajustar conteudo gerado. Haiku entregava refinamento generico que nao
+      // levava em conta nuance do nicho/voz do criador.
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
 

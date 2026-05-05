@@ -97,7 +97,10 @@ Ordene do maior score pro menor. Inclua NO MÁXIMO ${num} criadores.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      // Sonnet 4.6 (era Haiku 4.5): match criador<->marca e' decisao de
+      // negocio que afeta ROI da campanha. Sonnet captura nuance de
+      // alinhamento de valores/audiencia muito melhor.
+      model: 'claude-sonnet-4-6',
       max_tokens: 3000,
       system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: prompt }],
