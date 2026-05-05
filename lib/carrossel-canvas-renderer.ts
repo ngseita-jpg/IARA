@@ -9,7 +9,10 @@ import type {
   Slide2, Layer, TextLayer, PhotoLayer, ShapeLayer, Run, Background, Overlay,
 } from './carrossel-canvas-types'
 
-export const CANVAS_SIZE = 1080
+// 1440x1440 = qualidade Instagram premium (mais alta que o feed default 1080).
+// Pra fotos profissionais, perda visual e' imperceptivel; ganho de nitidez
+// em texto e detalhes finos e' enorme. Custo: PNG ~2x maior em bytes.
+export const CANVAS_SIZE = 1440
 
 export type RenderOptions = {
   watermark?: boolean
@@ -470,6 +473,12 @@ export async function renderSlide2(
   const size = CANVAS_SIZE
   canvas.width = size
   canvas.height = size
+
+  // CRITICO: ativa Lanczos resampling. Sem isso o canvas usa nearest-neighbor
+  // ao desenhar fotos em escala diferente — qualidade fica horrivel.
+  // 'high' e' suportado em Chromium/Safari/Firefox modernos.
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   // Fundo
   drawBackground(ctx, slide.background, size, imageCache)

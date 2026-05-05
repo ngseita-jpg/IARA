@@ -68,7 +68,11 @@ type CarrosselDraft = {
   incluirEncerramento: boolean
 }
 
-function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
+// Antes maxDim=800/quality=0.72 — fotos profissionais (4K+) viravam borrado.
+// Agora 2400px @ 92% = preserva todo detalhe util pra renderizacao em
+// 1440x1440. Tamanho do upload sobe ~3x mas o usuario paga premium e
+// quer qualidade visivel.
+function resizeImage(dataUrl: string, maxDim = 2400, quality = 0.92): Promise<string> {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
@@ -78,7 +82,13 @@ function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<str
       const canvas = document.createElement('canvas')
       canvas.width = w
       canvas.height = h
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      const ctx = canvas.getContext('2d')!
+      // imageSmoothingQuality 'high' ativa Lanczos resampling — preserva
+      // detalhe fino quando reduz tamanho. Sem isso o downscale do canvas
+      // usa nearest-neighbor e fica pixelizado.
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, w, h)
       resolve(canvas.toDataURL('image/jpeg', quality))
     }
     img.onerror = () => resolve(dataUrl)

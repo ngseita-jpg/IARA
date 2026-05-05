@@ -374,17 +374,22 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     const reader = new FileReader()
     reader.onload = async (e) => {
       const raw = e.target?.result as string
-      // Reaproveita o resize de 800px do parent
+      // Resize 2400px max @ JPEG 92% — preserva detalhe pra render em
+      // 1440x1440. Antes era 800px @ 72% (era borrado em fotos pro).
+      // imageSmoothingQuality 'high' ativa Lanczos no Chromium/Safari.
       const resized = await new Promise<string>((resolve) => {
         const img = new window.Image()
         img.onload = () => {
-          const scale = Math.min(1, 800 / Math.max(img.width, img.height))
+          const scale = Math.min(1, 2400 / Math.max(img.width, img.height))
           const w = Math.round(img.width * scale)
           const h = Math.round(img.height * scale)
           const canvas = document.createElement('canvas')
           canvas.width = w; canvas.height = h
-          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
-          resolve(canvas.toDataURL('image/jpeg', 0.72))
+          const ctx = canvas.getContext('2d')!
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
+          ctx.drawImage(img, 0, 0, w, h)
+          resolve(canvas.toDataURL('image/jpeg', 0.92))
         }
         img.onerror = () => resolve(raw)
         img.src = raw
