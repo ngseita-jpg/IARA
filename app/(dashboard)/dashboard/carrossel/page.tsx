@@ -157,11 +157,17 @@ export default function CarrosselPage() {
   })
   useUnsavedWarning(gerando || analisando)
 
-  // Notifica recuperacao de draft
+  // Notifica recuperacao de draft + se ha carrossel mas sem PNGs, auto-renderiza
   useEffect(() => {
     if (draft && (draft.carrossel || draft.url || draft.textoManual)) {
       const tem = draft.carrossel ? 'carrossel' : 'rascunho'
       toast.info(`Recuperei seu último ${tem} de carrossel`)
+    }
+    // Auto-recovery: carrossel restaurado do draft mas slidePngs vazio
+    // (e' o caso comum apos F5 — PNGs nao sao persistidos no localStorage).
+    // Sem isso ficaria "Renderizar este slide" em todos pra sempre.
+    if (draft?.carrossel && draft.carrossel.slides?.length > 0) {
+      void renderizarTodos(draft.carrossel)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -616,6 +622,9 @@ export default function CarrosselPage() {
             setCarrossel(c)
             setSlidePngs({})
             setStep('preview')
+            // Re-renderiza ao carregar — antes ficava preso em "Aguardando
+            // renderizacao" pra sempre porque nada disparava a renderizacao.
+            void renderizarTodos(c)
           }}
         />
 
@@ -1485,9 +1494,18 @@ export default function CarrosselPage() {
                               </button>
                             </div>
                           ) : (
+                            // Sem PNG e sem loading → estado orfao. Antes ficava
+                            // "Aguardando" pra sempre. Agora oferece retry manual.
                             <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4 text-center">
                               <ImageIcon className="w-6 h-6 text-[#3a3a5a]" />
-                              <p className="text-xs text-[#4a4a6a]">Aguardando renderização</p>
+                              <p className="text-xs text-[#4a4a6a]">Renderizar este slide</p>
+                              <button
+                                onClick={() => carrossel && renderizarSlide(slide, carrossel)}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-iara-600/20 text-iara-300 text-[10px] font-medium hover:bg-iara-600/40 transition-all"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                                Renderizar
+                              </button>
                             </div>
                           )}
                         </div>
