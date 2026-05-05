@@ -66,6 +66,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   const [imageCache, setImageCache] = useState<ImageCache>(new Map())
   const [imagensCache, setImagensCache] = useState<string[]>([])            // dataURLs pra exibição HTML
   const [exportando, setExportando] = useState(false)
+  // Progresso visual quando user clica SALVAR — antes era so spinner mudo.
+  // Em carrossel de 8 slides com fotos pesadas demora 5-10s, user achava
+  // que travou. Agora mostra "Renderizando 3/8..." em tempo real.
+  const [exportProgresso, setExportProgresso] = useState<{ atual: number; total: number } | null>(null)
   const [showPreview, setShowPreview] = useState(false)
 
   // Histórico (undo/redo)
@@ -680,10 +684,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   async function compartilharInstagram() {
     if (!imageCache) return
     setExportando(true)
+    setExportProgresso({ atual: 0, total: slides.length })
     try {
-      // Garante que TODAS as imagens em uso estao no cache antes de renderizar.
-      // Cobre o caso "user uploadou foto e clicou Salvar antes do Image.onload
-      // resolver" — sem isso a foto saia cinza no PNG salvo.
+      // Garante todas as imagens carregadas antes de renderizar
+      let cacheParaUsar = imageCache
       const idsUsados = new Set<number>()
       for (const s of slides) {
         if (s.background?.type === 'photo' && typeof s.background.imageIdx === 'number') {
@@ -698,7 +702,6 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         const novosSrcs = faltando.map(i => imagensCache[i]).filter(Boolean)
         if (novosSrcs.length > 0) {
           const novoCache = await preloadImages(novosSrcs)
-          // Mescla com cache existente preservando indices
           const merged = new Map(imageCache)
           let i = 0
           for (const idx of faltando) {
@@ -707,40 +710,31 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             i++
           }
           setImageCache(merged)
-          // Usa local diretamente (setState nao atualiza o `imageCache` desse closure)
-          await ensureFontsLoaded(collectFontsInUse())
-          const hiddenLocal = document.createElement('canvas')
-          hiddenLocal.width = CANVAS_SIZE
-          hiddenLocal.height = CANVAS_SIZE
-          const filesLocal: File[] = []
-          for (const s of slides) {
-            await renderSlide2(hiddenLocal, s, merged, { watermark })
-            const blob = await canvasToBlob(hiddenLocal)
-            filesLocal.push(new File([blob], `slide-${String(s.ordem).padStart(2, '0')}.png`, { type: 'image/png' }))
-          }
-          await compartilharFiles(filesLocal)
-          return
+          cacheParaUsar = merged
         }
       }
+
       await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
       hidden.width = CANVAS_SIZE
       hidden.height = CANVAS_SIZE
       const files: File[] = []
-      for (const s of slides) {
-        await renderSlide2(hidden, s, imageCache, { watermark })
+      for (let i = 0; i < slides.length; i++) {
+        const s = slides[i]
+        setExportProgresso({ atual: i + 1, total: slides.length })
+        await renderSlide2(hidden, s, cacheParaUsar, { watermark })
         const blob = await canvasToBlob(hidden)
         files.push(new File([blob], `slide-${String(s.ordem).padStart(2, '0')}.png`, { type: 'image/png' }))
       }
       await compartilharFiles(files)
     } catch (err) {
-      // Web Share cancelado pelo user não é erro
       if (err instanceof Error && err.name !== 'AbortError') {
         setExportToast('Não consegui salvar — tente novamente')
         setTimeout(() => setExportToast(null), 3500)
       }
     } finally {
       setExportando(false)
+      setExportProgresso(null)
     }
   }
 
@@ -912,13 +906,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           <button
             onClick={compartilharInstagram}
             disabled={exportando}
-            // Mobile target principal — texto "SALVAR" claro, gradient verde
-            // pra destacar como acao primaria em meio aos outros botoes da topbar.
             className="flex items-center gap-1.5 px-3 sm:px-4 min-h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-iara-500 hover:opacity-90 active:scale-95 disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-900/40 transition"
             title="Salvar imagens no celular (galeria) ou compartilhar"
           >
             {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            <span>SALVAR</span>
+            <span>
+              {exportProgresso
+                ? `${exportProgresso.atual}/${exportProgresso.total}`
+                : 'SALVAR'}
+            </span>
           </button>
           <button
             onClick={exportarTodosPng}
@@ -995,6 +991,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onUpdateLayer={updateLayer}
+              onDeleteLayer={deleteLayer}
               displaySize={canvasDisplaySize}
             />
 
@@ -1243,13 +1240,14 @@ type CanvasStageProps = {
   onPointerMove: (e: React.PointerEvent) => void
   onPointerUp: () => void
   onUpdateLayer: (id: string, fn: (l: Layer) => Layer) => void
+  onDeleteLayer: (id: string) => void  // pra auto-deletar text vazio no blur
   displaySize: number
 }
 
 function CanvasStage({
   slide, imagensCache, selectedLayerId, editingTextId,
   onSelectLayer, onStartEditText, onLayerPointerDown, onPointerMove, onPointerUp,
-  onUpdateLayer, displaySize,
+  onUpdateLayer, onDeleteLayer, displaySize,
 }: CanvasStageProps) {
   // Escala px: 100% = displaySize px
   const pxFromPct = (pct: number) => (pct / 100) * displaySize
@@ -1311,7 +1309,16 @@ function CanvasStage({
           onUpdateText={(newRuns) => {
             onUpdateLayer(layer.id, l => l.type === 'text' ? { ...l, runs: newRuns } : l)
           }}
-          onStopEdit={() => onStartEditText(null)}
+          onStopEdit={(runsFinais) => {
+            // Auto-delete text vazio no blur — comportamento Canva/Figma.
+            // Reverter via Ctrl+Z se foi por engano (history captura snapshot).
+            const textoFinal = (runsFinais ?? []).map(r => r.text).join('').trim()
+            if (textoFinal === '') {
+              onDeleteLayer(layer.id)
+              return
+            }
+            onStartEditText(null)
+          }}
         />
       ))}
     </div>
@@ -1330,7 +1337,7 @@ type LayerViewProps = {
   onPointerDown: (e: React.PointerEvent, id: string, mode?: 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br') => void
   onDoubleClick: () => void
   onUpdateText: (newRuns: Run[]) => void
-  onStopEdit: () => void
+  onStopEdit: (runsFinais?: Run[]) => void
 }
 
 // React.memo: sem isso, qualquer drag re-clonava `slides` e fazia TODAS as
@@ -1539,7 +1546,7 @@ function RichTextView({ runs, displaySize }: { runs: Run[]; displaySize: number 
 // Texto editável in-place com contenteditable preservando estrutura de runs
 function EditableText({ runs, align, displaySize, onChange, onBlur }: {
   runs: Run[]; align: 'left' | 'center' | 'right'; displaySize: number;
-  onChange: (runs: Run[]) => void; onBlur: () => void
+  onChange: (runs: Run[]) => void; onBlur: (runsFinais: Run[]) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const scale = displaySize / CANVAS_SIZE
@@ -1653,7 +1660,11 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
       spellCheck={false}
       inputMode="text"
       onInput={() => onChange(extractRuns())}
-      onBlur={() => { onChange(extractRuns()); onBlur() }}
+      onBlur={() => {
+        const runsFinais = extractRuns()
+        onChange(runsFinais)
+        onBlur(runsFinais)
+      }}
       onKeyDown={(e) => {
         // Blindagem dupla: stopPropagation impede o evento de subir pro window
         // listener do editor que deletava layer no Backspace. Mesmo que o
