@@ -1142,6 +1142,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
                 onAddText={() => { addTextLayer(); setShowFullEditor(false) }}
                 onAddPhoto={(idx) => { addPhotoLayer(idx); setShowFullEditor(false) }}
                 onUploadFoto={uploadNovaFoto}
+                onSelectLayer={(id) => setSelectedLayerId(id)}
+                onMoveLayerById={(id, dir) => moveLayerZ(id, dir)}
+                onDeleteLayerById={(id) => deleteLayer(id)}
                 imagensCache={imagensCache}
               />
             )}
@@ -1190,6 +1193,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             onAddText={addTextLayer}
             onAddPhoto={addPhotoLayer}
             onUploadFoto={uploadNovaFoto}
+            onSelectLayer={(id) => setSelectedLayerId(id)}
+            onMoveLayerById={(id, dir) => moveLayerZ(id, dir)}
+            onDeleteLayerById={(id) => deleteLayer(id)}
             imagensCache={imagensCache}
           />
         </div>
@@ -1602,35 +1608,62 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
     // em vez de virar texto generico sem style.
     const template: Run = runs[0] ?? { text: '' }
 
+    // Procura formatacao herdada subindo a arvore — necessario pra suportar
+    // execCommand (foreColor/fontName/bold) que cria spans aninhados SEM
+    // data-run, e pra texto raw fora de qualquer span (pega do template).
+    function styleHerdado(node: Node): Partial<Run> {
+      const acc: Partial<Run> = {}
+      let p: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE
+        ? (node as HTMLElement)
+        : node.parentElement
+      while (p && p !== ref.current) {
+        const s = p.style
+        if (!acc.color && s?.color) acc.color = s.color
+        if (!acc.fontSize && s?.fontSize) {
+          acc.fontSize = Math.round(parseFloat(s.fontSize) / scale)
+        }
+        if (!acc.fontFamily && s?.fontFamily) {
+          acc.fontFamily = s.fontFamily.replace(/['"]/g, '').split(',')[0].trim()
+        }
+        if (acc.bold === undefined) {
+          if (s?.fontWeight === '700' || s?.fontWeight === 'bold' || p.tagName === 'B' || p.tagName === 'STRONG') {
+            acc.bold = true
+          }
+        }
+        if (acc.italic === undefined) {
+          if (s?.fontStyle === 'italic' || p.tagName === 'I' || p.tagName === 'EM') {
+            acc.italic = true
+          }
+        }
+        if (acc.underline === undefined && (s?.textDecoration?.includes('underline') || p.tagName === 'U')) {
+          acc.underline = true
+        }
+        if (!acc.letterSpacing && s?.letterSpacing) {
+          acc.letterSpacing = Math.round(parseFloat(s.letterSpacing) / scale)
+        }
+        p = p.parentElement
+      }
+      return acc
+    }
+
     const result: Run[] = []
     const walk = (node: Node) => {
       if (node.nodeType === Node.TEXT_NODE) {
-        const parent = node.parentElement
-        const style = parent?.style
-        // Se o nodeText nao esta dentro de um span data-run (ex: usuario
-        // reescreveu tudo, browser criou nodeText raw no div), usa template.
-        const dentroDeSpan = parent?.hasAttribute('data-run') === true
+        const text = node.textContent ?? ''
+        if (!text) return
+        const herdado = styleHerdado(node)
+        // Mescla template (default) + herdado (override do span). Permite
+        // user mudar cor/fonte de UMA palavra via execCommand sem perder
+        // o resto da formatacao.
         result.push({
-          text: node.textContent ?? '',
-          color: dentroDeSpan && style?.color ? style.color : template.color,
-          fontSize: dentroDeSpan && style?.fontSize
-            ? Math.round(parseFloat(style.fontSize) / scale)
-            : template.fontSize,
-          fontFamily: dentroDeSpan && style?.fontFamily
-            ? (style.fontFamily.replace(/['"]/g, '').split(',')[0].trim() as Run['fontFamily'])
-            : template.fontFamily,
-          bold: dentroDeSpan
-            ? (style?.fontWeight === '700' || parent?.tagName === 'B' || parent?.tagName === 'STRONG')
-            : template.bold,
-          italic: dentroDeSpan
-            ? (style?.fontStyle === 'italic' || parent?.tagName === 'I' || parent?.tagName === 'EM')
-            : template.italic,
-          underline: dentroDeSpan
-            ? (style?.textDecoration?.includes('underline') || parent?.tagName === 'U')
-            : template.underline,
-          letterSpacing: dentroDeSpan && style?.letterSpacing
-            ? Math.round(parseFloat(style.letterSpacing) / scale)
-            : template.letterSpacing,
+          text,
+          color: herdado.color ?? template.color,
+          fontSize: herdado.fontSize ?? template.fontSize,
+          fontFamily: (herdado.fontFamily ?? template.fontFamily) as Run['fontFamily'],
+          bold: herdado.bold ?? template.bold,
+          italic: herdado.italic ?? template.italic,
+          underline: herdado.underline ?? template.underline,
+          letterSpacing: herdado.letterSpacing ?? template.letterSpacing,
         })
       } else {
         for (const child of Array.from(node.childNodes)) walk(child)
@@ -1784,12 +1817,21 @@ type InspectorProps = {
   onAddText: () => void
   onAddPhoto: (idx: number) => void
   onUploadFoto: (file: File) => void | Promise<void>
+  // Painel "Camadas" — gerenciar Z-order quando texto fica escondido atras
+  onSelectLayer?: (id: string) => void
+  onMoveLayerById?: (id: string, dir: 'up' | 'down') => void
+  onDeleteLayerById?: (id: string) => void
   imagensCache: string[]
   compact?: boolean
 }
 
 function Inspector(props: InspectorProps) {
-  const { slide, selected, onUpdateLayer, onUpdateSlide, onDelete, onDuplicate, onMoveZ, onAddText, onAddPhoto, onUploadFoto, imagensCache, compact } = props
+  const {
+    slide, selected, onUpdateLayer, onUpdateSlide, onDelete, onDuplicate, onMoveZ,
+    onAddText, onAddPhoto, onUploadFoto,
+    onSelectLayer, onMoveLayerById, onDeleteLayerById,
+    imagensCache, compact,
+  } = props
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -1851,10 +1893,70 @@ function Inspector(props: InspectorProps) {
             )}
           </div>
 
+          {/* Painel Camadas — lista todas as layers do slide com botoes pra
+              reordenar, selecionar e deletar. Resolve "textos as vezes ficam
+              escondidos atras de outras layers" — agora user enxerga a pilha
+              completa e move com 1 toque. Layers no fim do array renderizam
+              POR CIMA, entao listo invertido (topo da lista = topo visual). */}
           <div>
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-[#6b6b8a] mb-2">Layers ({slide.layers.length})</p>
-            <p className="text-[11px] text-[#5a5a7a] leading-relaxed">
-              Clica num elemento no canvas pra editar. Clique duplo em texto pra digitar. Ctrl+Z desfaz. Delete remove.
+            <p className="text-[10px] uppercase tracking-widest font-semibold text-[#6b6b8a] mb-2">
+              Camadas ({slide.layers.length})
+            </p>
+            {slide.layers.length === 0 ? (
+              <p className="text-[11px] text-[#5a5a7a] italic">Nenhum elemento no slide. Use os botões acima pra adicionar.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {[...slide.layers].reverse().map((l, idxRev) => {
+                  const idx = slide.layers.length - 1 - idxRev
+                  const ePrimeiro = idx === slide.layers.length - 1   // topo visual
+                  const eUltimo = idx === 0                            // fundo visual
+                  const tipoLabel = l.type === 'text'
+                    ? ((l as TextLayer).runs[0]?.text || 'Texto vazio').slice(0, 24)
+                    : l.type === 'photo'
+                    ? `Foto ${(l as PhotoLayer).imageIdx + 1}`
+                    : 'Forma'
+                  const tipoIcon = l.type === 'text' ? <Type className="w-3.5 h-3.5" />
+                    : l.type === 'photo' ? <ImageIcon className="w-3.5 h-3.5" />
+                    : <Palette className="w-3.5 h-3.5" />
+                  return (
+                    <div key={l.id} className="flex items-center gap-1 rounded-lg bg-[#0d0d1a] border border-[#1a1a2e] p-1.5">
+                      <button
+                        onClick={() => onSelectLayer?.(l.id)}
+                        className="flex-1 flex items-center gap-2 min-w-0 px-1 py-1 rounded hover:bg-[#1a1a2e] active:scale-95 transition text-left"
+                      >
+                        <span className="flex-shrink-0 text-iara-400">{tipoIcon}</span>
+                        <span className="text-[11px] text-[#c1c1d8] truncate">{tipoLabel}</span>
+                      </button>
+                      <button
+                        onClick={() => onMoveLayerById?.(l.id, 'up')}
+                        disabled={ePrimeiro}
+                        title="Trazer pra frente"
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onMoveLayerById?.(l.id, 'down')}
+                        disabled={eUltimo}
+                        title="Mandar pra trás"
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#1a1a2e] disabled:opacity-30 text-[#9b9bb5]"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteLayerById?.(l.id)}
+                        title="Excluir"
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-900/30 text-red-400"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <p className="text-[10px] text-[#5a5a7a] leading-relaxed mt-2 italic">
+              Toque num elemento pra editar. ↑ traz pra frente, ↓ manda pra trás.
             </p>
           </div>
         </>
@@ -2520,6 +2622,42 @@ function AddElementsMenu({
 // ─── ContextualToolbar — sempre visível em peek, sem precisar expandir ─────
 // 8 cores rapidas + paleta custom — comuns em carrossel viral BR
 const CORES_RAPIDAS = ['#ffffff', '#000000', '#facc15', '#06b6d4', '#ec4899', '#22c55e', '#f97316', '#8b5cf6']
+
+// Detecta se ha texto selecionado dentro de um contenteditable (modo edicao
+// ativo) — base pra aplicar cor/fonte/bold em apenas uma PALAVRA ESPECIFICA.
+// Sem seleccao, aplica em toda a layer (comportamento antigo).
+function temSelecaoEditavel(): boolean {
+  if (typeof window === 'undefined') return false
+  const sel = window.getSelection()
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0) return false
+  const node = sel.anchorNode
+  if (!node) return false
+  const parent = node.nodeType === Node.ELEMENT_NODE
+    ? (node as HTMLElement)
+    : node.parentElement
+  return !!parent?.closest('[contenteditable="true"]')
+}
+
+// Aplica formatacao SO no trecho selecionado via execCommand.
+// Apesar de deprecated, funciona em todos os browsers que a Iara suporta
+// (Safari iOS 15+, Chrome Android, Firefox, Edge).
+// Retorna true se aplicou (havia selecao); false se nao havia.
+function aplicarNoTrechoSelecionado(
+  comando: 'foreColor' | 'fontName' | 'bold' | 'italic' | 'underline',
+  valor?: string,
+): boolean {
+  if (!temSelecaoEditavel()) return false
+  try {
+    if (typeof valor !== 'undefined') {
+      document.execCommand(comando, false, valor)
+    } else {
+      document.execCommand(comando, false)
+    }
+    return true
+  } catch {
+    return false
+  }
+}
 // 8 fontes favoritas (top hits do catalogo) — quem quer mais abre "Mais"
 const FONTES_RAPIDAS: { id: string; label: string; cssFamily: string }[] = [
   { id: 'Inter',                 label: 'Inter',     cssFamily: 'Inter, sans-serif' },
@@ -2558,9 +2696,14 @@ function ContextualToolbar({
               ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, fontSize: Math.min(300, (r.fontSize ?? 40) + 6) }))
             } : l)}
           />
-          <ToolbarBtn icon={<Bold className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? {
-            ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, bold: !r.bold }))
-          } : l)} />
+          <ToolbarBtn icon={<Bold className="w-3.5 h-3.5" />} onClick={() => {
+            // Bold em PALAVRA SELECIONADA tem prioridade. Sem selecao, aplica
+            // em toda a layer (comportamento antigo — toggle do bold geral).
+            if (aplicarNoTrechoSelecionado('bold')) return
+            onUpdateLayer(l => l.type === 'text' ? {
+              ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, bold: !r.bold }))
+            } : l)
+          }} />
           <ToolbarBtn icon={<AlignLeft className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'left' } : l)} />
           <ToolbarBtn icon={<AlignCenter className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'center' } : l)} />
           <ToolbarBtn icon={<AlignRight className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'right' } : l)} />
@@ -2577,14 +2720,20 @@ function ContextualToolbar({
               </div>
             )}
           >
-            <p className="text-[10px] uppercase tracking-wider font-bold text-[#6b6b8a] mb-2">Cor do texto</p>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-[#6b6b8a] mb-1">Cor do texto</p>
+            <p className="text-[9px] text-[#6b6b8a] mb-2 italic">Selecione uma palavra antes pra colorir só ela</p>
             <div className="grid grid-cols-4 gap-2">
               {CORES_RAPIDAS.map(c => (
                 <button
                   key={c}
-                  onClick={() => onUpdateLayer(l => l.type === 'text' ? {
-                    ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, color: c }))
-                  } : l)}
+                  onClick={() => {
+                    // Cor em palavra selecionada via execCommand. Sem selecao,
+                    // aplica em todas as runs (comportamento antigo).
+                    if (aplicarNoTrechoSelecionado('foreColor', c)) return
+                    onUpdateLayer(l => l.type === 'text' ? {
+                      ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, color: c }))
+                    } : l)
+                  }}
                   className="w-10 h-10 rounded-lg border-2 border-white/10 active:scale-90 transition"
                   style={{ backgroundColor: c }}
                   title={c}
@@ -2594,9 +2743,12 @@ function ContextualToolbar({
             <input
               type="color"
               defaultValue={(layer as TextLayer).runs[0]?.color ?? '#ffffff'}
-              onChange={(e) => onUpdateLayer(l => l.type === 'text' ? {
-                ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, color: e.target.value }))
-              } : l)}
+              onChange={(e) => {
+                if (aplicarNoTrechoSelecionado('foreColor', e.target.value)) return
+                onUpdateLayer(l => l.type === 'text' ? {
+                  ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, color: e.target.value }))
+                } : l)
+              }}
               className="mt-3 w-full h-10 rounded-lg cursor-pointer border border-[#2a2a4a] bg-transparent"
               title="Cor personalizada"
             />
@@ -2613,16 +2765,20 @@ function ContextualToolbar({
               </div>
             )}
           >
-            <p className="text-[10px] uppercase tracking-wider font-bold text-[#6b6b8a] mb-2">Fonte</p>
+            <p className="text-[10px] uppercase tracking-wider font-bold text-[#6b6b8a] mb-1">Fonte</p>
+            <p className="text-[9px] text-[#6b6b8a] mb-2 italic">Selecione uma palavra antes pra mudar só dela</p>
             <div className="space-y-1.5 max-h-64 overflow-y-auto">
               {FONTES_RAPIDAS.map(f => {
                 const ativa = ((layer as TextLayer).runs[0]?.fontFamily ?? 'Inter') === f.id
                 return (
                   <button
                     key={f.id}
-                    onClick={() => onUpdateLayer(l => l.type === 'text' ? {
-                      ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, fontFamily: f.id }))
-                    } : l)}
+                    onClick={() => {
+                      if (aplicarNoTrechoSelecionado('fontName', f.id)) return
+                      onUpdateLayer(l => l.type === 'text' ? {
+                        ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, fontFamily: f.id }))
+                      } : l)
+                    }}
                     className={`w-full text-left px-3 py-2 rounded-lg active:scale-95 transition ${
                       ativa ? 'bg-iara-600/30 border border-iara-500/50' : 'bg-[#0d0d1a] border border-[#1a1a2e] hover:border-iara-700/40'
                     }`}
@@ -2644,8 +2800,10 @@ function ContextualToolbar({
         </>
       )}
       <span className="w-px h-5 bg-[#1a1a2e] mx-0.5" />
-      <ToolbarBtn icon={<ArrowUp className="w-3.5 h-3.5" />} onClick={() => onMoveZ('up')} />
-      <ToolbarBtn icon={<ArrowDown className="w-3.5 h-3.5" />} onClick={() => onMoveZ('down')} />
+      {/* Z-order — agora com label "Frente"/"Tras" pra ficar claro o que faz.
+          Resolve "textos as vezes ficam escondidos atras de outras layers". */}
+      <ToolbarBtn label="Frente" onClick={() => onMoveZ('up')} />
+      <ToolbarBtn label="Trás" onClick={() => onMoveZ('down')} />
       <ToolbarBtn icon={<Copy className="w-3.5 h-3.5" />} onClick={onDuplicate} />
       <ToolbarBtn icon={<Trash2 className="w-3.5 h-3.5" />} onClick={onDelete} variant="danger" />
       <span className="w-px h-5 bg-[#1a1a2e] mx-0.5" />
