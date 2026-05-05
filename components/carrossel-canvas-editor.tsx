@@ -52,10 +52,11 @@ type Props = {
   imagensBase64: string[]              // array base64 das imagens originais
   onFechar: () => void
   onSalvar?: (slides: Slide2[]) => void  // callback pra persistir mudanças
+  onUploadFotoParent?: (dataUrl: string) => void  // sincroniza foto nova com imagens[] do parent — sem isso PNG salvo fica com placeholder cinza
   watermark?: boolean
 }
 
-export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFechar, onSalvar, watermark = false }: Props) {
+export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFechar, onSalvar, onUploadFotoParent, watermark = false }: Props) {
   // ─── State ─────────────────────────────────────────────────────────
   const [slides, setSlides] = useState<Slide2[]>(slidesInit)
   const [slideIdx, setSlideIdx] = useState(0)
@@ -316,7 +317,11 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     const tl: TextLayer = {
       id: newId('t'),
       type: 'text',
-      x: 10, y: 40, w: 80, h: 20,
+      // Antes: x:10 y:40 w:80 h:20 — texto novo nascia ocupando 80% da
+      // largura do slide. No mobile (canvas 360-380px) ficava enorme e
+      // dificil de arrastar pro lugar certo. Agora nasce centralizado e
+      // pequeno, fica mais facil posicionar.
+      x: 25, y: 42, w: 50, h: 16,
       align: 'left', vAlign: 'top',
       runs: [{ text: 'Novo texto', color: '#ffffff', fontSize: 56, fontFamily: 'Inter', bold: true }],
       lineHeight: 1.2,
@@ -370,9 +375,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         img.src = raw
       })
 
-      // Adiciona na cache de imagens (HTML + canvas)
+      // Adiciona na cache de imagens (HTML + canvas + parent)
       const novoIdx = imagensCache.length
       setImagensCache(prev => [...prev, resized])
+
+      // CRITICO: sincroniza com parent imagens[] tambem. Sem isso, quando
+      // user salva o carrossel, o renderer tenta carregar imageIdx = novoIdx
+      // mas o cache do parent so tem fotos originais — PNG sai com placeholder
+      // cinza no slot novo.
+      onUploadFotoParent?.(resized)
 
       // Pre-load no canvas pra renderizar imediatamente
       const imgEl = new window.Image()
@@ -543,14 +554,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     // Rotação: variação do ângulo entre os dedos (graus)
     const angle = Math.atan2(dy, dx)
     let rotationDelta = (angle - pinchRef.current.initialAngle) * (180 / Math.PI)
-    // Snap a múltiplos de 15° quando próximo (ajuda alinhamento)
+    // Snap a múltiplos de 15° quando próximo (granularidade que o feel pede).
+    // Antes era um array hardcoded de 9 entries (45° em 45°). Agora gerado
+    // dinamicamente cobrindo -180 a 180 em passos de 15°.
     const candidate = pinchRef.current.initialRotation + rotationDelta
-    const snapTargets = [-180, -135, -90, -45, 0, 45, 90, 135, 180]
     let finalRotation = candidate
-    for (const t of snapTargets) {
-      if (Math.abs(candidate - t) < 5) { finalRotation = t; rotationDelta = t - pinchRef.current.initialRotation; break }
+    for (let t = -180; t <= 180; t += 15) {
+      if (Math.abs(candidate - t) < 4) { finalRotation = t; break }
     }
-    void rotationDelta // usado pro snap acima
+    void rotationDelta
 
     // Posição do tooltip: ponto médio entre os 2 dedos
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2
@@ -706,6 +718,28 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     }
   }, [])
 
+  // ─── AUTO-SAVE REAL AO PARENT ───────────────────────────────────
+  // Antes: o "Salvando/Salvo" indicador era ENGANOSO — so empilhava history
+  // em memoria. Se user fechasse o editor sem clicar em Exportar/Salvar,
+  // perdia TODAS as edicoes. Agora chama onSalvar(slides) com debounce 800ms
+  // a cada mudanca + no unmount (sair do editor commita o ultimo state).
+  const slidesRef = useRef(slides)
+  useEffect(() => { slidesRef.current = slides }, [slides])
+  useEffect(() => {
+    if (!onSalvar) return
+    if (hydrating.current) return  // nao salva durante undo/redo
+    const t = setTimeout(() => onSalvar(slides), 800)
+    return () => clearTimeout(t)
+    // slides intencional — re-armar a cada mudanca
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slides])
+  // Save final no unmount (cobre o caso "fechar editor antes do debounce
+  // disparar"). Usa ref pra pegar o estado mais recente.
+  useEffect(() => {
+    return () => { if (onSalvar) onSalvar(slidesRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   if (!slide) return null
 
   return (
@@ -751,17 +785,18 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -6 }}
                   transition={{ duration: 0.18 }}
-                  className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#13131f] border border-[#2a2a4a]"
+                  // Mobile target principal — antes era hidden sm:flex (so desktop)
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#13131f] border border-[#2a2a4a]"
                 >
                   {saveStatus === 'saving' ? (
                     <>
                       <Loader2 className="w-3 h-3 animate-spin text-iara-400" />
-                      <span className="text-[10px] text-[#9b9bb5]">Salvando…</span>
+                      <span className="text-[10px] text-[#9b9bb5] hidden sm:inline">Salvando…</span>
                     </>
                   ) : (
                     <>
                       <span className="w-2 h-2 rounded-full bg-green-400" />
-                      <span className="text-[10px] text-green-400">Salvo</span>
+                      <span className="text-[10px] text-green-400 hidden sm:inline">Salvo</span>
                     </>
                   )}
                 </motion.div>
@@ -1453,6 +1488,24 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
     sel?.addRange(range)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Re-injeta quando displaySize muda (rotacao do device altera scale).
+  // Sem isso, texto fica em escala errada ate o user blur+re-tap.
+  useEffect(() => {
+    if (!ref.current) return
+    const sel = window.getSelection()
+    const tinhaFoco = document.activeElement === ref.current
+    // So atualiza o font-size dos spans existentes — preserva texto e cursor
+    const spans = ref.current.querySelectorAll('span[data-run="1"]')
+    spans.forEach((span, i) => {
+      const run = runs[i]
+      if (run?.fontSize) (span as HTMLElement).style.fontSize = `${run.fontSize * scale}px`
+    })
+    if (tinhaFoco) ref.current.focus()
+    void sel
+    // intencional: so dispara em mudanca de scale, nao de runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale])
 
   function extractRuns(): Run[] {
     if (!ref.current) return runs

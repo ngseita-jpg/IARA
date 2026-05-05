@@ -1692,6 +1692,14 @@ export default function CarrosselPage() {
           imagensBase64={imagens}
           onFechar={() => setCanvasEditorAberto(false)}
           onSalvar={aplicarEdicoesCanvas}
+          // CRITICO: foto uploadada no editor (FAB → Enviar foto) tem que ir
+          // pro parent imagens[] tambem, senao o renderer salva PNG com
+          // placeholder cinza no slot da foto nova.
+          onUploadFotoParent={(dataUrl) => {
+            const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '')
+            setImagens(prev => [...prev, base64])
+            setImagensPreview(prev => [...prev, dataUrl])
+          }}
           watermark={showWatermark}
         />
       )}
