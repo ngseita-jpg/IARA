@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export const maxDuration = 30
 
@@ -17,18 +17,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Imagem não informada' }, { status: 400 })
   }
 
-  // Verificar limite de fotos (conta total no banco, não mensal)
-  const { count } = await supabase
+  // Verificar limite de fotos (conta total no banco, não mensal).
+  // ADMIN client + auto-heal pra evitar o bug "plano profissional mas DB
+  // ainda free porque webhook nao chegou" (2026-05-04).
+  const admin = createAdminClient()
+
+  const { count } = await admin
     .from('user_photos')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
 
-  const { getLimite } = await import('@/lib/limites')
-  const { data: profile } = await supabase.from('creator_profiles').select('plano').eq('user_id', user.id).maybeSingle()
-  const planoAtual = (profile?.plano ?? 'free') as Parameters<typeof getLimite>[0]
-  const limite = getLimite(planoAtual, 'fotos')
+  const { getLimite, NOME_PLANO } = await import('@/lib/limites')
+  const { data: profile } = await admin
+    .from('creator_profiles')
+    .select('plano, stripe_customer_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  let planoAtual = (profile?.plano ?? 'free') as Parameters<typeof getLimite>[0]
+  let limite = getLimite(planoAtual, 'fotos')
+
+  // Auto-heal: se vai bater limite mas tem customer_id em free/trial, sincroniza
+  if (limite !== null && (count ?? 0) >= limite
+      && profile?.stripe_customer_id && (planoAtual === 'free' || planoAtual === 'trial')) {
+    try {
+      const { sincronizarPlanoStripe } = await import('@/lib/syncPlano')
+      const planoReal = await sincronizarPlanoStripe(admin, user.id, profile.stripe_customer_id)
+      if (planoReal) {
+        planoAtual = planoReal as Parameters<typeof getLimite>[0]
+        limite = getLimite(planoAtual, 'fotos')
+      }
+    } catch (e) {
+      console.error('[fotos/upload] auto-heal:', e instanceof Error ? e.message : e)
+    }
+  }
+
   if (limite !== null && (count ?? 0) >= limite) {
-    const { NOME_PLANO } = await import('@/lib/limites')
     return NextResponse.json({
       error: 'limite_atingido',
       mensagem: `Você atingiu o limite de ${limite} fotos no plano ${NOME_PLANO[planoAtual]}. Faça upgrade para continuar.`,

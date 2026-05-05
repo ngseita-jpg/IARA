@@ -325,6 +325,49 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setSelectedLayerId(pl.id)
   }
 
+  // Upload nova foto direto do editor (file picker do dispositivo).
+  // Antes: so dava pra usar fotos enviadas no setup inicial — usuario nao
+  // conseguia adicionar nova depois de entrar no editor.
+  async function uploadNovaFoto(file: File) {
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const raw = e.target?.result as string
+      // Reaproveita o resize de 800px do parent
+      const resized = await new Promise<string>((resolve) => {
+        const img = new window.Image()
+        img.onload = () => {
+          const scale = Math.min(1, 800 / Math.max(img.width, img.height))
+          const w = Math.round(img.width * scale)
+          const h = Math.round(img.height * scale)
+          const canvas = document.createElement('canvas')
+          canvas.width = w; canvas.height = h
+          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+          resolve(canvas.toDataURL('image/jpeg', 0.72))
+        }
+        img.onerror = () => resolve(raw)
+        img.src = raw
+      })
+
+      // Adiciona na cache de imagens (HTML + canvas)
+      const novoIdx = imagensCache.length
+      setImagensCache(prev => [...prev, resized])
+
+      // Pre-load no canvas pra renderizar imediatamente
+      const imgEl = new window.Image()
+      imgEl.onload = () => {
+        setImageCache(prev => {
+          const next = new Map(prev)
+          next.set(novoIdx, imgEl)
+          return next
+        })
+        // Cria layer
+        addPhotoLayer(novoIdx)
+      }
+      imgEl.src = resized
+    }
+    reader.readAsDataURL(file)
+  }
+
   // ─── Drag handlers ─────────────────────────────────────────────
   function onLayerPointerDown(
     e: React.PointerEvent,
@@ -627,11 +670,12 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={onFechar}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] hover:border-[#3a3a5a] text-[#c1c1d8] hover:text-white text-xs font-semibold transition-all flex-shrink-0"
+            aria-label="Fechar editor e voltar"
+            className="flex items-center gap-1.5 px-3 min-h-11 rounded-lg bg-[#13131f] border border-[#2a2a4a] hover:border-[#3a3a5a] active:scale-95 text-[#c1c1d8] hover:text-white text-sm font-semibold transition-all flex-shrink-0"
             title="Fechar editor (Esc)"
           >
-            <X className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Fechar</span>
+            <X className="w-4 h-4" />
+            <span>Voltar</span>
           </button>
           <div className="min-w-0 flex items-center gap-2">
             <div className="min-w-0">
@@ -892,6 +936,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
                     onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
                     onAddText={addTextLayer}
                     onAddPhoto={addPhotoLayer}
+                    onUploadFoto={uploadNovaFoto}
                     imagensCache={imagensCache}
                     compact
                   />
@@ -916,6 +961,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             onMoveZ={(dir) => selectedLayer && moveLayerZ(selectedLayer.id, dir)}
             onAddText={addTextLayer}
             onAddPhoto={addPhotoLayer}
+            onUploadFoto={uploadNovaFoto}
             imagensCache={imagensCache}
           />
         </div>
@@ -1320,10 +1366,22 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
       ref={ref}
       contentEditable
       suppressContentEditableWarning
+      // Mobile: evita autocorrect/capitalize/spellcheck que mexem na string
+      // do contenteditable e quebram o re-extract de runs (resultado: cursor
+      // pula, letras somem, texto duplica). Resolve "apagar texto fica horrivel"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      inputMode="text"
       onInput={() => onChange(extractRuns())}
       onBlur={() => { onChange(extractRuns()); onBlur() }}
       onKeyDown={(e) => {
         if (e.key === 'Escape') { e.currentTarget.blur() }
+        // Enter sem shift no mobile = blur (commit do texto). Shift+Enter quebra linha.
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault()
+          e.currentTarget.blur()
+        }
       }}
       onClick={e => e.stopPropagation()}
       onPointerDown={e => e.stopPropagation()}
@@ -1426,12 +1484,14 @@ type InspectorProps = {
   onMoveZ: (direction: 'up' | 'down') => void
   onAddText: () => void
   onAddPhoto: (idx: number) => void
+  onUploadFoto: (file: File) => void | Promise<void>
   imagensCache: string[]
   compact?: boolean
 }
 
 function Inspector(props: InspectorProps) {
-  const { slide, selected, onUpdateLayer, onUpdateSlide, onDelete, onDuplicate, onMoveZ, onAddText, onAddPhoto, imagensCache, compact } = props
+  const { slide, selected, onUpdateLayer, onUpdateSlide, onDelete, onDuplicate, onMoveZ, onAddText, onAddPhoto, onUploadFoto, imagensCache, compact } = props
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className={compact ? 'p-3 space-y-3' : 'p-4 space-y-5'}>
@@ -1444,22 +1504,39 @@ function Inspector(props: InspectorProps) {
 
           <div>
             <p className="text-[10px] uppercase tracking-widest font-semibold text-[#6b6b8a] mb-2">Adicionar</p>
-            <div className="grid grid-cols-2 gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) onUploadFoto(file)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+            />
+            <div className="grid grid-cols-3 gap-2">
               <button onClick={onAddText}
-                className="flex flex-col items-center gap-1 p-3 rounded-xl border border-[#1a1a2e] bg-[#0d0d1a] hover:border-iara-500 text-[#c1c1d8] hover:text-white text-xs">
+                className="flex flex-col items-center gap-1 p-3 min-h-16 rounded-xl border border-[#1a1a2e] bg-[#0d0d1a] hover:border-iara-500 active:scale-95 text-[#c1c1d8] hover:text-white text-xs transition">
                 <Type className="w-4 h-4" />
                 Texto
               </button>
-              <div className="relative">
-                <button
-                  onClick={() => imagensCache.length > 0 && onAddPhoto(0)}
-                  disabled={imagensCache.length === 0}
-                  className="w-full flex flex-col items-center gap-1 p-3 rounded-xl border border-[#1a1a2e] bg-[#0d0d1a] hover:border-iara-500 disabled:opacity-30 text-[#c1c1d8] hover:text-white text-xs"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  Foto
-                </button>
-              </div>
+              <button
+                onClick={() => imagensCache.length > 0 && onAddPhoto(0)}
+                disabled={imagensCache.length === 0}
+                className="flex flex-col items-center gap-1 p-3 min-h-16 rounded-xl border border-[#1a1a2e] bg-[#0d0d1a] hover:border-iara-500 active:scale-95 disabled:opacity-30 text-[#c1c1d8] hover:text-white text-xs transition"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Foto
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center gap-1 p-3 min-h-16 rounded-xl border border-iara-700/40 bg-iara-900/20 hover:bg-iara-900/40 active:scale-95 text-iara-300 hover:text-iara-200 text-xs font-semibold transition"
+                title="Enviar nova foto do dispositivo"
+              >
+                <ImageIcon className="w-4 h-4" />
+                + Upload
+              </button>
             </div>
             {imagensCache.length > 0 && (
               <div className="grid grid-cols-4 gap-1.5 mt-2">

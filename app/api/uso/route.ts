@@ -28,11 +28,24 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('creator_profiles')
-    .select('plano')
+    .select('plano, stripe_customer_id')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  const plano = (profile?.plano ?? 'free') as keyof typeof LIMITES
+  let plano = (profile?.plano ?? 'free') as keyof typeof LIMITES
+
+  // Auto-heal: se mostra free/trial mas tem customer ativo, sincroniza com Stripe.
+  // Garante que UI nunca discorda do backend (origem de "minha conta diz ilimitado
+  // mas backend bate limite" — 2026-05-04).
+  if ((plano === 'free' || plano === 'trial') && profile?.stripe_customer_id) {
+    try {
+      const { sincronizarPlanoStripe } = await import('@/lib/syncPlano')
+      const planoReal = await sincronizarPlanoStripe(admin, user.id, profile.stripe_customer_id)
+      if (planoReal) plano = planoReal as keyof typeof LIMITES
+    } catch (e) {
+      console.error('[uso] auto-heal:', e instanceof Error ? e.message : e)
+    }
+  }
   const limites = LIMITES[plano]
   const mesAtual = inicioMesAtual()
   const uid = user.id
