@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
@@ -68,6 +69,43 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
+  }
+
+  // Bloqueio de termos pra NOVOS usuarios (pos 2026-05-04).
+  // Usuarios atuais marcados como '2026-04-01' via SQL (schema_termos.sql)
+  // passam livres pra sempre — sao confianca pre-launch. So bloqueia quem
+  // tem termos_versao_aceita = NULL.
+  if (
+    user
+    && !isPreviewMode
+    && !isOpenRoute
+    && !isAuthRoute
+    && pathname !== '/aceitar-termos'
+    && !pathname.startsWith('/api/perfil/aceitar-termos')
+    && !pathname.startsWith('/api/auth')   // callback supabase
+  ) {
+    try {
+      // Service-role client pra bypass de RLS na leitura do profile
+      const admin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      )
+      const [{ data: cp }, { data: bp }] = await Promise.all([
+        admin.from('creator_profiles').select('termos_versao_aceita').eq('user_id', user.id).maybeSingle(),
+        admin.from('brand_profiles').select('termos_versao_aceita').eq('user_id', user.id).maybeSingle(),
+      ])
+      const aceitouAlgum = !!(cp?.termos_versao_aceita || bp?.termos_versao_aceita)
+      if (!aceitouAlgum) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/aceitar-termos'
+        url.search = ''
+        return NextResponse.redirect(url)
+      }
+    } catch {
+      // Falha aberta: se algo der errado lendo o profile (DB caiu, etc.),
+      // deixa passar — preferimos disponibilidade a bloquear injustamente.
+    }
   }
 
   return supabaseResponse
