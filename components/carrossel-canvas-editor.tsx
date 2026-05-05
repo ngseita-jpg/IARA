@@ -17,7 +17,7 @@ import {
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
   ChevronLeft, ChevronRight, Plus, Eye,
   ArrowUp, ArrowDown, Share2, Loader2, MoreHorizontal,
-  Upload, Sliders,
+  Upload, Sliders, ChevronDown,
 } from 'lucide-react'
 import {
   type Slide2, type Layer, type TextLayer, type PhotoLayer, type Run,
@@ -2283,6 +2283,20 @@ function AddElementsMenu({
 }
 
 // ─── ContextualToolbar — sempre visível em peek, sem precisar expandir ─────
+// 8 cores rapidas + paleta custom — comuns em carrossel viral BR
+const CORES_RAPIDAS = ['#ffffff', '#000000', '#facc15', '#06b6d4', '#ec4899', '#22c55e', '#f97316', '#8b5cf6']
+// 8 fontes favoritas (top hits do catalogo) — quem quer mais abre "Mais"
+const FONTES_RAPIDAS: { id: string; label: string; cssFamily: string }[] = [
+  { id: 'Inter',                 label: 'Inter',     cssFamily: 'Inter, sans-serif' },
+  { id: 'Anton',                 label: 'Anton',     cssFamily: 'Anton, sans-serif' },
+  { id: 'Bebas Neue',            label: 'Bebas',     cssFamily: '"Bebas Neue", sans-serif' },
+  { id: 'Playfair Display',      label: 'Playfair',  cssFamily: '"Playfair Display", serif' },
+  { id: 'DM Serif Display',      label: 'DM Serif',  cssFamily: '"DM Serif Display", serif' },
+  { id: 'Poppins',               label: 'Poppins',   cssFamily: 'Poppins, sans-serif' },
+  { id: 'Caveat',                label: 'Caveat',    cssFamily: 'Caveat, cursive' },
+  { id: 'Manrope',               label: 'Manrope',   cssFamily: 'Manrope, sans-serif' },
+]
+
 function ContextualToolbar({
   layer, onDelete, onDuplicate, onMoveZ, onUpdateLayer, onExpand,
 }: {
@@ -2315,6 +2329,83 @@ function ContextualToolbar({
           <ToolbarBtn icon={<AlignLeft className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'left' } : l)} />
           <ToolbarBtn icon={<AlignCenter className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'center' } : l)} />
           <ToolbarBtn icon={<AlignRight className="w-3.5 h-3.5" />} onClick={() => onUpdateLayer(l => l.type === 'text' ? { ...l, align: 'right' } : l)} />
+
+          {/* Cor rapida — popover inline com 8 cores comuns + ver mais */}
+          <ToolbarPopover
+            trigger={(
+              <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] active:scale-90 transition">
+                <div
+                  className="w-4 h-4 rounded-full border border-white/30"
+                  style={{ backgroundColor: (layer as TextLayer).runs[0]?.color ?? '#ffffff' }}
+                />
+                <ChevronDown className="w-3 h-3 text-[#9b9bb5]" />
+              </div>
+            )}
+          >
+            <p className="text-[10px] uppercase tracking-wider font-bold text-[#6b6b8a] mb-2">Cor do texto</p>
+            <div className="grid grid-cols-4 gap-2">
+              {CORES_RAPIDAS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => onUpdateLayer(l => l.type === 'text' ? {
+                    ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, color: c }))
+                  } : l)}
+                  className="w-10 h-10 rounded-lg border-2 border-white/10 active:scale-90 transition"
+                  style={{ backgroundColor: c }}
+                  title={c}
+                />
+              ))}
+            </div>
+            <input
+              type="color"
+              defaultValue={(layer as TextLayer).runs[0]?.color ?? '#ffffff'}
+              onChange={(e) => onUpdateLayer(l => l.type === 'text' ? {
+                ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, color: e.target.value }))
+              } : l)}
+              className="mt-3 w-full h-10 rounded-lg cursor-pointer border border-[#2a2a4a] bg-transparent"
+              title="Cor personalizada"
+            />
+          </ToolbarPopover>
+
+          {/* Fonte rapida — popover com 8 favoritas + "ver todas" abre Mais */}
+          <ToolbarPopover
+            trigger={(
+              <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] active:scale-90 transition max-w-[80px]">
+                <span className="text-[10px] font-bold text-[#c1c1d8] truncate" style={{ fontFamily: (layer as TextLayer).runs[0]?.fontFamily ?? 'Inter' }}>
+                  {((layer as TextLayer).runs[0]?.fontFamily ?? 'Inter').split(' ')[0]}
+                </span>
+                <ChevronDown className="w-3 h-3 text-[#9b9bb5] flex-shrink-0" />
+              </div>
+            )}
+          >
+            <p className="text-[10px] uppercase tracking-wider font-bold text-[#6b6b8a] mb-2">Fonte</p>
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {FONTES_RAPIDAS.map(f => {
+                const ativa = ((layer as TextLayer).runs[0]?.fontFamily ?? 'Inter') === f.id
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => onUpdateLayer(l => l.type === 'text' ? {
+                      ...l, runs: (l as TextLayer).runs.map(r => ({ ...r, fontFamily: f.id }))
+                    } : l)}
+                    className={`w-full text-left px-3 py-2 rounded-lg active:scale-95 transition ${
+                      ativa ? 'bg-iara-600/30 border border-iara-500/50' : 'bg-[#0d0d1a] border border-[#1a1a2e] hover:border-iara-700/40'
+                    }`}
+                  >
+                    <span className="text-base text-white" style={{ fontFamily: f.cssFamily, fontWeight: 700 }}>
+                      {f.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={onExpand}
+              className="mt-3 w-full px-3 py-2 rounded-lg bg-iara-900/40 border border-iara-700/40 text-xs font-semibold text-iara-200 active:scale-95 transition"
+            >
+              Ver todas as 35+ fontes →
+            </button>
+          </ToolbarPopover>
         </>
       )}
       <span className="w-px h-5 bg-[#1a1a2e] mx-0.5" />
@@ -2324,6 +2415,42 @@ function ContextualToolbar({
       <ToolbarBtn icon={<Trash2 className="w-3.5 h-3.5" />} onClick={onDelete} variant="danger" />
       <span className="w-px h-5 bg-[#1a1a2e] mx-0.5" />
       <ToolbarBtn icon={<MoreHorizontal className="w-3.5 h-3.5" />} onClick={onExpand} label="Mais" />
+    </div>
+  )
+}
+
+// Popover compacto pra toolbar contextual — abre acima do trigger.
+// Click-outside fecha. Usado pra Cor + Fonte rapidas.
+function ToolbarPopover({ trigger, children }: { trigger: React.ReactNode; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDoc(e: Event) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('touchstart', onDoc)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('touchstart', onDoc)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)} className="block">
+        {trigger}
+      </button>
+      {open && (
+        <div
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-w-[80vw] rounded-2xl bg-[#0a0a14] border border-[#2a2a4a] shadow-2xl shadow-black/60 p-3 z-10"
+          onClick={e => e.stopPropagation()}
+        >
+          {children}
+        </div>
+      )}
     </div>
   )
 }
