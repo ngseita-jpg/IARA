@@ -1456,28 +1456,54 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
 
   function extractRuns(): Run[] {
     if (!ref.current) return runs
+    // Template = formatacao da PRIMEIRA run original. Se o user apagar tudo
+    // e reescrever, novos chars herdam essa formatacao (cor, fonte, tamanho)
+    // em vez de virar texto generico sem style.
+    const template: Run = runs[0] ?? { text: '' }
+
     const result: Run[] = []
     const walk = (node: Node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const parent = node.parentElement
         const style = parent?.style
+        // Se o nodeText nao esta dentro de um span data-run (ex: usuario
+        // reescreveu tudo, browser criou nodeText raw no div), usa template.
+        const dentroDeSpan = parent?.hasAttribute('data-run') === true
         result.push({
           text: node.textContent ?? '',
-          color: style?.color || undefined,
-          fontSize: style?.fontSize ? Math.round(parseFloat(style.fontSize) / scale) : undefined,
-          fontFamily: style?.fontFamily ? (style.fontFamily.replace(/['"]/g, '').split(',')[0].trim() as Run['fontFamily']) : undefined,
-          bold: style?.fontWeight === '700' || parent?.tagName === 'B' || parent?.tagName === 'STRONG',
-          italic: style?.fontStyle === 'italic' || parent?.tagName === 'I' || parent?.tagName === 'EM',
-          underline: style?.textDecoration?.includes('underline') || parent?.tagName === 'U',
-          letterSpacing: style?.letterSpacing ? Math.round(parseFloat(style.letterSpacing) / scale) : undefined,
+          color: dentroDeSpan && style?.color ? style.color : template.color,
+          fontSize: dentroDeSpan && style?.fontSize
+            ? Math.round(parseFloat(style.fontSize) / scale)
+            : template.fontSize,
+          fontFamily: dentroDeSpan && style?.fontFamily
+            ? (style.fontFamily.replace(/['"]/g, '').split(',')[0].trim() as Run['fontFamily'])
+            : template.fontFamily,
+          bold: dentroDeSpan
+            ? (style?.fontWeight === '700' || parent?.tagName === 'B' || parent?.tagName === 'STRONG')
+            : template.bold,
+          italic: dentroDeSpan
+            ? (style?.fontStyle === 'italic' || parent?.tagName === 'I' || parent?.tagName === 'EM')
+            : template.italic,
+          underline: dentroDeSpan
+            ? (style?.textDecoration?.includes('underline') || parent?.tagName === 'U')
+            : template.underline,
+          letterSpacing: dentroDeSpan && style?.letterSpacing
+            ? Math.round(parseFloat(style.letterSpacing) / scale)
+            : template.letterSpacing,
         })
       } else {
         for (const child of Array.from(node.childNodes)) walk(child)
       }
     }
     walk(ref.current)
-    // merge consecutivos iguais
-    return result.filter(r => r.text.length > 0)
+
+    const filtered = result.filter(r => r.text.length > 0)
+    // Garantia: se ficou TUDO vazio (user apagou ate o ultimo char), retorna
+    // pelo menos uma run vazia com o template — preserva formatacao pra
+    // proximos chars. Sem isso, runs=[] zerava cor/fonte/tamanho na proxima
+    // digitacao.
+    if (filtered.length === 0) return [{ ...template, text: '' }]
+    return filtered
   }
 
   return (
