@@ -11,12 +11,13 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
   ChevronLeft, ChevronRight, Plus, Eye,
-  ArrowUp, ArrowDown, Share2, Loader2, MoreHorizontal, GripHorizontal,
+  ArrowUp, ArrowDown, Share2, Loader2, MoreHorizontal,
+  Upload, Sliders,
 } from 'lucide-react'
 import {
   type Slide2, type Layer, type TextLayer, type PhotoLayer, type Run,
@@ -96,9 +97,12 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   // Snap guides — linhas que aparecem quando layer alinha com centros/bordas
   const [snapGuides, setSnapGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] })
 
-  // Bottom sheet — 3 snap stops: peek (180px), normal (45vh), full (85vh)
-  // 0 = peek, 1 = normal, 2 = full
-  const [sheetStop, setSheetStop] = useState<0 | 1 | 2>(1)
+  // Mobile UX: tres modais full-screen no lugar de BottomSheet (que travava o
+  // canvas por causa de drag-gesture concorrente). Cada modal e' SO pra editar
+  // detalhes — toolbar contextual flutuante cobre a maioria dos casos.
+  const [showFullEditor, setShowFullEditor] = useState(false)   // "Mais" da toolbar
+  const [showSlideEditor, setShowSlideEditor] = useState(false) // botao Slide da topbar
+  const [showAddMenu, setShowAddMenu] = useState(false)         // FAB "+"
 
   // Auto-save indicator — 'idle' | 'saving' | 'saved'.
   // saving aparece quando user faz mudança, vira saved após 800ms, some após 2s.
@@ -199,29 +203,24 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setTimeout(() => { hydrating.current = false }, 0)
   }, [historyIdx, history])
 
-  // Bloqueia pinch-to-zoom do iOS Safari (preventDefault no event nativo evita
-  // o zoom da viewport). Mas o React onTouchMove no canvas continua disparando,
-  // então nosso pinch-to-resize de layer selecionada funciona normalmente.
+  // Bloqueia pinch-zoom da viewport SO sobre o canvas (antes era no document
+  // inteiro com passive:false — matava scroll otimizado da pagina toda).
+  // O canvas em si tem touchAction: none — basta cuidar do gesture iOS Safari.
   useEffect(() => {
     if (typeof document === 'undefined') return
-    let cleanup: (() => void) | undefined
-    try {
-      const onTouchMove = (e: TouchEvent) => {
-        if (e.touches.length > 1) e.preventDefault()
-      }
-      const onGestureStart = (e: Event) => e.preventDefault()
-      document.addEventListener('touchmove', onTouchMove, { passive: false })
-      document.addEventListener('gesturestart', onGestureStart)
-      document.addEventListener('gesturechange', onGestureStart)
-      document.addEventListener('gestureend', onGestureStart)
-      cleanup = () => {
-        document.removeEventListener('touchmove', onTouchMove)
-        document.removeEventListener('gesturestart', onGestureStart)
-        document.removeEventListener('gesturechange', onGestureStart)
-        document.removeEventListener('gestureend', onGestureStart)
-      }
-    } catch { /* sem-op */ }
-    return cleanup
+    const stage = stageContainerRef.current
+    if (!stage) return
+    const onGestureStart = (e: Event) => e.preventDefault()
+    // Estes 3 sao iOS Safari especifico — bloqueiam zoom de viewport so quando
+    // o gesture comeca SOBRE o canvas, sem afetar scroll de listas externas.
+    stage.addEventListener('gesturestart', onGestureStart)
+    stage.addEventListener('gesturechange', onGestureStart)
+    stage.addEventListener('gestureend', onGestureStart)
+    return () => {
+      stage.removeEventListener('gesturestart', onGestureStart)
+      stage.removeEventListener('gesturechange', onGestureStart)
+      stage.removeEventListener('gestureend', onGestureStart)
+    }
   }, [])
 
   useEffect(() => {
@@ -241,13 +240,22 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   }, [undo, redo, selectedLayerId, editingTextId])
 
   // ─── Mutações ─────────────────────────────────────────────────────
-  function updateLayer(layerId: string, fn: (l: Layer) => Layer) {
+  // Quando true, updateLayer pula pushHistory — usado durante drag continuo.
+  // Sem isso, cada pixel de movimento dispara structuredClone do estado +
+  // 4 setStates + 2 setTimeouts (saving indicator). Em mobile = lag mortal.
+  const isDraggingRef = useRef(false)
+
+  function updateLayer(layerId: string, fn: (l: Layer) => Layer, opts: { skipHistory?: boolean } = {}) {
     const next = slides.map((s, i) => {
       if (i !== slideIdx) return s
       return { ...s, layers: s.layers.map(l => l.id === layerId ? fn(l) : l) }
     })
     setSlides(next)
-    pushHistory(next)
+    // Pula history se: (a) caller pediu, (b) estamos no meio de drag continuo
+    // History sera commitado uma unica vez no pointerup
+    if (!opts.skipHistory && !isDraggingRef.current) {
+      pushHistory(next)
+    }
   }
 
   function updateSlide(fn: (s: Slide2) => Slide2) {
@@ -381,6 +389,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     if (selectedLayerId !== layerId) haptic('light')
     setSelectedLayerId(layerId)
+    isDraggingRef.current = true   // bloqueia pushHistory ate pointerup
     setDragState({
       layerId,
       startX: e.clientX, startY: e.clientY,
@@ -460,11 +469,24 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       return next
     })
 
-    setSnapGuides({ v: Array.from(new Set(guidesV)), h: Array.from(new Set(guidesH)) })
+    // Otimizacao: so setState se guides REALMENTE mudaram (compara como string).
+    // Antes, cada pointermove forcava re-render mesmo sem snap.
+    const newV = Array.from(new Set(guidesV)).sort()
+    const newH = Array.from(new Set(guidesH)).sort()
+    setSnapGuides(prev => {
+      const sameV = prev.v.length === newV.length && prev.v.every((x, i) => x === newV[i])
+      const sameH = prev.h.length === newH.length && prev.h.every((x, i) => x === newH[i])
+      return (sameV && sameH) ? prev : { v: newV, h: newH }
+    })
     if (snapped) haptic('light')
   }
 
   function onPointerUp() {
+    // Commit history UMA VEZ no fim do drag (em vez de 60 vezes/seg).
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false
+      pushHistory(slides)
+    }
     setDragState(null)
     setSnapGuides({ v: [], h: [] })
   }
@@ -491,6 +513,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       initialX: layer.x,
       initialY: layer.y,
     }
+    isDraggingRef.current = true   // pula history durante pinch
     setDragState(null)
     haptic('light')
   }
@@ -554,6 +577,11 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
 
   function onCanvasTouchEnd(e: React.TouchEvent) {
     if (e.touches.length < 2) {
+      // Commit history UMA VEZ no fim do pinch
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false
+        pushHistory(slides)
+      }
       pinchRef.current = null
       setPinchInfo(null)
     }
@@ -729,6 +757,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             <Redo2 className="w-4 h-4" />
           </button>
           <div className="h-5 w-px bg-[#2a2a4a] mx-0.5 sm:mx-1" />
+          {/* Botao "Slide" mobile — abre modal de fundo (cor, gradiente, foto).
+              No desktop fica no Inspector lateral por padrao. */}
+          <button
+            onClick={() => { setShowSlideEditor(true); haptic('light') }}
+            aria-label="Configurar fundo do slide"
+            className="lg:hidden flex items-center gap-1 px-2.5 min-h-11 rounded-lg bg-[#13131f] border border-[#2a2a4a] active:scale-95 text-[#c1c1d8] text-xs font-semibold"
+          >
+            <Sliders className="w-3.5 h-3.5" /> Slide
+          </button>
           <button
             onClick={() => setShowPreview(true)}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#13131f] border border-[#2a2a4a] text-[#9b9bb5] hover:text-white text-xs font-medium"
@@ -902,48 +939,99 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             </div>
           </div>
 
-          {/* Inspector mobile — bottom sheet estilo Canva/Figma com 3 snap stops e drag handle */}
+          {/* Toolbar contextual flutuante — aparece SO quando ha layer
+              selecionada, posicao fixa no bottom (sem drag handle conflitando
+              com toques no canvas). Padrao Canva/Procreate. */}
           <AnimatePresence>
             {selectedLayer && (
-              <BottomSheet
-                stop={sheetStop}
-                onChangeStop={(s) => { setSheetStop(s); haptic('light') }}
-                onClose={() => { setSelectedLayerId(null); setEditingTextId(null); haptic('light') }}
-                titulo={
-                  selectedLayer.type === 'text' ? 'Texto'
-                  : selectedLayer.type === 'photo' ? 'Foto'
-                  : 'Forma'
-                }
+              <motion.div
+                key="floating-toolbar"
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                className="lg:hidden fixed left-3 right-3 z-30"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
               >
-                {/* Toolbar contextual — ações rápidas sempre visíveis em peek */}
-                <ContextualToolbar
-                  layer={selectedLayer}
-                  onDelete={() => deleteLayer(selectedLayer.id)}
-                  onDuplicate={() => duplicateLayer(selectedLayer.id)}
-                  onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
-                  onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
-                  onExpand={() => { setSheetStop(2); haptic('medium') }}
-                />
-                {/* Inspector full — só visível quando sheet expandido */}
-                {sheetStop >= 1 && (
-                  <Inspector
-                    slide={slide}
-                    selected={selectedLayer}
-                    onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
-                    onUpdateSlide={updateSlide}
+                <div className="rounded-2xl bg-[#0a0a14]/95 backdrop-blur border border-[#2a2a4a] shadow-2xl shadow-black/60">
+                  <ContextualToolbar
+                    layer={selectedLayer}
                     onDelete={() => deleteLayer(selectedLayer.id)}
                     onDuplicate={() => duplicateLayer(selectedLayer.id)}
                     onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
-                    onAddText={addTextLayer}
-                    onAddPhoto={addPhotoLayer}
-                    onUploadFoto={uploadNovaFoto}
-                    imagensCache={imagensCache}
-                    compact
+                    onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
+                    onExpand={() => { setShowFullEditor(true); haptic('medium') }}
                   />
-                )}
-              </BottomSheet>
+                </div>
+              </motion.div>
             )}
           </AnimatePresence>
+
+          {/* FAB "+" — adicionar elementos. So aparece quando NAO ha selecao
+              (pra nao competir com a toolbar contextual). */}
+          {!selectedLayer && (
+            <button
+              onClick={() => { setShowAddMenu(true); haptic('light') }}
+              aria-label="Adicionar texto, foto ou nova imagem"
+              className="lg:hidden fixed right-4 z-30 w-14 h-14 rounded-full bg-gradient-to-br from-iara-500 to-accent-purple shadow-2xl shadow-iara-900/60 flex items-center justify-center text-white active:scale-90 transition-transform"
+              style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Modal: Mais opcoes da layer (Inspector completo) */}
+          <FullScreenModal
+            open={showFullEditor && !!selectedLayer}
+            onClose={() => setShowFullEditor(false)}
+            titulo={
+              selectedLayer?.type === 'text' ? 'Editar texto'
+              : selectedLayer?.type === 'photo' ? 'Editar foto'
+              : 'Editar forma'
+            }
+          >
+            {selectedLayer && (
+              <Inspector
+                slide={slide}
+                selected={selectedLayer}
+                onUpdateLayer={(fn) => updateLayer(selectedLayer.id, fn)}
+                onUpdateSlide={updateSlide}
+                onDelete={() => { deleteLayer(selectedLayer.id); setShowFullEditor(false) }}
+                onDuplicate={() => duplicateLayer(selectedLayer.id)}
+                onMoveZ={(dir) => moveLayerZ(selectedLayer.id, dir)}
+                onAddText={() => { addTextLayer(); setShowFullEditor(false) }}
+                onAddPhoto={(idx) => { addPhotoLayer(idx); setShowFullEditor(false) }}
+                onUploadFoto={uploadNovaFoto}
+                imagensCache={imagensCache}
+              />
+            )}
+          </FullScreenModal>
+
+          {/* Modal: configurar fundo do slide */}
+          <FullScreenModal
+            open={showSlideEditor}
+            onClose={() => setShowSlideEditor(false)}
+            titulo={`Slide ${slideIdx + 1} — fundo`}
+          >
+            <div className="p-4">
+              <SlideBackgroundEditor slide={slide} onUpdateSlide={updateSlide} imagensCache={imagensCache} />
+            </div>
+          </FullScreenModal>
+
+          {/* Modal: menu de adicionar (acionado pelo FAB) */}
+          <FullScreenModal
+            open={showAddMenu}
+            onClose={() => setShowAddMenu(false)}
+            titulo="Adicionar"
+          >
+            <AddElementsMenu
+              imagensCache={imagensCache}
+              onAddText={() => { addTextLayer(); setShowAddMenu(false) }}
+              onAddPhoto={(idx) => { addPhotoLayer(idx); setShowAddMenu(false) }}
+              onUploadFoto={async (file) => { await uploadNovaFoto(file); setShowAddMenu(false) }}
+              onOpenSlide={() => { setShowAddMenu(false); setShowSlideEditor(true) }}
+            />
+          </FullScreenModal>
         </div>
 
         {/* Inspector direita (desktop) */}
@@ -2030,94 +2118,151 @@ function FontPicker({ value, onChange }: { value: string; onChange: (id: string)
   )
 }
 
-// ─── BottomSheet (3 snap stops + drag handle) ─────────────────────────
-// Inspirado em Apple/Canva/Figma. Usuário arrasta o handle pra mudar entre:
-// stop 0 = peek (180px, só toolbar contextual)
-// stop 1 = normal (45vh)
-// stop 2 = full (85vh, descontando safe-area)
-// Animação spring (não linear) — sensação de "vivo".
-
-function BottomSheet({
-  stop, onChangeStop, onClose, titulo, children,
+// ─── FullScreenModal — substitui BottomSheet pra todas as edicoes pesadas ──
+// Razao: BottomSheet com drag handle competia com touches no canvas
+// (gesto disputado = lag percebido em iPhone 17 Pro Max). Modal full-screen
+// e' o padrao iOS native — sem conflito de gesture, sem reflow continuo.
+function FullScreenModal({
+  open, onClose, titulo, children,
 }: {
-  stop: 0 | 1 | 2
-  onChangeStop: (s: 0 | 1 | 2) => void
-  onClose: () => void
-  titulo: string
-  children: React.ReactNode
+  open: boolean; onClose: () => void; titulo: string; children: React.ReactNode
 }) {
-  // Heights por stop (px). Calculado dinamicamente no useMemo
-  const stops = useMemo(() => {
-    if (typeof window === 'undefined') return [180, 380, 600]
-    const vh = window.innerHeight
-    return [180, Math.min(420, vh * 0.45), Math.min(720, vh * 0.85)]
-  }, [])
-  const heightAtual = stops[stop]
+  // Lock scroll do body quando aberto
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open, onClose])
 
   return (
-    <motion.div
-      key="bottom-sheet"
-      initial={{ y: 400 }}
-      animate={{ y: 0, height: heightAtual }}
-      exit={{ y: 400 }}
-      transition={{ type: 'spring', stiffness: 350, damping: 32 }}
-      className="lg:hidden flex-shrink-0 bg-[#0a0a14] flex flex-col rounded-t-2xl shadow-[0_-12px_32px_rgba(0,0,0,0.6)] border-t border-[#1a1a2e] relative"
-      style={{ overflow: 'hidden' }}
-    >
-      {/* Drag handle — clique pra ciclar entre stops */}
-      <div
-        onClick={() => onChangeStop(((stop + 1) % 3) as 0 | 1 | 2)}
-        className="flex items-center justify-center pt-2 pb-1 cursor-pointer select-none active:scale-95 transition-transform"
-        style={{ touchAction: 'manipulation' }}
-      >
-        <div className="w-10 h-1 rounded-full bg-[#2a2a4a]" />
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-1.5 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-iara-500" />
-          <p className="text-xs font-bold text-[#f1f1f8] tracking-wide">{titulo}</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => onChangeStop(stop === 2 ? 0 : ((stop + 1) as 0 | 1 | 2))}
-            className="p-1.5 rounded-md hover:bg-[#1a1a2e] text-[#6b6b8a]"
-            aria-label="Expandir/recolher"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="lg:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+            onClick={e => e.stopPropagation()}
+            className="absolute inset-x-0 bottom-0 top-12 bg-[#0a0a14] rounded-t-3xl border-t border-[#1a1a2e] flex flex-col shadow-2xl shadow-black/60 overflow-hidden"
+            style={{ touchAction: 'pan-y' }}
           >
-            {stop === 2 ? <ChevronDown /> : <ChevronUp />}
-          </button>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-[#1a1a2e] text-[#6b6b8a]"
-            aria-label="Fechar"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Body — scroll com pan-y, hide quando peek */}
-      <div
-        className="overflow-y-auto flex-1 overscroll-contain"
-        style={{
-          touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
-        }}
-      >
-        {children}
-      </div>
-    </motion.div>
+            {/* Header sticky com Done — padrao iOS */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1a2e] flex-shrink-0 bg-[#0a0a14]">
+              <button
+                onClick={onClose}
+                className="px-3 min-h-11 rounded-lg text-sm font-semibold text-[#9b9bb5] active:scale-95 active:bg-[#1a1a2e] transition"
+              >
+                Cancelar
+              </button>
+              <p className="text-sm font-bold text-[#f1f1f8] truncate flex-1 text-center">{titulo}</p>
+              <button
+                onClick={onClose}
+                className="px-3 min-h-11 rounded-lg text-sm font-bold text-iara-400 active:scale-95 active:bg-iara-900/30 transition"
+              >
+                Pronto
+              </button>
+            </div>
+            {/* Body scrollavel */}
+            <div
+              className="overflow-y-auto flex-1 overscroll-contain"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+              }}
+            >
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
-// Mini ícones inline pra evitar import extra
-function ChevronUp() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15" /></svg>
-}
-function ChevronDown() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+// ─── AddElementsMenu — conteudo do FAB (escolher entre Texto/Foto/Upload/Slide) ──
+function AddElementsMenu({
+  imagensCache, onAddText, onAddPhoto, onUploadFoto, onOpenSlide,
+}: {
+  imagensCache: string[]
+  onAddText: () => void
+  onAddPhoto: (idx: number) => void
+  onUploadFoto: (file: File) => void | Promise<void>
+  onOpenSlide: () => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  return (
+    <div className="p-4 space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) onUploadFoto(file)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        }}
+      />
+      {/* 4 ações grandes touch-friendly (min-h 80) */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={onAddText}
+          className="flex flex-col items-center justify-center gap-2 min-h-24 rounded-2xl border border-[#2a2a4a] bg-[#13131f] active:scale-95 active:bg-[#1a1a2e] transition"
+        >
+          <Type className="w-7 h-7 text-iara-400" />
+          <span className="text-sm font-semibold text-white">Texto</span>
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 min-h-24 rounded-2xl border border-iara-700/50 bg-iara-900/20 active:scale-95 transition"
+        >
+          <Upload className="w-7 h-7 text-iara-300" />
+          <span className="text-sm font-semibold text-iara-200">Enviar foto</span>
+        </button>
+        <button
+          onClick={onOpenSlide}
+          className="col-span-2 flex items-center justify-center gap-3 min-h-16 rounded-2xl border border-[#2a2a4a] bg-[#13131f] active:scale-95 active:bg-[#1a1a2e] transition"
+        >
+          <Sliders className="w-5 h-5 text-violet-400" />
+          <span className="text-sm font-semibold text-white">Configurar fundo do slide</span>
+        </button>
+      </div>
+
+      {/* Galeria de fotos do carrossel */}
+      {imagensCache.length > 0 && (
+        <div>
+          <p className="text-xs uppercase tracking-wider font-semibold text-[#6b6b8a] mb-2">Fotos do carrossel</p>
+          <div className="grid grid-cols-3 gap-2">
+            {imagensCache.map((src, i) => (
+              <button
+                key={i}
+                onClick={() => onAddPhoto(i)}
+                className="relative aspect-square rounded-xl overflow-hidden border border-[#2a2a4a] active:scale-95 transition"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                <span className="absolute bottom-1 right-1 text-[10px] px-1.5 py-0.5 rounded bg-black/70 text-white font-mono">{i + 1}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── ContextualToolbar — sempre visível em peek, sem precisar expandir ─────
