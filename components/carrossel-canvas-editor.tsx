@@ -225,11 +225,25 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (editingTextId) return // quando editando texto, não atropela
+      // Guard CRITICA: se o evento veio de dentro de um campo editavel
+      // (input, textarea, contenteditable), nao atropela. Evita o bug
+      // "apagar caractere no mobile fecha o editor inteiro" — guard antiga
+      // baseada so em editingTextId falhava em iOS quando o foco oscilava
+      // pelo teclado virtual.
+      const target = e.target as HTMLElement | null
+      const active = document.activeElement as HTMLElement | null
+      const elementoEditavel = (el: HTMLElement | null) => {
+        if (!el) return false
+        const tag = el.tagName
+        return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable
+      }
+      if (elementoEditavel(target) || elementoEditavel(active)) return
+      if (editingTextId) return
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
       else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo() }
       else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedLayerId && !editingTextId) { e.preventDefault(); deleteLayer(selectedLayerId) }
+        if (selectedLayerId) { e.preventDefault(); deleteLayer(selectedLayerId) }
       } else if (e.key === 'Escape') {
         setSelectedLayerId(null); setEditingTextId(null)
       }
@@ -1481,10 +1495,19 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
       onInput={() => onChange(extractRuns())}
       onBlur={() => { onChange(extractRuns()); onBlur() }}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') { e.currentTarget.blur() }
+        // Blindagem dupla: stopPropagation impede o evento de subir pro window
+        // listener do editor que deletava layer no Backspace. Mesmo que o
+        // window listener ja tenha guard de contenteditable, esse stop garante
+        // robustez em iOS quando o foco oscila com teclado virtual.
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.stopPropagation()
+          // NAO preventDefault — backspace nativo do contenteditable continua apagando
+        }
+        if (e.key === 'Escape') { e.stopPropagation(); e.currentTarget.blur() }
         // Enter sem shift no mobile = blur (commit do texto). Shift+Enter quebra linha.
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault()
+          e.stopPropagation()
           e.currentTarget.blur()
         }
       }}
@@ -1846,6 +1869,12 @@ function TextInspector({ layer, onUpdate, onDelete, onDuplicate, onMoveZ, compac
         value={texto}
         onChange={e => setTextoCompleto(e.target.value)}
         rows={3}
+        // Mobile: bloqueia bubble pro window listener que deletava layer no Backspace
+        onKeyDown={e => {
+          if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Escape') {
+            e.stopPropagation()
+          }
+        }}
         className="w-full bg-[#08080f] border border-[#1a1a2e] rounded-lg p-2 text-xs text-[#f1f1f8] resize-none focus:outline-none focus:border-iara-500"
       />
 
