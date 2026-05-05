@@ -8,7 +8,7 @@
 // Sem isso, usuarios com app instalado continuam servindo JS antigo via cache
 // e nao veem fixes (ex: /conta nao carregava porque o SW devolvia o client
 // antigo sem tratamento de erro).
-const CACHE_NAME = 'iara-hub-v10-2026-05-04h'
+const CACHE_NAME = 'iara-hub-v11-2026-05-04i'
 const PRECACHE = [
   '/',
   '/login',

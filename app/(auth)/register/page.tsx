@@ -83,6 +83,13 @@ function RegisterForm() {
       return
     }
 
+    // Registra aceite da versao atual dos termos pra novos usuarios.
+    // (perfil ainda nao existe — sera criado no callback. O endpoint
+    // tolera ausencia de profile silenciosamente.)
+    try {
+      await fetch('/api/perfil/aceitar-termos', { method: 'POST' })
+    } catch { /* nao-bloqueante */ }
+
     // Tracking de conversão (signup)
     try {
       const { trackSignup, trackLead } = await import('@/lib/analytics-events')

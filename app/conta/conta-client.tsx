@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft, Lock, Eye, EyeOff, Check, AlertCircle, RefreshCw } from 'lucide-react'
+import { User, CreditCard, Mail, Loader2, ExternalLink, LogOut, ArrowLeft, Lock, Eye, EyeOff, Check, AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react'
+import { ADMIN_EMAILS } from '@/lib/admin'
 import { UpgradeModal } from '@/components/upgrade-modal'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -185,6 +186,7 @@ export function ContaClient() {
   const plano = perfil?.plano ?? 'free'
   const temAssinatura = !!perfil?.stripe_customer_id && plano !== 'free'
   const temCustomerSemPlano = !!perfil?.stripe_customer_id && (plano === 'free' || plano === 'trial')
+  const isAdminUser = !!perfil?.email && ADMIN_EMAILS.includes(perfil.email.toLowerCase())
 
   async function handleSyncPlano() {
     try {
@@ -333,6 +335,25 @@ export function ContaClient() {
             </div>
             <ExternalLink className="w-4 h-4 text-[#3a3a5a] group-hover:text-indigo-400 transition-colors" />
           </Link>
+
+          {/* Painel Admin — visivel apenas pra admins (ngseita + iarahubapp) */}
+          {isAdminUser && (
+            <Link
+              href="/admin"
+              className="rounded-2xl border border-iara-700/40 bg-gradient-to-br from-iara-950/40 to-violet-950/20 p-4 flex items-center justify-between hover:from-iara-900/40 hover:to-violet-900/30 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-iara-900/40 border border-iara-700/40 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-iara-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-iara-200">Painel Admin</p>
+                  <p className="text-xs text-iara-300/70">Cupons, suspeitos, audit, marketing studio, webhook</p>
+                </div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-iara-400/60 group-hover:text-iara-300 transition-colors" />
+            </Link>
+          )}
 
           {/* Sair */}
           <button
