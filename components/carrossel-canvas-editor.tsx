@@ -675,6 +675,47 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     if (!imageCache) return
     setExportando(true)
     try {
+      // Garante que TODAS as imagens em uso estao no cache antes de renderizar.
+      // Cobre o caso "user uploadou foto e clicou Salvar antes do Image.onload
+      // resolver" — sem isso a foto saia cinza no PNG salvo.
+      const idsUsados = new Set<number>()
+      for (const s of slides) {
+        if (s.background?.type === 'photo' && typeof s.background.imageIdx === 'number') {
+          idsUsados.add(s.background.imageIdx)
+        }
+        for (const l of s.layers) {
+          if (l.type === 'photo') idsUsados.add(l.imageIdx)
+        }
+      }
+      const faltando = Array.from(idsUsados).filter(i => !imageCache.has(i))
+      if (faltando.length > 0) {
+        const novosSrcs = faltando.map(i => imagensCache[i]).filter(Boolean)
+        if (novosSrcs.length > 0) {
+          const novoCache = await preloadImages(novosSrcs)
+          // Mescla com cache existente preservando indices
+          const merged = new Map(imageCache)
+          let i = 0
+          for (const idx of faltando) {
+            const img = novoCache.get(i)
+            if (img) merged.set(idx, img)
+            i++
+          }
+          setImageCache(merged)
+          // Usa local diretamente (setState nao atualiza o `imageCache` desse closure)
+          await ensureFontsLoaded(collectFontsInUse())
+          const hiddenLocal = document.createElement('canvas')
+          hiddenLocal.width = CANVAS_SIZE
+          hiddenLocal.height = CANVAS_SIZE
+          const filesLocal: File[] = []
+          for (const s of slides) {
+            await renderSlide2(hiddenLocal, s, merged, { watermark })
+            const blob = await canvasToBlob(hiddenLocal)
+            filesLocal.push(new File([blob], `slide-${String(s.ordem).padStart(2, '0')}.png`, { type: 'image/png' }))
+          }
+          await compartilharFiles(filesLocal)
+          return
+        }
+      }
       await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
       hidden.width = CANVAS_SIZE
@@ -685,24 +726,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         const blob = await canvasToBlob(hidden)
         files.push(new File([blob], `slide-${String(s.ordem).padStart(2, '0')}.png`, { type: 'image/png' }))
       }
-      if (navigator.canShare?.({ files })) {
-        await navigator.share({ files, title: 'Carrossel Iara' })
-        haptic('medium')
-        setExportToast('✓ Pronto! No iOS escolha "Salvar em Fotos" ou abra direto no Instagram')
-        setTimeout(() => setExportToast(null), 4500)
-      } else {
-        // fallback desktop: baixa um por um
-        for (const f of files) {
-          const url = URL.createObjectURL(f)
-          const a = document.createElement('a')
-          a.href = url; a.download = f.name; a.click()
-          URL.revokeObjectURL(url)
-          await new Promise(r => setTimeout(r, 150))
-        }
-        haptic('medium')
-        setExportToast(`✓ ${files.length} ${files.length === 1 ? 'imagem baixada' : 'imagens baixadas'}`)
-        setTimeout(() => setExportToast(null), 4000)
-      }
+      await compartilharFiles(files)
     } catch (err) {
       // Web Share cancelado pelo user não é erro
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -711,6 +735,28 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       }
     } finally {
       setExportando(false)
+    }
+  }
+
+  // Helper: usa Web Share API no mobile (galeria/Instagram nativo) ou
+  // fallback de download direto no desktop.
+  async function compartilharFiles(files: File[]) {
+    if (navigator.canShare?.({ files })) {
+      await navigator.share({ files, title: 'Carrossel Iara' })
+      haptic('medium')
+      setExportToast('✓ Pronto! No iOS escolha "Salvar em Fotos" ou abra direto no Instagram')
+      setTimeout(() => setExportToast(null), 4500)
+    } else {
+      for (const f of files) {
+        const url = URL.createObjectURL(f)
+        const a = document.createElement('a')
+        a.href = url; a.download = f.name; a.click()
+        URL.revokeObjectURL(url)
+        await new Promise(r => setTimeout(r, 150))
+      }
+      haptic('medium')
+      setExportToast(`✓ ${files.length} ${files.length === 1 ? 'imagem baixada' : 'imagens baixadas'}`)
+      setTimeout(() => setExportToast(null), 4000)
     }
   }
 
