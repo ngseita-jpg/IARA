@@ -71,7 +71,9 @@ export type PhotoLayer = {
   w: number
   h: number
   imageIdx: number
-  objectPosition?: string
+  objectPosition?: string  // 'X% Y%' ou keyword (drag livre + 9 presets)
+  fit?: 'cover' | 'contain' // cover = preenche cortando (default); contain = mostra inteira com letterbox
+  zoom?: number            // 1.0 = normal, >1 = zoom in (so vale com fit=cover)
   rounded?: number         // border-radius em px
   shadow?: boolean
   rotation?: number

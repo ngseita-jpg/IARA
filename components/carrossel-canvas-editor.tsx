@@ -12,6 +12,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { FotoFundoDragger } from '@/components/foto-fundo-dragger'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
@@ -2186,27 +2187,62 @@ function PhotoInspector({ layer, onUpdate, onDelete, onDuplicate, onMoveZ, image
         </div>
       </div>
 
-      {/* Enquadramento */}
+      {/* Modo de enquadramento — Cover (preenche cortando) vs Contain (foto inteira) */}
       <div>
-        <p className="text-[10px] text-[#6b6b8a] mb-1.5">Enquadramento</p>
-        <div className="grid grid-cols-3 gap-1">
-          {[
-            'left top', 'center top', 'right top',
-            'left center', 'center', 'right center',
-            'left bottom', 'center bottom', 'right bottom',
-          ].map(pos => (
-            <button
-              key={pos}
-              onClick={() => onUpdate(l => l.type === 'photo' ? { ...l, objectPosition: pos } : l)}
-              className={`py-1.5 text-[9px] rounded border transition-all ${
-                layer.objectPosition === pos ? 'border-iara-500 bg-iara-600/20 text-iara-200' : 'border-[#1a1a2e] bg-[#0d0d1a] text-[#9b9bb5]'
-              }`}
-            >
-              {pos.split(' ').map(s => s.slice(0, 3)).join('-')}
-            </button>
-          ))}
+        <p className="text-[10px] text-[#6b6b8a] mb-1.5">Modo da foto</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => onUpdate(l => l.type === 'photo' ? { ...l, fit: 'cover' } : l)}
+            className={`p-2 rounded-lg border text-xs font-semibold transition-all ${
+              (layer.fit ?? 'cover') === 'cover'
+                ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                : 'border-[#1a1a2e] bg-[#0d0d1a] text-[#9b9bb5]'
+            }`}
+          >
+            <div className="text-[10px] mb-0.5">Preencher</div>
+            <div className="text-[8px] opacity-70">corta sobras</div>
+          </button>
+          <button
+            onClick={() => onUpdate(l => l.type === 'photo' ? { ...l, fit: 'contain' } : l)}
+            className={`p-2 rounded-lg border text-xs font-semibold transition-all ${
+              layer.fit === 'contain'
+                ? 'border-iara-500 bg-iara-600/20 text-iara-200'
+                : 'border-[#1a1a2e] bg-[#0d0d1a] text-[#9b9bb5]'
+            }`}
+          >
+            <div className="text-[10px] mb-0.5">Inteira</div>
+            <div className="text-[8px] opacity-70">sem cortes</div>
+          </button>
         </div>
       </div>
+
+      {/* Posicionar foto livremente — crosshair + sliders + 9 atalhos.
+          Reusa FotoFundoDragger que ja existe pro background do slide.
+          Resolve "fotos ficam cortadas, dificil reposicionar". */}
+      {imagensCache[layer.imageIdx] && (
+        <div>
+          <p className="text-[10px] text-[#6b6b8a] mb-1.5">Posição da foto (arraste pra ajustar)</p>
+          <FotoFundoDragger
+            fotoSrc={imagensCache[layer.imageIdx]}
+            valor={layer.objectPosition ?? 'center'}
+            onChange={(novo) => onUpdate(l => l.type === 'photo' ? { ...l, objectPosition: novo } : l)}
+          />
+        </div>
+      )}
+
+      {/* Zoom — so faz sentido em modo Cover */}
+      {(layer.fit ?? 'cover') === 'cover' && (
+        <div>
+          <p className="text-[10px] text-[#6b6b8a] mb-1">Zoom da foto ({((layer.zoom ?? 1) * 100).toFixed(0)}%)</p>
+          <input
+            type="range"
+            min={1.0} max={3.0} step={0.05}
+            value={layer.zoom ?? 1}
+            onChange={e => onUpdate(l => l.type === 'photo' ? { ...l, zoom: Number(e.target.value) } : l)}
+            className="w-full accent-iara-500"
+          />
+        </div>
+      )}
 
       {/* Rounded corners */}
       <div>

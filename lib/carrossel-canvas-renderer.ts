@@ -161,12 +161,39 @@ function drawPhotoLayer(
   }
   const img = imageCache.get(layer.imageIdx)
   if (img) {
-    drawImageCover(ctx, img, x, y, w, h, layer.objectPosition)
+    if (layer.fit === 'contain') {
+      // Modo CONTAIN: mostra a foto inteira dentro da caixa, sem cortar.
+      // Pode sobrar espaco com cor de fundo neutra (escuro escuro).
+      ctx.fillStyle = '#0a0a14'
+      ctx.fillRect(x, y, w, h)
+      drawImageContain(ctx, img, x, y, w, h, layer.objectPosition)
+    } else {
+      // Default COVER: preenche cortando. Suporta zoom interno (1x = normal,
+      // >1 = zoom in) e objectPosition livre via drag.
+      drawImageCover(ctx, img, x, y, w, h, layer.objectPosition, layer.zoom ?? 1)
+    }
   } else {
     ctx.fillStyle = '#1a1a2e'
     ctx.fillRect(x, y, w, h)
   }
   ctx.restore()
+}
+
+// Equivalente CSS object-fit: contain — mostra foto inteira com letterbox.
+function drawImageContain(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  dx: number, dy: number, dw: number, dh: number,
+  objectPosition?: string,
+) {
+  const { x: posX, y: posY } = parseObjectPosition(objectPosition)
+  const scale = Math.min(dw / img.width, dh / img.height)
+  const renderW = img.width * scale
+  const renderH = img.height * scale
+  // Posiciona dentro do destino — posX/posY 0-100 do espaco vazio
+  const offsetX = ((dw - renderW) * posX) / 100
+  const offsetY = ((dh - renderH) * posY) / 100
+  ctx.drawImage(img, dx + offsetX, dy + offsetY, renderW, renderH)
 }
 
 function drawShapeLayer(ctx: CanvasRenderingContext2D, layer: ShapeLayer, size: number) {
