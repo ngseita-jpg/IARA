@@ -80,12 +80,22 @@ export async function POST(req: NextRequest) {
 
   // 1. Verifica se já existe cronograma pra essa semana e nao forcou regerar
   if (!forcar_regeneracao) {
-    const { data: existente } = await admin
+    const { data: existente, error: existenteErr } = await admin
       .from('cronograma_semanal')
       .select('id, versao')
       .eq('user_id', user.id)
       .eq('semana_inicio', semanaInicio)
       .maybeSingle()
+
+    // Se a tabela nao existe (admin nao rodou SQL), fala claramente
+    if (existenteErr && /relation.*does not exist|not found/i.test(existenteErr.message ?? '')) {
+      console.error('[cronograma/gerar] tabela faltando:', existenteErr.message)
+      return NextResponse.json({
+        error: 'setup_pendente',
+        mensagem: 'A feature ainda não está ativada. Admin precisa rodar schema_cronograma.sql no Supabase.',
+      }, { status: 503 })
+    }
+
     if (existente) {
       const { data: items } = await admin
         .from('calendar_items')
@@ -100,10 +110,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. Carrega persona do user
+  // 2. Carrega persona + disponibilidade do user
   const { data: profile } = await admin
     .from('creator_profiles')
-    .select('nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil, nome_artistico, plano')
+    .select(`
+      nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil, nome_artistico, plano,
+      disponibilidade_dias, disponibilidade_periodos, disponibilidade_minutos, disponibilidade_compromissos
+    `)
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -112,6 +125,15 @@ export async function POST(req: NextRequest) {
       error: 'persona_incompleta',
       mensagem: 'Configure seu nicho e tom de voz no perfil pra a Iara montar seu cronograma.',
       redirect: '/dashboard/persona',
+    }, { status: 422 })
+  }
+
+  // Disponibilidade: pre-requisito pra IA nao inventar horarios impossiveis
+  const dias = profile.disponibilidade_dias as string[] | null
+  if (!dias || dias.length === 0) {
+    return NextResponse.json({
+      error: 'disponibilidade_incompleta',
+      mensagem: 'Conta primeiro quais dias e horários você consegue postar. A Iara precisa disso pra montar um cronograma realista.',
     }, { status: 422 })
   }
 
@@ -139,6 +161,18 @@ export async function POST(req: NextRequest) {
     ? profile.tom_de_voz.join(', ')
     : profile.tom_de_voz
 
+  // Disponibilidade real do criador — REGRA: ignora dias e periodos que ele
+  // nao marcou. So gera post nos dias/periodos que ele tem disponibilidade.
+  const periodosLabel: Record<string, string> = {
+    manha_cedo: '6h-9h', manha: '9h-12h', almoco: '12h-14h',
+    tarde: '14h-18h', noite: '18h-22h', madrugada: '22h+',
+  }
+  const periodosDisponiveis = (profile.disponibilidade_periodos as string[] | null ?? [])
+    .map(p => periodosLabel[p] ?? p).join(', ')
+  const minutosTexto = profile.disponibilidade_minutos
+    ? `${profile.disponibilidade_minutos} minutos por dia`
+    : 'não informado'
+
   const userPrompt = `## Perfil do criador
 - Nome: ${profile.nome_artistico ?? 'criador'}
 - Nicho: ${profile.nicho}
@@ -147,6 +181,14 @@ export async function POST(req: NextRequest) {
 - Objetivo: ${profile.objetivo ?? 'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
+
+## Disponibilidade REAL do criador (RESPEITE — não invente horário fora disso)
+- Dias da semana que pode postar: ${dias.join(', ').toUpperCase()}
+- Períodos do dia disponíveis: ${periodosDisponiveis || 'não informado'}
+- Tempo livre por dia pra criar conteúdo: ${minutosTexto}
+${profile.disponibilidade_compromissos ? `- Compromissos fixos a evitar: ${profile.disponibilidade_compromissos}` : ''}
+
+REGRA CRÍTICA: gere posts SOMENTE nos dias listados acima. Os outros dias da semana ficam SEM POST (item vazio na resposta — pula esse dia). Horário escolhido tem que cair dentro de UM dos períodos disponíveis acima.
 
 ## Janelas de horário válidas (BR, Instagram)
 ${janelas.map(j => `- ${j.inicio} às ${j.fim}${j.razao ? ` (${j.razao})` : ''}`).join('\n')}

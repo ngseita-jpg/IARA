@@ -7,6 +7,7 @@ import {
   Trophy, Loader2, X, Target, Sparkles, Trash2, Wand2, AlertCircle,
 } from 'lucide-react'
 import { CronogramaHojeCard } from '@/components/cronograma-hoje-card'
+import { CronogramaDisponibilidadeWizard } from '@/components/cronograma-disponibilidade-wizard'
 
 type CalendarItem = {
   id: string
@@ -184,35 +185,77 @@ export default function CalendarioPage() {
 
   // ─── Cronograma inteligente ──────────────────────────────────────
   const [gerandoCronograma, setGerandoCronograma] = useState(false)
+  const [progressoMensagem, setProgressoMensagem] = useState<string | null>(null)
   const [erroCronograma, setErroCronograma] = useState<string | null>(null)
   const [redirectPersona, setRedirectPersona] = useState(false)
+  const [precisaDisponibilidade, setPrecisaDisponibilidade] = useState(false)
 
   async function gerarCronograma(forcar = false) {
     setGerandoCronograma(true)
     setErroCronograma(null)
     setRedirectPersona(false)
+    setPrecisaDisponibilidade(false)
+
+    // Mensagens rotativas durante a geracao — IA demora 20-40s, sem feedback
+    // user acha que travou. Atualiza a cada 5s.
+    const mensagens = [
+      'Estudando seu nicho e tom de voz…',
+      'Cruzando com horários ideais do seu público…',
+      'Validando ângulos novos (sem repetir o que você já postou)…',
+      'Escrevendo hooks que param o scroll…',
+      'Ajustando scripts pro seu ritmo de fala…',
+      'Quase lá — finalizando os 7 dias…',
+    ]
+    let msgIdx = 0
+    setProgressoMensagem(mensagens[0])
+    const iv = setInterval(() => {
+      msgIdx = (msgIdx + 1) % mensagens.length
+      setProgressoMensagem(mensagens[msgIdx])
+    }, 5000)
+
     try {
+      // Timeout 90s (Sonnet 4.6 com cache cold pode demorar ~40s)
+      const ctrl = new AbortController()
+      const timer = setTimeout(() => ctrl.abort(), 90_000)
+
       const res = await fetch('/api/cronograma/gerar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ forcar_regeneracao: forcar }),
+        signal: ctrl.signal,
       })
-      const data = await res.json()
+      clearTimeout(timer)
+
+      const data = await res.json().catch(() => ({}))
       if (res.status === 422 && data.error === 'persona_incompleta') {
         setRedirectPersona(true)
         setErroCronograma(data.mensagem)
         return
       }
-      if (!res.ok) {
-        setErroCronograma(data.error || 'Erro inesperado ao gerar cronograma')
+      if (res.status === 422 && data.error === 'disponibilidade_incompleta') {
+        setPrecisaDisponibilidade(true)
+        setErroCronograma(null)
         return
       }
-      // Recarrega items pra puxar os novos
+      if (res.status === 503 && data.error === 'setup_pendente') {
+        setErroCronograma(data.mensagem || 'Setup pendente do admin.')
+        return
+      }
+      if (!res.ok) {
+        setErroCronograma(data.mensagem || data.error || 'Erro inesperado. Tenta de novo em alguns segundos.')
+        return
+      }
       await loadData()
-    } catch {
-      setErroCronograma('Falha de conexão. Tenta de novo.')
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        setErroCronograma('Demorou mais que 90s. A IA pode estar sobrecarregada — tenta de novo.')
+      } else {
+        setErroCronograma('Falha de conexão. Verifica internet e tenta de novo.')
+      }
     } finally {
+      clearInterval(iv)
       setGerandoCronograma(false)
+      setProgressoMensagem(null)
     }
   }
 
@@ -253,7 +296,7 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      {/* Cronograma inteligente — card de HOJE em destaque */}
+      {/* Cronograma inteligente — fluxo: card HOJE / wizard de disponibilidade / estado vazio */}
       {(() => {
         const itemHoje = items.find(i => i.data_planejada === today && i.gerado_por_ia)
         const temCronogramaSemana = items.some(i => i.gerado_por_ia)
@@ -269,6 +312,18 @@ export default function CalendarioPage() {
           )
         }
 
+        // Wizard de disponibilidade — bloqueia geracao ate user contar agenda real
+        if (precisaDisponibilidade) {
+          return (
+            <CronogramaDisponibilidadeWizard
+              onConcluir={() => {
+                setPrecisaDisponibilidade(false)
+                gerarCronograma(false)
+              }}
+            />
+          )
+        }
+
         // Estado vazio: sem cronograma da semana — convida a gerar
         if (!temCronogramaSemana) {
           return (
@@ -279,16 +334,21 @@ export default function CalendarioPage() {
               <h2 className="text-xl sm:text-2xl font-black text-white mb-2">
                 Acorde sabendo o que criar
               </h2>
-              <p className="text-sm text-iara-200/90 max-w-md mx-auto mb-5">
-                A Iara monta sua semana inteira: <strong className="text-white">7 dias de posts prontos</strong>, com tema, horário ideal, hook, script e até onde gravar.
+              <p className="text-sm text-iara-200/90 max-w-md mx-auto mb-3">
+                A Iara monta sua semana inteira: <strong className="text-white">7 dias de posts prontos</strong>, respeitando sua agenda real, com tema, horário ideal, hook, script e até onde gravar.
+              </p>
+              <p className="text-[11px] text-amber-300/80 max-w-md mx-auto mb-5 italic">
+                ⏱ A primeira geração demora cerca de 30-40 segundos. A Iara está costurando 7 dias inteiros pra você.
               </p>
               <button
                 onClick={() => gerarCronograma(false)}
                 disabled={gerandoCronograma}
-                className="inline-flex items-center gap-2 px-6 min-h-12 rounded-2xl bg-gradient-to-r from-iara-500 to-accent-purple text-white text-sm font-bold active:scale-95 disabled:opacity-50 transition shadow-2xl shadow-iara-900/40"
+                className="inline-flex items-center gap-2 px-6 min-h-12 rounded-2xl bg-gradient-to-r from-iara-500 to-accent-purple text-white text-sm font-bold active:scale-95 disabled:opacity-50 transition shadow-2xl shadow-iara-900/40 max-w-full"
               >
                 {gerandoCronograma ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Estudando seu nicho, escolhendo horários, escrevendo scripts…</>
+                  <><Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                    <span className="truncate">{progressoMensagem ?? 'Iniciando…'}</span>
+                  </>
                 ) : (
                   <><Sparkles className="w-4 h-4" /> Gerar cronograma da semana</>
                 )}
@@ -311,13 +371,12 @@ export default function CalendarioPage() {
               )}
 
               <p className="text-[10px] text-iara-300/60 mt-4">
-                Inclui: hook por dia · horário ideal pelo seu nicho · script pronto pra gravar · sugestão de local pra vídeo
+                Inclui: hook por dia · horário que cabe na SUA agenda · script pronto pra gravar · sugestão de local
               </p>
             </div>
           )
         }
 
-        // Tem cronograma mas hoje não é dia gerado pela IA (ou já passou) — não mostra nada
         return null
       })()}
 
