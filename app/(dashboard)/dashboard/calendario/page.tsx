@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Check,
-  Trophy, Loader2, X, Target, Sparkles, Trash2,
+  Trophy, Loader2, X, Target, Sparkles, Trash2, Wand2, AlertCircle,
 } from 'lucide-react'
+import { CronogramaHojeCard } from '@/components/cronograma-hoje-card'
 
 type CalendarItem = {
   id: string
@@ -24,6 +26,14 @@ type CalendarItem = {
     pontos_recompensa: number
     status: string
   }
+  // Campos do cronograma inteligente (gerados pela IA)
+  cronograma_id?: string | null
+  script?: string | null
+  horario_sugerido?: string | null
+  local_sugerido?: string | null
+  gancho?: string | null
+  cta?: string | null
+  gerado_por_ia?: boolean
 }
 
 type Meta = {
@@ -172,6 +182,40 @@ export default function CalendarioPage() {
     setItems(prev => prev.filter(i => i.id !== id))
   }
 
+  // ─── Cronograma inteligente ──────────────────────────────────────
+  const [gerandoCronograma, setGerandoCronograma] = useState(false)
+  const [erroCronograma, setErroCronograma] = useState<string | null>(null)
+  const [redirectPersona, setRedirectPersona] = useState(false)
+
+  async function gerarCronograma(forcar = false) {
+    setGerandoCronograma(true)
+    setErroCronograma(null)
+    setRedirectPersona(false)
+    try {
+      const res = await fetch('/api/cronograma/gerar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forcar_regeneracao: forcar }),
+      })
+      const data = await res.json()
+      if (res.status === 422 && data.error === 'persona_incompleta') {
+        setRedirectPersona(true)
+        setErroCronograma(data.mensagem)
+        return
+      }
+      if (!res.ok) {
+        setErroCronograma(data.error || 'Erro inesperado ao gerar cronograma')
+        return
+      }
+      // Recarrega items pra puxar os novos
+      await loadData()
+    } catch {
+      setErroCronograma('Falha de conexão. Tenta de novo.')
+    } finally {
+      setGerandoCronograma(false)
+    }
+  }
+
   const today = toLocalDateStr(new Date())
   const itensConcluidosSemana = items.filter(i => i.concluido).length
   const totalSemana = items.length
@@ -208,6 +252,74 @@ export default function CalendarioPage() {
           </div>
         </div>
       </div>
+
+      {/* Cronograma inteligente — card de HOJE em destaque */}
+      {(() => {
+        const itemHoje = items.find(i => i.data_planejada === today && i.gerado_por_ia)
+        const temCronogramaSemana = items.some(i => i.gerado_por_ia)
+
+        if (itemHoje) {
+          return (
+            <CronogramaHojeCard
+              item={itemHoje}
+              onConcluir={(id) => concluirItem(id) as Promise<void>}
+              onRegerar={() => gerarCronograma(true)}
+              podeRegerar
+            />
+          )
+        }
+
+        // Estado vazio: sem cronograma da semana — convida a gerar
+        if (!temCronogramaSemana) {
+          return (
+            <div className="rounded-3xl bg-gradient-to-br from-iara-900/40 via-accent-purple/15 to-accent-pink/10 border border-iara-700/40 p-6 sm:p-8 mb-6 text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-iara-600/30 border border-iara-500/40 flex items-center justify-center">
+                <Wand2 className="w-7 h-7 text-iara-300" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white mb-2">
+                Acorde sabendo o que criar
+              </h2>
+              <p className="text-sm text-iara-200/90 max-w-md mx-auto mb-5">
+                A Iara monta sua semana inteira: <strong className="text-white">7 dias de posts prontos</strong>, com tema, horário ideal, hook, script e até onde gravar.
+              </p>
+              <button
+                onClick={() => gerarCronograma(false)}
+                disabled={gerandoCronograma}
+                className="inline-flex items-center gap-2 px-6 min-h-12 rounded-2xl bg-gradient-to-r from-iara-500 to-accent-purple text-white text-sm font-bold active:scale-95 disabled:opacity-50 transition shadow-2xl shadow-iara-900/40"
+              >
+                {gerandoCronograma ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Estudando seu nicho, escolhendo horários, escrevendo scripts…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Gerar cronograma da semana</>
+                )}
+              </button>
+
+              {erroCronograma && (
+                <div className="mt-5 max-w-md mx-auto">
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-red-950/30 border border-red-800/40 text-red-300 text-xs text-left">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p>{erroCronograma}</p>
+                      {redirectPersona && (
+                        <Link href="/dashboard/persona" className="inline-block mt-2 px-3 py-1.5 rounded-lg bg-iara-600/40 border border-iara-500/40 text-iara-200 font-semibold">
+                          Configurar perfil →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] text-iara-300/60 mt-4">
+                Inclui: hook por dia · horário ideal pelo seu nicho · script pronto pra gravar · sugestão de local pra vídeo
+              </p>
+            </div>
+          )
+        }
+
+        // Tem cronograma mas hoje não é dia gerado pela IA (ou já passou) — não mostra nada
+        return null
+      })()}
 
       {/* Notificação de pontos */}
       {pontosNotif && (

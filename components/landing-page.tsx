@@ -248,13 +248,24 @@ export function LandingPage({ tipoConta = null }: { tipoConta?: 'criador' | 'mar
               as="h1"
             />
 
+            {/* Gancho de retenção — diferencial chave do Cronograma Inteligente.
+                Imprime promessa concreta: user acorda com briefing pronto. */}
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.55 }}
+              className="text-[clamp(20px,2.4vw,28px)] italic text-iara-200/85 max-w-md mx-auto -mt-2 mb-7 font-serif"
+            >
+              &ldquo;Acorde sabendo o que criar.&rdquo;
+            </motion.p>
+
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.65 }}
               className="text-[clamp(16px,1.6vw,21px)] text-[#9b9bb5] max-w-xl mx-auto mb-10 leading-relaxed"
             >
-              A Iara é sua assessora digital com IA. Aprende seu tom, escreve na sua voz e constrói sua autoridade online —{' '}
+              A Iara é sua assessora digital com IA. Toda manhã ela te entrega o briefing do dia: tema, horário ideal, hook e script prontos —{' '}
               <span className="text-[#f1f1f8] font-semibold">em minutos por dia.</span>
             </motion.p>
 
