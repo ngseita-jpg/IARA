@@ -8,6 +8,7 @@ import {
   type Slide2, type Layer, type TextLayer, type Background,
   type Run, newId,
 } from './carrossel-canvas-types'
+import { getFonteById } from './carrossel-fontes'
 
 const COR_TEXTO_PADRAO = '#ffffff'
 const COR_EYEBROW = 'rgba(255,255,255,0.85)'
@@ -271,9 +272,12 @@ export function slideParaSlide2(slide: Slide, totalSlides: number): Slide2 {
     layers.push(makeTextLayer('handle', slide.handle, preset.handle, corTextoOverride, align))
   }
 
-  const fonteFamilia = slide.fonte_override === 'oswald' ? 'Oswald'
-                     : slide.fonte_override === 'playfair' ? 'Playfair Display'
-                     : 'Inter'
+  // Suporta qualquer fonte do catalogo (lib/carrossel-fontes.ts) — antes
+  // era hard-coded em 3 opcoes (inter/oswald/playfair). Agora a IA pode
+  // escolher das 40+ disponiveis baseado no nicho do criador.
+  const fonteFamilia = slide.fonte_override
+    ? getFonteById(slide.fonte_override).id
+    : 'Inter'
 
   // Overlay decorativo (não-clickable) — só se tinha foto e o preset previa
   const overlay = preset.overlay && slide.imagem_index !== undefined && preset.bgType === 'photo'
@@ -303,11 +307,11 @@ function makeTextLayer(
   preset: TextPreset,
   corOverride?: string,
   alignOverride?: TextLayer['align'],
-  fonteOverride?: 'inter' | 'oswald' | 'playfair',
+  fonteOverride?: string,
 ): TextLayer {
-  const fontFamily = fonteOverride === 'oswald' ? 'Oswald'
-                   : fonteOverride === 'playfair' ? 'Playfair Display'
-                   : 'Inter'
+  // Aceita qualquer fonte do catalogo lib/carrossel-fontes.ts (40+ opcoes).
+  // getFonteById faz fallback pra Inter se id nao existir.
+  const fontFamily = fonteOverride ? getFonteById(fonteOverride).id : 'Inter'
   const corFinal = corOverride || preset.color
 
   const runs: Run[] = [{

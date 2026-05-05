@@ -64,7 +64,7 @@ type CarrosselDraft = {
   plataforma: string
   carrossel: CarrosselData | null
   showWatermark: boolean
-  fonteCarrossel: 'inter' | 'oswald' | 'playfair'
+  fonteCarrossel: string
   incluirEncerramento: boolean
 }
 
@@ -147,7 +147,7 @@ export default function CarrosselPage() {
   const [historicoAberto, setHistoricoAberto] = useState(false)
   const [pontosNotif, setPontosNotif] = useState<number | null>(null)
   const [bancoAberto, setBancoAberto] = useState(false)
-  const [fonteCarrossel, setFonteCarrossel] = useState<'inter'|'oswald'|'playfair'>(draft?.fonteCarrossel ?? 'inter')
+  const [fonteCarrossel, setFonteCarrossel] = useState<string>(draft?.fonteCarrossel ?? 'inter')
   const [incluirEncerramento, setIncluirEncerramento] = useState(draft?.incluirEncerramento ?? true)
 
   // Auto-save (sem imagens base64 / PNGs renderizados — pesa muito)

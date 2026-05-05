@@ -28,7 +28,7 @@ export type Slide = {
   foto_tem_rosto?: boolean
 
   // Overrides do editor manual — sobrescrevem o estilo automático do arquétipo
-  fonte_override?: 'inter' | 'oswald' | 'playfair'
+  fonte_override?: string              // qualquer id do catalogo lib/carrossel-fontes.ts
   cor_texto_override?: string          // hex
   cor_fundo_override?: string          // hex — pinta o fundo em arquétipos text-only ou overlay
   alinhamento?: 'left' | 'center' | 'right'
@@ -38,8 +38,10 @@ export type Slide = {
 
 export type CarrosselData = {
   slides: Slide[]
-  paleta: { primaria: string; secundaria: string; texto: string }
+  paleta: { primaria: string; secundaria: string; texto: string; acento?: string }
   fonte_sugerida: string
+  fonte_titulo?: string  // id da fonte do catalogo (lib/carrossel-fontes.ts) escolhida pra titulos
+  fonte_corpo?: string   // idem pra corpo
   raciocinio: string
 }
 
@@ -117,6 +119,77 @@ Nicho: ${perfil.nicho ?? 'não informado'}
 Tom de voz: ${perfil.tom_de_voz ?? 'não informado'}
 Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use linguagem direta, brasileira e próxima do leitor.'}
 
+## Tipografia e paleta — escolha conforme nicho/persona (NÃO use defaults genéricos)
+
+Os carrosséis que VIRALIZAM no Instagram BR hoje têm tipo + cor casados com o nicho. Carrossel de advogado com fonte de food blog é amador. Sua escolha de fonte e paleta deve ser TÃO consistente com a persona quanto o copy.
+
+### Fontes disponíveis (escolha 1 pra título e 1 pra corpo — podem ser a mesma)
+
+**Display impactante (capa, viral):**
+- "Anton" — peso máximo, tipo MrBeast/Hytalo. Fitness, esporte, virais agressivos
+- "Bebas Neue" — viral clássico, condensada. Tudo que precisa de impacto
+- "Archivo Black" — denso, autoritário. Negócios, finanças, polêmico
+- "Oswald" — esporte, energia. Treino, ação
+- "Bungee" — colorido, lúdico. Kids, lifestyle jovem
+- "Righteous" — gaming, tech. Hacker, crypto
+
+**Sans moderno (corpo profissional):**
+- "Inter" — neutro premium. Tech, SaaS, profissional liberal moderno
+- "Plus Jakarta Sans" — SaaS clean. Startup, fintech
+- "Manrope" — tech minimalista. IA, dev, cibersegurança
+- "Poppins" — amigável, redondo. Coach, lifestyle, pet
+- "Outfit" — fashion contemporâneo. Beauty, moda
+- "DM Sans" — editorial sério. Jornalismo, notícias
+- "Work Sans" — corporativo, neutro. Consultoria, B2B
+
+**Serif clássico (luxo, autoridade):**
+- "Playfair Display" — luxo editorial. Joalheria, alta gastronomia, advocacia premium
+- "Cormorant Garamond" — fashion editorial. Beauty, perfume, decor
+- "Abril Fatface" — revista glamour. Moda, luxo
+- "Cinzel" — monumental, romano. Direito, museu, monumental
+- "DM Serif Display" — impacto editorial. Negócios premium, life coaching sério
+- "Lora" — leitura sofisticada. Escritor, literatura, terapia
+- "Spectral" — moderno serif. Educação, ciência
+
+**Manuscrito (humano, próximo):**
+- "Caveat" — rabisco humano. Maternidade, terapia, lifestyle suave
+- "Permanent Marker" — caneta marker. Estudos, "anotações", viral motivacional
+- "Kalam" — caligrafia natural. Diário, reflexão pessoal
+
+### Guia de escolha por nicho (estes COMBINAM, copie):
+
+| Nicho | Título | Corpo | Paleta principal | Vibe |
+|-------|--------|-------|------------------|------|
+| Advogado/Direito | DM Serif Display ou Cinzel | Inter | navy #0a1628 + dourado #c9a961 + branco | sério, autoritário |
+| Médico/Saúde | Plus Jakarta Sans | Inter | branco + azul claro #4a90e2 + verde #2dd4bf | clean, confiável |
+| Dentista | Outfit ou Manrope | Inter | branco + turquesa #5eead4 + cinza claro | moderno, asséptico |
+| Psicóloga/Terapia | Lora ou Caveat | DM Sans | sépia #e8d8c4 + terracota #c97064 + creme | acolhedor, humano |
+| Nutricionista | Plus Jakarta | Inter | verde sálvia #87a96b + creme + laranja queimado | natural, orgânico |
+| Personal trainer | Bebas Neue ou Anton | Inter | preto + amarelo neon #facc15 + branco | impacto, energia |
+| Coach/desenvolvimento | Playfair ou DM Serif | Plus Jakarta | preto + dourado #d4af37 + nude | autoridade aspiracional |
+| Beauty/maquiagem | Cormorant ou Abril Fatface | Outfit | nude #e8c5b7 + rose gold #b76e79 + ivory | feminino, elegante |
+| Moda | Outfit ou Cormorant | Inter | preto + branco + acento color (vermelho ou cobalto) | editorial, contemporâneo |
+| Fitness/musculação | Anton ou Oswald | Inter | preto + vermelho #dc2626 + branco | agressivo, masculino |
+| Comida/gastronomia | Lora ou Lobster | Poppins | tomate #c44d2a + creme #f5e6d3 + verde oliva | apetitoso, caseiro |
+| Maternidade | Caveat ou Lora | DM Sans | rosa pó #f8d7da + verde água #b5e1d8 + branco | suave, materno |
+| Tech/IA/SaaS | Manrope ou Plus Jakarta | Inter | preto/cinza #18181b + ciano neon #06b6d4 + branco | dark, tech |
+| Finanças/investimentos | Archivo Black ou Inter | Inter | verde profundo #064e3b + preto + dourado | dinheiro sério |
+| Marketing/agência | DM Sans ou Plus Jakarta | Inter | preto + neon (rosa #ec4899 ou verde #84cc16) | cool, criativo |
+| Lifestyle/viagem | Outfit | Inter | terracota + creme + verde mata + dourado | warm, instagramável |
+| Educação | DM Serif | Plus Jakarta | azul navy + amarelo + branco | confiável, academic |
+| Pet | Poppins | Inter | laranja #fb923c + creme + verde #84cc16 | divertido, alegre |
+
+**Se não bater exato com nenhum acima:** combine pela VIBE da persona. Tom de voz "técnico/direto" pede sans + paleta dark. "Acolhedor/maternal" pede serif/handwritten + tons quentes. "Premium/luxo" pede serif display + neutros + dourado.
+
+### Regras de paleta (sempre escolher 4 cores)
+
+1. **fundo_principal** — cor dominante dos slides (geralmente clara ou escura)
+2. **texto_principal** — alto contraste com fundo (escuro em fundo claro, branco em fundo escuro)
+3. **destaque** — cor de marca, usada em CTA, eyebrow, números, palavras-chave
+4. **acento** — segunda cor de marca, usada com moderação (highlights, separadores)
+
+Garanta WCAG AA: contraste mínimo 4.5:1 entre texto e fundo. Branco sobre amarelo claro = NÃO. Branco sobre preto = SIM.
+
 ## Formato de saída (JSON puro, sem markdown)
 {
   "slides": [
@@ -131,13 +204,22 @@ Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use l
       "layout": "base",
       "tamanho_fonte": "gigante",
       "cor_texto": "#ffffff",
+      "fonte_override": "Anton",
       "imagem_index": 0
     }
   ],
-  "paleta": { "primaria": "#6366f1", "secundaria": "#a855f7", "texto": "#ffffff" },
+  "paleta": { "primaria": "#0a1628", "secundaria": "#c9a961", "texto": "#ffffff" },
   "fonte_sugerida": "Inter",
-  "raciocinio": "explique brevemente suas escolhas de design e copy"
+  "fonte_titulo": "Anton",
+  "fonte_corpo": "Inter",
+  "raciocinio": "Explique a escolha de fonte+paleta baseada no NICHO do criador (1-2 frases) + escolhas de copy"
 }
+
+**OBRIGATÓRIO sobre tipografia:**
+- Cada slide deve ter "fonte_override" — nome EXATO da fonte do catálogo acima
+- Capa e encerramento usam "fonte_titulo" (display impactante)
+- Slides de conteúdo geralmente usam "fonte_corpo" (sans/serif legível)
+- "fonte_titulo" e "fonte_corpo" no nível da paleta indicam o sistema usado
 
 ## Qualidade do texto — REGRAS OBRIGATÓRIAS
 - Escreva em português brasileiro fluente e natural — zero erros gramaticais
