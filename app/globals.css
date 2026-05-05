@@ -458,3 +458,23 @@
   }
   .cursor-halo-on * { cursor: auto !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Canvas Editor — modo fullscreen
+   Quando o editor de carrossel abre, esconde navbar (sidebar desktop +
+   topbar mobile + bottom-tabs mobile) do dashboard layout. Resolve
+   "Iara/logo no topo + modulos embaixo atrapalham na area de edicao".
+   O editor seta data-canvas-editor-open no body via useEffect; elementos
+   com data-app-chrome="1" reagem.
+   ═══════════════════════════════════════════════════════════════ */
+body[data-canvas-editor-open="1"] [data-app-chrome="1"] {
+  display: none !important;
+}
+body[data-canvas-editor-open="1"] main {
+  margin-left: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+body[data-canvas-editor-open="1"] footer {
+  display: none !important;
+}

@@ -128,11 +128,37 @@ function IdeaCard({ idea, index }: { idea: Idea; index: number }) {
 }
 
 function IdeasSkeleton() {
+  // Mensagens rotativas — feedback "vivo" enquanto a IA trabalha
+  const mensagens = [
+    'Buscando ângulos que viralizaram esta semana...',
+    'Cruzando com seu nicho e tom de voz...',
+    'Validando potencial de hook em cada ideia...',
+    'Calibrando urgência por momento de mercado...',
+    'Quase lá — refinando os títulos...',
+  ]
+  const [msgIdx, setMsgIdx] = useState(0)
+  useEffect(() => {
+    const iv = setInterval(() => setMsgIdx(i => (i + 1) % mensagens.length), 2400)
+    return () => clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div className="mt-4">
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="w-4 h-4 text-iara-400 animate-pulse" />
-        <p className="text-xs font-bold text-[#6b6b8a] uppercase tracking-widest">Gerando suas ideias...</p>
+      {/* Header com mensagem rotativa */}
+      <div className="rounded-2xl border border-iara-800/40 bg-gradient-to-br from-iara-950/40 to-violet-950/30 p-5 mb-4 flex items-center gap-3">
+        <div className="relative w-10 h-10 flex-shrink-0">
+          <div className="absolute inset-0 rounded-xl bg-iara-500/30 blur-md animate-pulse" />
+          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-iara-500 to-accent-purple flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white animate-pulse" />
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-iara-200">Iara está pensando…</p>
+          <p key={msgIdx} className="text-xs text-iara-300/80 truncate animate-fade-in">
+            {mensagens[msgIdx]}
+          </p>
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {[0, 1, 2].map(i => (

@@ -1465,6 +1465,34 @@ export default function CarrosselPage() {
                   </div>
                 </div>
 
+                {/* CTA principal: abrir editor — antes ficava escondido em
+                    barra de acoes. Agora full-width, gradient, impossivel de
+                    perder. Resolve "nao achei o editor de forma visivel". */}
+                <button
+                  onClick={() => {
+                    if (!carrossel) return
+                    const s2 = carrosselParaSlide2(carrossel.slides)
+                    setSlidesCanvas(s2)
+                    setCanvasEditorAberto(true)
+                  }}
+                  disabled={!carrossel || Object.values(slidePngs).filter(p => p && !p.startsWith('ERROR:')).length === 0}
+                  className="w-full mb-6 group relative overflow-hidden rounded-2xl bg-gradient-to-r from-iara-600 via-accent-purple to-accent-pink text-white p-5 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xl shadow-iara-900/40"
+                >
+                  <div className="relative z-10 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center flex-shrink-0">
+                      <Wand2 className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        Personalizar no Editor
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#E2C068] text-[#0a0a14] tracking-wider">BETA</span>
+                      </p>
+                      <p className="text-xs text-white/80 mt-0.5">Mexa em cada slide: troque texto, foto, fonte, cor. Adicione print de artigo. Liso no celular.</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+
                 {/* Slides grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {carrossel.slides.map((slide) => {

@@ -675,14 +675,31 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   }
 
   // ─── Render helpers (componentes filhos) ─────────────────────────────
+  // Lock body scroll + esconde navbar/bottom-tabs do dashboard quando editor abre.
+  // Antes: editor era fixed inset-0 z-50 bg opaco MAS o user reportou ver "Iara
+  // logo no topo + modulos embaixo". Causa: navbar (z-40) ficava por baixo, mas
+  // em iOS PWA com safe-area-inset-top o `inset-0` nao cobre a barra de status
+  // — entao quando o editor "scrollava" um pouco, a navbar aparecia.
+  // Solucao: data-attribute no body que CSS global usa pra esconder navbar.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.body.setAttribute('data-canvas-editor-open', '1')
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.body.removeAttribute('data-canvas-editor-open')
+    }
+  }, [])
+
   if (!slide) return null
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#050510] flex flex-col"
+      // z-[100] garante que fica acima de QUALQUER coisa do dashboard layout
+      // (navbar z-40, modais auxiliares z-50). Cobre status bar via inset-0.
+      className="fixed inset-0 z-[100] bg-[#050510] flex flex-col"
       // touch-action: none bloqueia pinch-zoom e gestos default do browser (iOS Safari)
-      // que estavam arrastando a tela inteira. Sub-elementos relaxam isso conforme
-      // a necessidade (canvas: none, inspector: pan-y, thumbs: pan-x).
       style={{ touchAction: 'none', overscrollBehavior: 'none' }}
     >
       {/* Todas as fontes do catálogo em um único stylesheet Google Fonts */}

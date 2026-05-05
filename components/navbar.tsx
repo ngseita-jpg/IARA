@@ -120,7 +120,7 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
   return (
     <>
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex flex-col w-64 h-screen border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40 overflow-hidden"
+      <aside data-app-chrome="1" className="hidden md:flex flex-col w-64 h-screen border-r border-iara-900/30 px-4 py-6 fixed left-0 top-0 z-40 overflow-hidden"
         style={{ background: 'linear-gradient(180deg, #0e0e1e 0%, #0a0a14 100%)' }}>
         {/* Top glow */}
         <div className="absolute top-0 left-0 right-0 h-48 pointer-events-none sidebar-top-glow" />
@@ -224,6 +224,7 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
 
       {/* Mobile topbar — respeita safe-area-inset-top (status bar do iOS/Android) */}
       <header
+        data-app-chrome="1"
         className="md:hidden flex items-center justify-between px-4 py-3 border-b border-iara-900/30 fixed top-0 left-0 right-0 z-40"
         style={{
           background: 'rgba(10,10,20,0.96)',
@@ -258,6 +259,7 @@ export function Navbar({ userEmail }: { userEmail?: string }) {
 
       {/* Mobile bottom tab bar */}
       <nav
+        data-app-chrome="1"
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0d0d1a]/95 backdrop-blur-sm border-t border-iara-900/30 px-2"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
