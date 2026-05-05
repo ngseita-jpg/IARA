@@ -314,6 +314,14 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   }
 
   function addTextLayer() {
+    // Cap soft 50 layers/slide — alem disso editor fica lento + impossivel
+    // de gerenciar visualmente. Mostra toast e nao adiciona.
+    if (slide && slide.layers.length >= 50) {
+      import('@/lib/toast').then(({ toast }) => {
+        toast.warning('Limite de 50 elementos por slide. Apague algum antes de adicionar.')
+      }).catch(() => null)
+      return
+    }
     const tl: TextLayer = {
       id: newId('t'),
       type: 'text',
@@ -337,6 +345,12 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   }
 
   function addPhotoLayer(imgIdx: number) {
+    if (slide && slide.layers.length >= 50) {
+      import('@/lib/toast').then(({ toast }) => {
+        toast.warning('Limite de 50 elementos por slide. Apague algum antes de adicionar.')
+      }).catch(() => null)
+      return
+    }
     const pl: PhotoLayer = {
       id: newId('p'),
       type: 'photo',
@@ -841,11 +855,13 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           <button
             onClick={compartilharInstagram}
             disabled={exportando}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-90 disabled:opacity-40 text-white text-[10px] sm:text-xs font-bold shadow-lg shadow-pink-900/30"
-            title="Salvar imagens no celular ou compartilhar direto"
+            // Mobile target principal — texto "SALVAR" claro, gradient verde
+            // pra destacar como acao primaria em meio aos outros botoes da topbar.
+            className="flex items-center gap-1.5 px-3 sm:px-4 min-h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-iara-500 hover:opacity-90 active:scale-95 disabled:opacity-40 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-900/40 transition"
+            title="Salvar imagens no celular (galeria) ou compartilhar"
           >
-            {exportando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-            <span>Salvar / Enviar</span>
+            {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span>SALVAR</span>
           </button>
           <button
             onClick={exportarTodosPng}
@@ -1045,6 +1061,19 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
               <Plus className="w-6 h-6" />
             </button>
           )}
+
+          {/* FAB "SALVAR" — persistente esquerda. Sempre visivel pra criador
+              nunca esquecer de salvar. Com label visivel pra clareza. */}
+          <button
+            onClick={compartilharInstagram}
+            disabled={exportando}
+            aria-label="Salvar carrossel na galeria do celular"
+            className="lg:hidden fixed left-4 z-30 flex items-center gap-2 pl-3 pr-4 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-iara-500 shadow-2xl shadow-emerald-900/60 text-white font-bold active:scale-95 transition-transform disabled:opacity-50"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+          >
+            {exportando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+            <span className="text-sm">Salvar</span>
+          </button>
 
           {/* Modal: Mais opcoes da layer (Inspector completo) */}
           <FullScreenModal
@@ -1296,6 +1325,10 @@ const LayerView = React.memo(function LayerView({
         }}>
           {editing ? (
             <EditableText
+              // key={layer.id} forca remount fresh quando user re-tap em
+              // outra layer rapidamente — evita race do useEffect[] reusar
+              // instancia anterior com runs desatualizado.
+              key={t.id}
               runs={t.runs}
               align={t.align}
               displaySize={displaySize}
