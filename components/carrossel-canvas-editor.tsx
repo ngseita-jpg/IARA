@@ -819,7 +819,12 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       <link rel="stylesheet" href={GOOGLE_FONTS_URL} />
 
       {/* Topbar — responsivo: labels somem no mobile, ícones permanecem */}
-      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-[#1a1a2e] bg-[#0a0a14] flex-shrink-0">
+      <div
+        className="flex items-center justify-between gap-2 px-3 sm:px-6 py-3 border-b border-[#1a1a2e] bg-[#0a0a14] flex-shrink-0"
+        // CRITICO: respeita safe-area-inset-top do iOS — sem isso a barra de
+        // status (bateria/horario/notch) tampava o botao Voltar e o SALVAR.
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+      >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={onFechar}
@@ -1108,18 +1113,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
             </button>
           )}
 
-          {/* FAB "SALVAR" — persistente esquerda. Sempre visivel pra criador
-              nunca esquecer de salvar. Com label visivel pra clareza. */}
-          <button
-            onClick={compartilharInstagram}
-            disabled={exportando}
-            aria-label="Salvar carrossel na galeria do celular"
-            className="lg:hidden fixed left-4 z-30 flex items-center gap-2 pl-3 pr-4 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-iara-500 shadow-2xl shadow-emerald-900/60 text-white font-bold active:scale-95 transition-transform disabled:opacity-50"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-          >
-            {exportando ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-            <span className="text-sm">Salvar</span>
-          </button>
+          {/* FAB Salvar removido — usuario reportou que atrapalhava o canvas
+              (tampava layers da metade esquerda). O botao SALVAR gigante
+              gradient verde da topbar ja e' suficientemente visivel. */}
 
           {/* Modal: Mais opcoes da layer (Inspector completo) */}
           <FullScreenModal
