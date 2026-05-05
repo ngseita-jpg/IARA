@@ -42,6 +42,11 @@ export function CookieConsent() {
   // Em paginas publicas tambem usa formato compacto pra nao bloquear CTAs.
   return (
     <div
+      // data-app-chrome="1" faz o banner sumir quando o editor canvas
+      // abre (CSS global em globals.css esconde [data-app-chrome="1"]
+      // quando body tem data-canvas-editor-open). Sem isso o cookie banner
+      // tampava a topbar do editor (Voltar/SALVAR).
+      data-app-chrome="1"
       className={`fixed left-0 right-0 z-40 px-3 ${
         isAuthArea
           ? 'top-0 pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2'
