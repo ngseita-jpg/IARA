@@ -7,6 +7,7 @@ import {
   ChevronRight, Smartphone, Lightbulb, Briefcase, Scissors,
 } from 'lucide-react'
 import { UpgradeBanners } from '@/components/upgrade-banners'
+import { IaraInsightsCard } from '@/components/iara-insights-card'
 
 export const dynamic = 'force-dynamic'
 
@@ -265,6 +266,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* ── Iara Insights — card rotativo a cada 10min ── */}
+      <IaraInsightsCard />
+
       {/* ── Uso do mês ── */}
       <div className="mb-10">
         <div className="flex items-center justify-between mb-4 gap-3">
@@ -281,23 +285,10 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {isIlimitado ? (
-          <Link
-            href="/conta"
-            className="block rounded-2xl border border-emerald-800/30 bg-gradient-to-r from-emerald-950/30 to-[#0f0f1e] p-4 hover:border-emerald-700/50 transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-900/30 border border-emerald-800/25 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#f1f1f8]">Acesso ilimitado ativo</p>
-                <p className="text-xs text-[#6b6b8a]">Sem restrições — gere o quanto quiser. Toque pra gerenciar plano.</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-emerald-400/60 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-            </div>
-          </Link>
-        ) : (
+        {/* Antes: bloco 'Acesso ilimitado ativo' (mudei pra /conta — ja
+            mostra status la). Aqui agora some completamente quando ilimitado.
+            Usuario com plano nao-ilimitado segue vendo a grade de uso. */}
+        {isIlimitado ? null : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
               {usoMes.map((item) => {
