@@ -118,10 +118,13 @@ function buildBackground(l: ThumbnailLayout): React.CSSProperties {
 
 // Tamanhos de output suportados
 type Formato = 'youtube' | 'instagram_quadrado' | 'story'
+// Atualizado 2026-05-05: dimensoes premium pra qualidade que profissional
+// pagante espera. Antes: HD basico (1080-1280). Agora: FullHD/2K oficial
+// das plataformas — texto vira nitido, foto preserva detalhe.
 const TAMANHOS: Record<Formato, { width: number; height: number; escala_fonte: number }> = {
-  youtube:            { width: 1280, height: 720,  escala_fonte: 1.0 },   // 16:9 padrão
-  instagram_quadrado: { width: 1080, height: 1080, escala_fonte: 1.1 },   // 1:1 feed
-  story:              { width: 1080, height: 1920, escala_fonte: 1.4 },   // 9:16 stories/reels capa
+  youtube:            { width: 1920, height: 1080, escala_fonte: 1.0 },   // 16:9 FullHD oficial YouTube
+  instagram_quadrado: { width: 1440, height: 1440, escala_fonte: 1.1 },   // 1:1 premium Instagram
+  story:              { width: 1440, height: 2560, escala_fonte: 1.4 },   // 9:16 high-res Story/Reels
 }
 
 // ── Handler ──────────────────────────────────────────────

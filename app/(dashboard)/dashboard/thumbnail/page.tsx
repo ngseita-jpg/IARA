@@ -114,7 +114,10 @@ const GOOGLE_FONTS_HREF =
   '&family=Caveat:wght@700' +
   '&display=swap'
 
-function resizeImage(dataUrl: string, maxDim = 1280, quality = 0.85): Promise<string> {
+// Antes: maxDim=1280 quality=0.85 — fotos pro do user (4K) saiam pixelizadas
+// no thumbnail final. Agora 2400 @ 92% com Lanczos ('high') preserva detalhe
+// pra render em 1920x1080 (FullHD YouTube) ou 1440x1440 (Instagram premium).
+function resizeImage(dataUrl: string, maxDim = 2400, quality = 0.92): Promise<string> {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
@@ -123,7 +126,10 @@ function resizeImage(dataUrl: string, maxDim = 1280, quality = 0.85): Promise<st
       const h = Math.round(img.height * scale)
       const canvas = document.createElement('canvas')
       canvas.width = w; canvas.height = h
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      const ctx = canvas.getContext('2d')!
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, w, h)
       resolve(canvas.toDataURL('image/jpeg', quality))
     }
     img.onerror = () => resolve(dataUrl)

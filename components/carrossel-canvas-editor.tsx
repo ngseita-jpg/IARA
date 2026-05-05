@@ -1787,7 +1787,9 @@ function PreviewModal({ slides, imageCache, watermark, onFechar }: {
         <X className="w-5 h-5" />
       </button>
       <div className="flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
-        <canvas ref={ref} width={1080} height={1080} className="max-w-[90vw] max-h-[75vh] rounded-xl shadow-2xl" style={{ aspectRatio: '1/1' }} />
+        {/* width/height matchando CANVAS_SIZE (1440) — antes estava 1080
+            mas renderer escreve em 1440 e canvas DOM downscalava com perda. */}
+        <canvas ref={ref} width={1440} height={1440} className="max-w-[90vw] max-h-[75vh] rounded-xl shadow-2xl" style={{ aspectRatio: '1/1' }} />
         <div className="flex items-center gap-3">
           <button onClick={() => setIdx(Math.max(0, idx - 1))} disabled={idx === 0}
             className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30">

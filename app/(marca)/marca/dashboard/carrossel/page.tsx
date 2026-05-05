@@ -16,7 +16,10 @@ import type { Slide2 } from '@/lib/carrossel-canvas-types'
 
 const COR_MARCA = '#a855f7'
 
-function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<string> {
+// Atualizado 2026-05-05: maxDim 800->2400 + JPEG 72->92% + Lanczos high.
+// Marca paga premium — qualidade premium tambem (essa area tinha ficado
+// fora dos fixes anteriores do criador).
+function resizeImage(dataUrl: string, maxDim = 2400, quality = 0.92): Promise<string> {
   return new Promise((resolve) => {
     const img = new window.Image()
     img.onload = () => {
@@ -26,7 +29,10 @@ function resizeImage(dataUrl: string, maxDim = 800, quality = 0.72): Promise<str
       const canvas = document.createElement('canvas')
       canvas.width = w
       canvas.height = h
-      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      const ctx = canvas.getContext('2d')!
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(img, 0, 0, w, h)
       resolve(canvas.toDataURL('image/jpeg', quality))
     }
     img.onerror = () => resolve(dataUrl)
