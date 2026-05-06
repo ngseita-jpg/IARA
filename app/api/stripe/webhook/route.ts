@@ -360,9 +360,12 @@ async function processarEvento(event: Stripe.Event): Promise<NextResponse> {
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription
       const userId = sub.metadata?.user_id
+      const tipo = sub.metadata?.tipo  // 'criador' | 'marca' (setado no checkout)
       if (userId) {
+        // Marca tem tabela separada — sem isso marca cancelada continuava com features pagas.
+        const tabela = tipo === 'marca' ? 'brand_profiles' : 'creator_profiles'
         await supabaseAdmin
-          .from('creator_profiles')
+          .from(tabela)
           .update({ plano: 'free', stripe_subscription_id: null })
           .eq('user_id', userId)
       }

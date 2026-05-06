@@ -69,9 +69,9 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/bem-vindo?plano=${plano}&periodo=${periodo}`,
       cancel_url: `${origin}/dashboard`,
-      metadata: { user_id: user.id, plano, periodo },
+      metadata: { user_id: user.id, plano, periodo, tipo: 'criador' },
       subscription_data: {
-        metadata: { user_id: user.id, plano, periodo },
+        metadata: { user_id: user.id, plano, periodo, tipo: 'criador' },
         trial_period_days: 3,
         trial_settings: {
           end_behavior: { missing_payment_method: 'cancel' },

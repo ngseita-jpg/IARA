@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Copy,
 } from 'lucide-react'
+import { compressImage } from '@/lib/image-compress'
 
 type Foto = {
   id: string
@@ -62,7 +63,9 @@ export default function FotosPage() {
     setErro(null)
 
     try {
-      const base64 = await fileToBase64(file)
+      // Comprime no client antes de enviar — fotos de iPhone (8-12MB) estouram
+      // o limite Vercel (~5MB) e upload trava sem aviso. Reduz pra 1600px @ 85%.
+      const base64 = await compressImage(file, 1600, 0.85)
       const res = await fetch('/api/fotos/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,15 +84,6 @@ export default function FotosPage() {
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }, [])
-
-  function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => resolve(e.target?.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault()
