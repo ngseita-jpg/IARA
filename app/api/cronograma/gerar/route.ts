@@ -246,26 +246,42 @@ Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar, em
       messages: [{ role: 'user', content: userPrompt }],
     })
   } catch (e) {
-    console.error('[cronograma/gerar] Anthropic erro:', e instanceof Error ? e.message : e)
-    return NextResponse.json({ error: 'Falha temporária da IA. Tente em alguns segundos.' }, { status: 503 })
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[cronograma/gerar] Anthropic erro:', msg)
+    return NextResponse.json({
+      error: 'Falha temporária da IA. Tente em alguns segundos.',
+      debug: msg.slice(0, 200),
+    }, { status: 503 })
   }
 
   const texto = response.content[0]?.type === 'text' ? response.content[0].text : ''
   const jsonMatch = texto.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
-    console.error('[cronograma/gerar] JSON inválido na resposta da IA')
-    return NextResponse.json({ error: 'Resposta da IA mal formada. Tente regerar.' }, { status: 502 })
+    console.error('[cronograma/gerar] JSON nao encontrado. Resposta IA:', texto.slice(0, 500))
+    return NextResponse.json({
+      error: 'Resposta da IA mal formada. Tente regerar.',
+      debug: `IA nao retornou JSON. Inicio resposta: ${texto.slice(0, 200)}`,
+    }, { status: 502 })
   }
 
   let parsed: { items: CronogramaItem[]; raciocinio: string }
   try {
     parsed = JSON.parse(jsonMatch[0])
-  } catch {
-    return NextResponse.json({ error: 'Resposta da IA não é JSON válido.' }, { status: 502 })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[cronograma/gerar] JSON parse erro:', msg, 'Inicio:', jsonMatch[0].slice(0, 300))
+    return NextResponse.json({
+      error: 'IA retornou JSON quebrado. Tente regerar.',
+      debug: `Parse erro: ${msg}`,
+    }, { status: 502 })
   }
 
   if (!parsed.items || !Array.isArray(parsed.items) || parsed.items.length === 0) {
-    return NextResponse.json({ error: 'IA não gerou items. Tente regerar.' }, { status: 502 })
+    console.error('[cronograma/gerar] items vazio ou ausente. Parsed:', JSON.stringify(parsed).slice(0, 500))
+    return NextResponse.json({
+      error: 'IA não gerou items. Tente regerar.',
+      debug: `Recebi: ${JSON.stringify(parsed).slice(0, 200)}`,
+    }, { status: 502 })
   }
 
   // 7. Calcula custo
@@ -352,8 +368,13 @@ Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar, em
     .select()
 
   if (itemsErr) {
-    console.error('[cronograma/gerar] erro inserindo items:', itemsErr.message)
-    return NextResponse.json({ error: 'Erro salvando os posts.' }, { status: 500 })
+    console.error('[cronograma/gerar] erro inserindo items:', itemsErr.message, 'Sample:', JSON.stringify(itemsParaInserir[0]))
+    // Cleanup do registro orfao no parent (cronograma_semanal)
+    await admin.from('cronograma_semanal').delete().eq('id', cronograma.id)
+    return NextResponse.json({
+      error: 'Erro salvando os posts.',
+      debug: `${itemsErr.message}. Items sendo inseridos: ${itemsParaInserir.length}`,
+    }, { status: 500 })
   }
 
   return NextResponse.json({

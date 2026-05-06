@@ -267,7 +267,10 @@ export default function CalendarioPage() {
         return
       }
       if (!res.ok) {
-        setErroCronograma(data.mensagem || data.error || 'Erro inesperado. Tenta de novo em alguns segundos.')
+        const erroBase = data.mensagem || data.error || 'Erro inesperado. Tenta de novo em alguns segundos.'
+        // Mostra debug em dev/prod pra debugar quando user reporta — facilita diagnose
+        const erroFinal = data.debug ? `${erroBase} [Debug: ${data.debug}]` : erroBase
+        setErroCronograma(erroFinal)
         return
       }
       await loadData()
