@@ -15,8 +15,16 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('client_id', appId)
   url.searchParams.set('redirect_uri', redirectUri)
   url.searchParams.set('response_type', 'code')
-  url.searchParams.set('scope', 'instagram_basic,instagram_manage_insights,instagram_manage_comments,pages_show_list,pages_read_engagement,business_management')
   url.searchParams.set('state', user.id)
+
+  // Login for Business (novo fluxo Meta) — passa config_id, scopes vem da configuracao
+  const configId = process.env.META_LOGIN_CONFIG_ID
+  if (configId) {
+    url.searchParams.set('config_id', configId)
+  } else {
+    // Fallback: fluxo antigo, declara scopes na URL
+    url.searchParams.set('scope', 'instagram_basic,instagram_manage_insights,instagram_manage_comments,pages_show_list,pages_read_engagement,business_management')
+  }
 
   return NextResponse.redirect(url.toString())
 }
