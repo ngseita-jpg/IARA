@@ -92,13 +92,28 @@ export async function middleware(request: NextRequest) {
         { auth: { autoRefreshToken: false, persistSession: false } },
       )
       const [{ data: cp }, { data: bp }] = await Promise.all([
-        admin.from('creator_profiles').select('termos_versao_aceita').eq('user_id', user.id).maybeSingle(),
-        admin.from('brand_profiles').select('termos_versao_aceita').eq('user_id', user.id).maybeSingle(),
+        admin.from('creator_profiles').select('termos_versao_aceita, onboarding_completo, nicho').eq('user_id', user.id).maybeSingle(),
+        admin.from('brand_profiles').select('termos_versao_aceita, onboarding_completo').eq('user_id', user.id).maybeSingle(),
       ])
       const aceitouAlgum = !!(cp?.termos_versao_aceita || bp?.termos_versao_aceita)
       if (!aceitouAlgum) {
         const url = request.nextUrl.clone()
         url.pathname = '/aceitar-termos'
+        url.search = ''
+        return NextResponse.redirect(url)
+      }
+
+      // Forca onboarding: se aceitou termos mas nao completou onboarding, bloqueia
+      // qualquer rota interna (exceto /onboarding e /api dele). Sem isso user gera
+      // conteudo generico sem persona e churn.
+      const isOnboardingRoute = pathname.startsWith('/onboarding') || pathname.startsWith('/marca/onboarding') || pathname.startsWith('/api/onboarding')
+      const ehCriador = !!cp
+      const ehMarca = !!bp && !cp
+      const onboardingCriadorPendente = ehCriador && cp && !cp.onboarding_completo && !cp.nicho
+      const onboardingMarcaPendente = ehMarca && bp && !bp.onboarding_completo
+      if (!isOnboardingRoute && (onboardingCriadorPendente || onboardingMarcaPendente)) {
+        const url = request.nextUrl.clone()
+        url.pathname = ehMarca ? '/marca/onboarding' : '/onboarding'
         url.search = ''
         return NextResponse.redirect(url)
       }

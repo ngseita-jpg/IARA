@@ -125,7 +125,13 @@ Retorne SOMENTE JSON válido (sem markdown, sem texto extra):
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('JSON não encontrado na resposta')
 
-    const parsed = JSON.parse(jsonMatch[0])
+    let parsed
+    try {
+      parsed = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      parsed = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
 
     return new Response(
       JSON.stringify({ slides: parsed.slides, dica_geral: parsed.dica_geral }),

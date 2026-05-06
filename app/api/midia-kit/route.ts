@@ -127,7 +127,13 @@ Retorne SOMENTE JSON válido:
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('JSON não encontrado')
 
-    const kit = JSON.parse(jsonMatch[0])
+    let kit
+    try {
+      kit = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      kit = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
 
     // Registra uso para controle de limite e concede pontos
     const PONTOS_MIDIA_KIT = 5

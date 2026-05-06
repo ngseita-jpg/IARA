@@ -106,9 +106,17 @@ Avalie nas 5 dimensões e retorne SOMENTE JSON válido (sem markdown, sem texto 
     })
 
     const raw = message.content[0].type === 'text' ? message.content[0].text : ''
-    analysisData = JSON.parse(raw)
-  } catch {
-    return new Response(JSON.stringify({ error: 'Erro ao analisar transcrição' }), { status: 500 })
+    const jsonMatch = raw.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('IA não retornou JSON')
+    try {
+      analysisData = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      analysisData = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
+  } catch (e) {
+    const detalhe = e instanceof Error ? e.message : 'erro'
+    return new Response(JSON.stringify({ error: 'Erro ao analisar transcrição', detalhe }), { status: 500 })
   }
 
   // Salvar análise no banco

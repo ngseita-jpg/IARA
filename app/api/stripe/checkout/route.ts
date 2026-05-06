@@ -49,10 +49,16 @@ export async function POST(req: NextRequest) {
         metadata: { user_id: user.id },
       })
       customerId = customer.id
-      await admin
+      // upsert pra garantir que mesmo sem trigger handle_new_user a row existe.
+      // Sem isso: user paga, Stripe salva customer, mas update afeta 0 rows
+      // e webhook nao acha o user_id pra atualizar plano. Resultado: pago sem upgrade.
+      const { error: upErr } = await admin
         .from('creator_profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('user_id', user.id)
+        .upsert({ user_id: user.id, stripe_customer_id: customerId }, { onConflict: 'user_id' })
+      if (upErr) {
+        console.error('[stripe/checkout] falha upsert stripe_customer_id:', upErr.message)
+        return NextResponse.json({ error: 'Erro setando customer Stripe. Tente em alguns segundos.' }, { status: 500 })
+      }
     }
 
     const origin = req.headers.get('origin') ?? 'https://iarahubapp.com.br'

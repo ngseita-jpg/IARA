@@ -259,7 +259,13 @@ Retorne APENAS o JSON.`
     const jsonMatch = texto.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'IA não retornou JSON válido' }, { status: 500 })
 
-    const layout: ThumbnailLayout = JSON.parse(jsonMatch[0])
+    let layout: ThumbnailLayout
+    try {
+      layout = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      layout = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
 
     return NextResponse.json({ layout, assistant_message: texto })
   } catch (err) {

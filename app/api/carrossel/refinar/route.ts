@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 
-export const maxDuration = 30
+export const maxDuration = 60
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -75,7 +75,13 @@ Retorne APENAS JSON, sem markdown:
     const jsonMatch = texto.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'Erro ao analisar conteúdo' }, { status: 500 })
 
-    const resultado: RefinamentoResponse = JSON.parse(jsonMatch[0])
+    let resultado: RefinamentoResponse
+    try {
+      resultado = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      resultado = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
     return NextResponse.json(resultado)
   } catch (err) {
     console.error('[refinar]', err)

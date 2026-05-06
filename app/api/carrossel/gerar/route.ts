@@ -387,7 +387,13 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
     try {
       carrossel = JSON.parse(jsonMatch[0])
     } catch {
-      return NextResponse.json({ error: 'Erro ao interpretar resposta da IA. Tente novamente.' }, { status: 500 })
+      try {
+        const { jsonrepair } = await import('jsonrepair')
+        carrossel = JSON.parse(jsonrepair(jsonMatch[0]))
+      } catch (e2) {
+        const detalhe = e2 instanceof Error ? e2.message : 'erro'
+        return NextResponse.json({ error: 'Erro ao interpretar resposta da IA. Tente novamente.', detalhe }, { status: 500 })
+      }
     }
 
     // ── Revisão automática do texto ──────────────────────────────────────────

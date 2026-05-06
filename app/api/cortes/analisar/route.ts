@@ -9,7 +9,7 @@ import { checkRateLimitUser } from '@/lib/rateLimit'
 import { isFeatureEnabled } from '@/lib/feature-flags'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 90
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -201,7 +201,13 @@ Seja honesto nos scores: só dê 90+ pra cortes que REALMENTE têm potencial vir
     const texto = response.content.filter(b => b.type === 'text').map(b => (b as { type: 'text'; text: string }).text).join('')
     const jsonMatch = texto.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('IA não retornou JSON')
-    const parsed = JSON.parse(jsonMatch[0]) as { trechos: Trecho[] }
+    let parsed: { trechos: Trecho[] }
+    try {
+      parsed = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      parsed = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
     trechos = (parsed.trechos ?? []).filter(t =>
       typeof t.inicio_segundos === 'number' &&
       typeof t.fim_segundos === 'number' &&

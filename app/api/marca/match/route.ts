@@ -110,7 +110,13 @@ Ordene do maior score pro menor. Inclua NO MÁXIMO ${num} criadores.`
     const jsonMatch = texto.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return NextResponse.json({ error: 'IA não retornou JSON válido' }, { status: 500 })
 
-    const parsed = JSON.parse(jsonMatch[0]) as { matches: Array<{ id: string; score: number; racional: string; pontos_fortes?: string[] }> }
+    let parsed: { matches: Array<{ id: string; score: number; racional: string; pontos_fortes?: string[] }> }
+    try {
+      parsed = JSON.parse(jsonMatch[0])
+    } catch {
+      const { jsonrepair } = await import('jsonrepair')
+      parsed = JSON.parse(jsonrepair(jsonMatch[0]))
+    }
 
     // Hidrata com dados completos do criador (pro frontend mostrar)
     const hidratados = (parsed.matches ?? []).map(m => {
