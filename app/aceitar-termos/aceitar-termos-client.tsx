@@ -59,7 +59,7 @@ export function ContaTermosClient() {
               <li className="flex gap-2"><span className="text-iara-500 mt-0.5">•</span><span>Cobrança recorrente após o trial de 3 dias, cancelável a qualquer momento.</span></li>
               <li className="flex gap-2"><span className="text-iara-500 mt-0.5">•</span><span>Você é responsável pelo conteúdo que publica baseado em sugestões da IA.</span></li>
               <li className="flex gap-2"><span className="text-amber-500 mt-0.5">•</span><span><strong className="text-amber-300">Banimento sem reembolso</strong> em caso de uso compartilhado, multi-conta pra burlar limites, ou ataque à plataforma.</span></li>
-              <li className="flex gap-2"><span className="text-iara-500 mt-0.5">•</span><span>LGPD respeitada — você pode pedir, corrigir ou apagar seus dados a qualquer momento via <a href="mailto:iarahubapp@gmail.com" className="text-iara-400 hover:underline">iarahubapp@gmail.com</a>.</span></li>
+              <li className="flex gap-2"><span className="text-iara-500 mt-0.5">•</span><span>LGPD respeitada — você pode pedir, corrigir ou apagar seus dados a qualquer momento via <a href="mailto:ngseita@gmail.com" className="text-iara-400 hover:underline">ngseita@gmail.com</a>.</span></li>
             </ul>
           </div>
 

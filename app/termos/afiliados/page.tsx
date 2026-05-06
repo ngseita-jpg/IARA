@@ -253,7 +253,7 @@ export default function TermosAfiliadosPage() {
           <P>
             Eventuais conflitos serão preferencialmente resolvidos pela via extrajudicial, mediante contato com o suporte do
             Iara Hub em <Link href="/ajuda" className="text-iara-400 hover:text-iara-300 underline">iarahubapp.com.br/ajuda</Link>
-            ou pelo email <Strong>iarahubapp@gmail.com</Strong>.
+            ou pelo email <Strong>ngseita@gmail.com</Strong>.
           </P>
         </Secao>
 

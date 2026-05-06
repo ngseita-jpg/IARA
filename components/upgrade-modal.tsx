@@ -145,7 +145,7 @@ export function UpgradeModal({ open, modulo, onClose }: Props) {
 
     // Agência → email comercial
     if (plano === 'agencia') {
-      window.location.href = 'mailto:contato@iarahubapp.com.br?subject=Quero%20o%20plano%20Ag%C3%AAncia&body=Ol%C3%A1!%20Tenho%20interesse%20no%20plano%20Ag%C3%AAncia%20do%20Iara%20Hub.%20Pode%20me%20chamar?'
+      window.location.href = 'mailto:ngseita@gmail.com?subject=Quero%20o%20plano%20Ag%C3%AAncia&body=Ol%C3%A1!%20Tenho%20interesse%20no%20plano%20Ag%C3%AAncia%20do%20Iara%20Hub.%20Pode%20me%20chamar?'
       return
     }
 

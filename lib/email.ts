@@ -4,14 +4,14 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     type: 'OAuth2',
-    user: 'iarahubapp@gmail.com',
+    user: 'ngseita@gmail.com',
     clientId: process.env.GMAIL_CLIENT_ID,
     clientSecret: process.env.GMAIL_CLIENT_SECRET,
     refreshToken: process.env.GMAIL_REFRESH_TOKEN,
   },
 })
 
-const FROM = '"Iara Hub" <iarahubapp@gmail.com>'
+const FROM = '"Iara Hub" <ngseita@gmail.com>'
 
 function base(preheader: string, body: string) {
   return `<!DOCTYPE html>
@@ -335,7 +335,7 @@ export async function emailTicketNovoAdmin({
     </table>
     ${btn('https://supabase.com/dashboard/project/_/editor', 'Abrir Supabase →')}
   `
-  await send('iarahubapp@gmail.com', `[SAC] #${ticketId} · ${assunto}`, base(`Novo ticket de ${userNome || userEmail}`, body))
+  await send('ngseita@gmail.com', `[SAC] #${ticketId} · ${assunto}`, base(`Novo ticket de ${userNome || userEmail}`, body))
 }
 
 export async function emailTicketRespondidoUsuario({
