@@ -275,10 +275,10 @@ export default function CalendarioPage() {
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-3xl font-bold text-[#f1f1f8]">
-              Calendário <span className="iara-gradient-text">Editorial</span>
+              Conteúdos da <span className="iara-gradient-text">Semana</span>
             </h1>
             <p className="mt-1 text-[#9b9bb5] text-sm">
-              Planeje seu conteúdo, conecte às metas e ganhe pontos ao postar.
+              7 dias de conteúdo gerados pela Iara. Marque postagens, conecte às metas e ganhe pontos.
             </p>
           </div>
 
