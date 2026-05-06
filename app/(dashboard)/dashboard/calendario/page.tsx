@@ -243,9 +243,9 @@ export default function CalendarioPage() {
     }, 5000)
 
     try {
-      // Timeout 90s (Sonnet 4.6 com cache cold pode demorar ~40s)
+      // Timeout 100s — Sonnet 4.6 com 7 items pode chegar a 60-80s. Server tem maxDuration 90s.
       const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 90_000)
+      const timer = setTimeout(() => ctrl.abort(), 100_000)
 
       const res = await fetch('/api/cronograma/gerar', {
         method: 'POST',
@@ -280,7 +280,7 @@ export default function CalendarioPage() {
       await loadData()
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
-        setErroCronograma('Demorou mais que 90s. A IA pode estar sobrecarregada — tenta de novo.')
+        setErroCronograma('Demorou mais que 100s. A IA pode estar sobrecarregada — tenta de novo.')
       } else {
         setErroCronograma('Falha de conexão. Verifica internet e tenta de novo.')
       }

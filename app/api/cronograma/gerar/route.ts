@@ -8,7 +8,7 @@ import {
 } from '@/lib/cronograma-heuristicas'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 90
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -39,8 +39,9 @@ REGRAS OBRIGATÓRIAS:
 4. LOCAL: escolha DA LISTA fornecida pro nicho (ou descreva variação plausível).
 
 5. SCRIPT: PRONTO PRA GRAVAR/POSTAR — não brief, não rascunho.
+   - MÁXIMO 8 linhas curtas (ideal 5-7) — script pra rolar em 60-90s na fala natural
    - Hook (1ª linha): força emocional, tensão, curiosidade
-   - Desenvolvimento (3-5 linhas): específico, brasileiro, sem clichês
+   - Desenvolvimento (3-5 linhas): específico, brasileiro, sem clichês, frases enxutas
    - CTA: ação clara ("salve", "manda pra alguém", "comenta o número da dica")
 
 6. EVITAR:
@@ -241,7 +242,8 @@ Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar, em
   try {
     response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 2500,  // Antes 4000 — IA estava escrevendo scripts de 1500 chars cada,
+                         // batia 77s+ no Sonnet. Limite pra forcar concisao.
       system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content: userPrompt }],
     })
