@@ -44,3 +44,27 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+
+/**
+ * GET retorna a disponibilidade atual — usado pra pre-preencher o wizard
+ * quando o user clica "Editar disponibilidade" pra mudar a rotina.
+ */
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+  const { data } = await supabase
+    .from('creator_profiles')
+    .select('disponibilidade_dias, disponibilidade_periodos, disponibilidade_minutos, disponibilidade_compromissos, disponibilidade_atualizada_em')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  return NextResponse.json({
+    dias: data?.disponibilidade_dias ?? null,
+    periodos: data?.disponibilidade_periodos ?? null,
+    minutos: data?.disponibilidade_minutos ?? null,
+    compromissos: data?.disponibilidade_compromissos ?? null,
+    atualizada_em: data?.disponibilidade_atualizada_em ?? null,
+  })
+}

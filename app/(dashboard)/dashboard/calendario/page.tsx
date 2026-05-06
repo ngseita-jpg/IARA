@@ -189,6 +189,31 @@ export default function CalendarioPage() {
   const [erroCronograma, setErroCronograma] = useState<string | null>(null)
   const [redirectPersona, setRedirectPersona] = useState(false)
   const [precisaDisponibilidade, setPrecisaDisponibilidade] = useState(false)
+  // Editar disponibilidade existente (user mudou a rotina)
+  const [editandoDisponibilidade, setEditandoDisponibilidade] = useState(false)
+  const [dispoAtual, setDispoAtual] = useState<{
+    dias: string[] | null
+    periodos: string[] | null
+    minutos: number | null
+    compromissos: string | null
+  } | null>(null)
+
+  async function abrirEditorDisponibilidade() {
+    try {
+      const res = await fetch('/api/perfil/disponibilidade')
+      const data = await res.json().catch(() => ({}))
+      setDispoAtual({
+        dias: data.dias ?? null,
+        periodos: data.periodos ?? null,
+        minutos: data.minutos ?? null,
+        compromissos: data.compromissos ?? null,
+      })
+    } catch {
+      setDispoAtual({ dias: null, periodos: null, minutos: null, compromissos: null })
+    }
+    setEditandoDisponibilidade(true)
+    setPrecisaDisponibilidade(false)
+  }
 
   async function gerarCronograma(forcar = false) {
     setGerandoCronograma(true)
@@ -301,14 +326,64 @@ export default function CalendarioPage() {
         const itemHoje = items.find(i => i.data_planejada === today && i.gerado_por_ia)
         const temCronogramaSemana = items.some(i => i.gerado_por_ia)
 
+        // Editar disponibilidade existente (user clicou em "Mudar agenda")
+        if (editandoDisponibilidade && dispoAtual) {
+          return (
+            <CronogramaDisponibilidadeWizard
+              onConcluir={() => {
+                setEditandoDisponibilidade(false)
+                gerarCronograma(true)  // regera com agenda nova
+              }}
+              inicialDias={dispoAtual.dias ?? []}
+              inicialPeriodos={dispoAtual.periodos ?? []}
+              inicialMinutos={dispoAtual.minutos}
+              inicialCompromissos={dispoAtual.compromissos}
+            />
+          )
+        }
+
         if (itemHoje) {
           return (
-            <CronogramaHojeCard
-              item={itemHoje}
-              onConcluir={(id) => concluirItem(id) as Promise<void>}
-              onRegerar={() => gerarCronograma(true)}
-              podeRegerar
-            />
+            <>
+              <CronogramaHojeCard
+                item={itemHoje}
+                onConcluir={(id) => concluirItem(id) as Promise<void>}
+                onRegerar={() => gerarCronograma(true)}
+                podeRegerar
+              />
+              <button
+                onClick={abrirEditorDisponibilidade}
+                className="mt-3 mb-6 text-xs text-iara-400/80 hover:text-iara-300 underline underline-offset-2 transition-colors"
+              >
+                Mudou sua rotina? Editar disponibilidade
+              </button>
+            </>
+          )
+        }
+
+        // Cronograma existe mas hoje nao tem post (dia de descanso na agenda)
+        if (temCronogramaSemana && !itemHoje) {
+          const proximoItem = items
+            .filter(i => i.gerado_por_ia && i.data_planejada > today)
+            .sort((a, b) => a.data_planejada.localeCompare(b.data_planejada))[0]
+          return (
+            <div className="rounded-3xl bg-gradient-to-br from-iara-900/30 via-accent-purple/10 to-iara-950/20 border border-iara-700/30 p-6 mb-3 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-iara-600/20 border border-iara-500/30 flex items-center justify-center text-2xl">
+                🌙
+              </div>
+              <h3 className="text-lg font-bold text-white mb-1">Hoje é dia de descanso</h3>
+              <p className="text-sm text-iara-200/80">
+                {proximoItem
+                  ? <>Próximo post: <strong className="text-white">{new Date(proximoItem.data_planejada + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' })}</strong>{proximoItem.horario_sugerido ? ` às ${proximoItem.horario_sugerido.slice(0, 5)}` : ''} — {proximoItem.titulo}</>
+                  : 'Aproveita pra descansar.'}
+              </p>
+              <button
+                onClick={abrirEditorDisponibilidade}
+                className="mt-3 text-xs text-iara-400/80 hover:text-iara-300 underline underline-offset-2 transition-colors"
+              >
+                Mudei de ideia, quero postar hoje
+              </button>
+            </div>
           )
         }
 

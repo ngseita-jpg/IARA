@@ -168,10 +168,22 @@ export function sugerirLocais(nicho: string | null | undefined): string[] {
   return LOCAIS_POR_NICHO._default
 }
 
-/** Pega a próxima segunda-feira (ou hoje se for segunda). YYYY-MM-DD. */
-export function proximaSegunda(referencia: Date = new Date()): string {
+/** Pega a SEGUNDA-feira da SEMANA ATUAL (ou hoje se for segunda). YYYY-MM-DD.
+ * Use isso pra cronograma que cobre a semana corrente. */
+export function inicioSemanaAtual(referencia: Date = new Date()): string {
   const d = new Date(referencia)
   const dia = d.getDay()  // 0=dom, 1=seg, ..., 6=sab
+  // Quantos dias VOLTAR ate a segunda dessa semana
+  // dom (0) -> volta 6, seg (1) -> 0, ter (2) -> 1, etc
+  const diasParaVoltar = dia === 0 ? 6 : dia - 1
+  d.setDate(d.getDate() - diasParaVoltar)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Pega a PROXIMA segunda-feira (sempre futura). Mantido pra retrocompatibilidade. */
+export function proximaSegunda(referencia: Date = new Date()): string {
+  const d = new Date(referencia)
+  const dia = d.getDay()
   const diasAteSegunda = dia === 1 ? 0 : (8 - dia) % 7
   d.setDate(d.getDate() + diasAteSegunda)
   return d.toISOString().slice(0, 10)

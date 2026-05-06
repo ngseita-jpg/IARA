@@ -4,7 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import {
   janelasHorarios, sugerirLocais, ARQUETIPO_DIA_SEMANA,
-  proximaSegunda, addDias, type DiaSemana,
+  inicioSemanaAtual, addDias, type DiaSemana,
 } from '@/lib/cronograma-heuristicas'
 
 export const runtime = 'nodejs'
@@ -26,22 +26,19 @@ type CronogramaItem = {
 }
 
 const SYSTEM_PROMPT = `Você é a Iara, assessora de conteúdo para criadores e profissionais brasileiros.
-Sua tarefa: gerar um CRONOGRAMA SEMANAL DE POSTAGENS de 7 dias.
+Sua tarefa: gerar um CRONOGRAMA DE POSTAGENS apenas pros dias que o criador pode postar.
 
 REGRAS OBRIGATÓRIAS:
-1. Misturar formatos: variar entre reel/carrossel/post/story pra não cansar feed do follower
-2. Cada dia tem ARQUÉTIPO específico (siga rigorosamente):
-   - SEGUNDA: problema_doloroso (reel) — hook agressivo sobre erro/dor do nicho
-   - TERÇA: dica_acionavel (carrossel) — tutorial prático salvável, 5-7 slides
-   - QUARTA: historia_pessoal (reel) — vulnerabilidade, conexão emocional
-   - QUINTA: case_resultado (reel) — antes/depois ou prova social
-   - SEXTA: cta_engajamento (post) — pergunta provocativa pra comentários
-   - SÁBADO: leve_humano (story) — bastidor, descontraído
-   - DOMINGO: reflexao_inspiracao (post) — frase forte/reflexão pra começar a semana
 
-3. HORÁRIO: escolha DENTRO das janelas fornecidas no input. Não invente horário fora.
+1. Gere UM item para CADA dia listado em "## Dias com post nesta semana" (nem mais, nem menos). Não invente dias adicionais. Não pule nenhum dos listados.
+
+2. Cada dia listado vem com um ARQUÉTIPO sugerido — siga ele. Misture formatos entre os dias (reel/carrossel/post/story) pra variar o feed.
+
+3. HORÁRIO: escolha DENTRO das janelas válidas fornecidas no input. Formato HH:MM (ex: "18:30"). Não invente horário fora.
+
 4. LOCAL: escolha DA LISTA fornecida pro nicho (ou descreva variação plausível).
-5. SCRIPT: deve ser PRONTO PRA GRAVAR/POSTAR — não brief, não rascunho.
+
+5. SCRIPT: PRONTO PRA GRAVAR/POSTAR — não brief, não rascunho.
    - Hook (1ª linha): força emocional, tensão, curiosidade
    - Desenvolvimento (3-5 linhas): específico, brasileiro, sem clichês
    - CTA: ação clara ("salve", "manda pra alguém", "comenta o número da dica")
@@ -53,14 +50,14 @@ REGRAS OBRIGATÓRIAS:
 
 7. PORTUGUÊS BR fluente, sem erro gramatical.
 
-OUTPUT: JSON estrito (sem markdown, sem explicação fora do JSON):
+OUTPUT: JSON estrito (sem markdown, sem explicação fora do JSON). dia_semana segue 1=seg, 2=ter, ..., 6=sab, 0=dom:
 {
   "items": [{
-    "dia_semana": 1, "data": "2026-05-11", "titulo": "...",
+    "dia_semana": 3, "data": "2026-05-08", "titulo": "...",
     "plataforma": "instagram", "tipo": "reel",
     "horario": "18:30", "local": "...", "gancho": "...",
     "script": "linha 1\\nlinha 2\\nlinha 3", "cta": "..."
-  }, ... ],
+  }],
   "raciocinio": "Explicação curta da sequência narrativa que você criou pra essa semana específica"
 }`
 
@@ -75,7 +72,7 @@ export async function POST(req: NextRequest) {
   const { semana_inicio: semanaForcada, forcar_regeneracao = false } =
     await req.json().catch(() => ({})) as { semana_inicio?: string; forcar_regeneracao?: boolean }
 
-  const semanaInicio = semanaForcada ?? proximaSegunda()
+  const semanaInicio = semanaForcada ?? inicioSemanaAtual()
   const admin = createAdminClient()
 
   // 1. Verifica se já existe cronograma pra essa semana e nao forcou regerar
@@ -182,6 +179,33 @@ export async function POST(req: NextRequest) {
     ? `${profile.disponibilidade_minutos} minutos por dia`
     : 'não informado'
 
+  // Mapa abreviacao -> dia_semana numero (1=seg ... 0=dom)
+  const DIA_NUM: Record<string, DiaSemana> = {
+    seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6, dom: 0,
+  }
+  const NOMES_DIA = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO']
+
+  // Lista APENAS os dias que o criador marcou como disponiveis nesta semana
+  const diasComPost = dias
+    .map((abrev) => {
+      const num = DIA_NUM[abrev.toLowerCase().slice(0, 3)]
+      if (num === undefined) return null
+      // Calcula a data exata na semana corrente
+      const offset = num === 0 ? 6 : num - 1
+      const data = addDias(semanaInicio, offset)
+      const arq = ARQUETIPO_DIA_SEMANA[num as DiaSemana]
+      return {
+        nome: NOMES_DIA[num],
+        data,
+        dia_semana: num,
+        arquetipo: arq.arquetipo,
+        formato: arq.formato_sugerido,
+        vibe: arq.vibe,
+      }
+    })
+    .filter((d): d is NonNullable<typeof d> => d !== null)
+    .sort((a, b) => a.data.localeCompare(b.data))
+
   const userPrompt = `## Perfil do criador
 - Nome: ${profile.nome_artistico ?? 'criador'}
 - Nicho: ${profile.nicho}
@@ -191,13 +215,10 @@ export async function POST(req: NextRequest) {
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
 
-## Disponibilidade REAL do criador (RESPEITE — não invente horário fora disso)
-- Dias da semana que pode postar: ${dias.join(', ').toUpperCase()}
+## Disponibilidade REAL do criador
 - Períodos do dia disponíveis: ${periodosDisponiveis || 'não informado'}
 - Tempo livre por dia pra criar conteúdo: ${minutosTexto}
 ${profile.disponibilidade_compromissos ? `- Compromissos fixos a evitar: ${profile.disponibilidade_compromissos}` : ''}
-
-REGRA CRÍTICA: gere posts SOMENTE nos dias listados acima. Os outros dias da semana ficam SEM POST (item vazio na resposta — pula esse dia). Horário escolhido tem que cair dentro de UM dos períodos disponíveis acima.
 
 ## Janelas de horário válidas (BR, Instagram)
 ${janelas.map(j => `- ${j.inicio} às ${j.fim}${j.razao ? ` (${j.razao})` : ''}`).join('\n')}
@@ -205,18 +226,15 @@ ${janelas.map(j => `- ${j.inicio} às ${j.fim}${j.razao ? ` (${j.razao})` : ''}`
 ## Locais sugeridos para vídeos do seu nicho (escolha um ou variação)
 ${locais.map(l => `- ${l}`).join('\n')}
 
-## Estrutura da semana (datas exatas)
-${[1,2,3,4,5,6,0].map(i => {
-  const dia = i as DiaSemana
-  const data = addDias(semanaInicio, i === 0 ? 6 : i - 1)
-  const arq = ARQUETIPO_DIA_SEMANA[dia]
-  return `- Dia ${i === 0 ? 'DOMINGO' : ['SEG','TER','QUA','QUI','SEX','SAB'][i-1]} (${data}): arquétipo "${arq.arquetipo}", formato "${arq.formato_sugerido}". Vibe: ${arq.vibe}`
-}).join('\n')}
+## Dias com post nesta semana (gere EXATAMENTE 1 item para cada um, na ordem)
+${diasComPost.map(d => `- ${d.nome} (${d.data}, dia_semana=${d.dia_semana}): arquétipo "${d.arquetipo}", formato sugerido "${d.formato}". Vibe: ${d.vibe}`).join('\n')}
+
+Total a gerar: ${diasComPost.length} ${diasComPost.length === 1 ? 'item' : 'items'}.
 
 ## Últimos 14 dias o criador postou sobre (NÃO repita)
 ${ultimosTitulos.length === 0 ? '- (sem histórico — pode escolher livremente)' : ultimosTitulos.map(t => `- ${t}`).join('\n')}
 
-Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar.`
+Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar, em PT-BR fluente.`
 
   // 6. Chama Anthropic com prompt cache no system
   let response
@@ -301,19 +319,28 @@ Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar.`
     return NextResponse.json({ error: 'Erro salvando cronograma.' }, { status: 500 })
   }
 
-  // 9. Insere os 7 items no calendar_items
+  // 9. Insere os items no calendar_items (apenas os dias disponiveis)
+  // Normaliza horario: aceita "18:30" ou "18:30:00" — Postgres time exige HH:MM:SS
+  const normHorario = (h: string | undefined): string | null => {
+    if (!h) return null
+    const trim = h.trim()
+    if (/^\d{2}:\d{2}$/.test(trim)) return `${trim}:00`
+    if (/^\d{2}:\d{2}:\d{2}$/.test(trim)) return trim
+    return null
+  }
+
   const itemsParaInserir = parsed.items.map((it) => ({
     user_id: user.id,
     cronograma_id: cronograma.id,
-    titulo: it.titulo,
-    plataforma: it.plataforma,
-    tipo_conteudo: it.tipo,
+    titulo: it.titulo ?? 'Post sem título',
+    plataforma: it.plataforma ?? 'instagram',
+    tipo_conteudo: it.tipo ?? 'reel',
     data_planejada: it.data,
-    horario_sugerido: it.horario,
-    local_sugerido: it.local,
-    gancho: it.gancho,
-    script: it.script,
-    cta: it.cta,
+    horario_sugerido: normHorario(it.horario),
+    local_sugerido: it.local ?? null,
+    gancho: it.gancho ?? null,
+    script: it.script ?? null,
+    cta: it.cta ?? null,
     gerado_por_ia: true,
     concluido: false,
     pontos: 10,
