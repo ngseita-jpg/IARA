@@ -26,7 +26,7 @@ import {
 import Link from 'next/link'
 import { InstagramIcon, TikTokIcon, YouTubeIcon } from '@/components/platform-icons'
 import { HistoricoPanel, salvarHistorico, type HistoricoItem } from '@/components/historico-panel'
-import { sanitizeBold } from '@/lib/sanitize'
+import { RoteiroRender } from '@/components/roteiro-render'
 import { ShareButton } from '@/components/share-button'
 import { IaFeedback } from '@/components/ia-feedback'
 import { RefineChat } from '@/components/refine-chat'
@@ -732,58 +732,8 @@ export default function RoteirosPage() {
             )}
 
             {roteiro && (
-              <div className="p-6 h-full overflow-y-auto">
-                <div className="prose prose-invert prose-sm max-w-none">
-                  {roteiro.split('\n').map((line, i) => {
-                    if (!line.trim()) return <br key={i} />
-
-                    if (line.startsWith('###')) {
-                      return (
-                        <h3 key={i} className="text-sm font-bold text-iara-300 mt-5 mb-2 first:mt-0">
-                          {line.replace(/^###\s*/, '')}
-                        </h3>
-                      )
-                    }
-                    if (line.startsWith('##')) {
-                      return (
-                        <h2 key={i} className="text-base font-bold iara-gradient-text mt-6 mb-3 first:mt-0">
-                          {line.replace(/^##\s*/, '')}
-                        </h2>
-                      )
-                    }
-                    if (line.startsWith('#')) {
-                      return (
-                        <h1 key={i} className="text-lg font-bold text-[#f1f1f8] mb-4">
-                          {line.replace(/^#\s*/, '')}
-                        </h1>
-                      )
-                    }
-
-                    // Bold text — sanitizeBold escapa <>&" antes de aplicar markdown (anti-XSS)
-                    const boldParsed = sanitizeBold(line)
-
-                    // Direções de cena entre colchetes
-                    if (line.match(/^\[.+\]$/)) {
-                      return (
-                        <p key={i} className="text-xs text-iara-400 italic font-medium my-1">
-                          {line}
-                        </p>
-                      )
-                    }
-
-                    return (
-                      <p
-                        key={i}
-                        className="text-sm text-[#d0d0e8] leading-relaxed mb-1"
-                        dangerouslySetInnerHTML={{ __html: boldParsed }}
-                      />
-                    )
-                  })}
-                </div>
-
-                {loading && (
-                  <span className="inline-block w-1.5 h-4 bg-iara-400 animate-pulse ml-0.5 align-middle" />
-                )}
+              <div className="p-5 sm:p-6 h-full overflow-y-auto">
+                <RoteiroRender texto={roteiro} modo={modo} loading={loading} />
               </div>
             )}
           </div>
