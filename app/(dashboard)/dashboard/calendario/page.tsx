@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { CronogramaHojeCard } from '@/components/cronograma-hoje-card'
 import { CronogramaDisponibilidadeWizard } from '@/components/cronograma-disponibilidade-wizard'
+import { CronogramaDaySelector } from '@/components/cronograma-day-selector'
 
 type CalendarItem = {
   id: string
@@ -198,6 +199,9 @@ export default function CalendarioPage() {
     compromissos: string | null
   } | null>(null)
 
+  // Dia selecionado no day-selector horizontal (default = hoje)
+  const [diaSelecionado, setDiaSelecionado] = useState<string>(() => toLocalDateStr(new Date()))
+
   async function abrirEditorDisponibilidade() {
     try {
       const res = await fetch('/api/perfil/disponibilidade')
@@ -324,18 +328,17 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      {/* Cronograma inteligente — fluxo: card HOJE / wizard de disponibilidade / estado vazio */}
+      {/* Cronograma inteligente — fluxo: editar / day selector + card / wizard / estado vazio */}
       {(() => {
-        const itemHoje = items.find(i => i.data_planejada === today && i.gerado_por_ia)
         const temCronogramaSemana = items.some(i => i.gerado_por_ia)
 
-        // Editar disponibilidade existente (user clicou em "Mudar agenda")
+        // Editar disponibilidade existente
         if (editandoDisponibilidade && dispoAtual) {
           return (
             <CronogramaDisponibilidadeWizard
               onConcluir={() => {
                 setEditandoDisponibilidade(false)
-                gerarCronograma(true)  // regera com agenda nova
+                gerarCronograma(true)
               }}
               inicialDias={dispoAtual.dias ?? []}
               inicialPeriodos={dispoAtual.periodos ?? []}
@@ -345,52 +348,76 @@ export default function CalendarioPage() {
           )
         }
 
-        if (itemHoje) {
+        // Tem cronograma — mostra day selector + card do dia selecionado
+        if (temCronogramaSemana) {
+          // Calcula a semana a partir do PRIMEIRO item (segunda da semana do cronograma)
+          const datasItems = [...new Set(items.filter(i => i.gerado_por_ia).map(i => i.data_planejada))].sort()
+          const primeiraData = datasItems[0]
+          // Calcula a segunda dessa semana
+          const dPrimeira = new Date(primeiraData + 'T00:00:00')
+          const diaSemana = dPrimeira.getDay()
+          const diasParaVoltar = diaSemana === 0 ? 6 : diaSemana - 1
+          const segunda = new Date(dPrimeira)
+          segunda.setDate(segunda.getDate() - diasParaVoltar)
+          const diasSemana = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(segunda)
+            d.setDate(segunda.getDate() + i)
+            return d.toISOString().slice(0, 10)
+          })
+
+          // Garante que diaSelecionado está dentro da semana mostrada (se hoje for fora, default = primeiro item)
+          const diaValido = diasSemana.includes(diaSelecionado) ? diaSelecionado : (datasItems.includes(today) ? today : datasItems[0])
+          const itemDoDia = items.find(i => i.data_planejada === diaValido && i.gerado_por_ia)
+
           return (
             <>
-              <CronogramaHojeCard
-                item={itemHoje}
-                onConcluir={(id) => concluirItem(id) as Promise<void>}
-                onRegerar={() => gerarCronograma(true)}
-                podeRegerar
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-iara-400">
+                  Sua semana criativa
+                </h2>
+                <button
+                  onClick={abrirEditorDisponibilidade}
+                  className="text-[11px] text-iara-400/80 hover:text-iara-300 underline underline-offset-2 transition-colors"
+                >
+                  Mudou sua rotina? Editar disponibilidade
+                </button>
+              </div>
+
+              <CronogramaDaySelector
+                diasSemana={diasSemana}
+                hoje={today}
+                selecionado={diaValido}
+                onSelecionar={setDiaSelecionado}
+                items={items.filter(i => i.gerado_por_ia)}
               />
-              <button
-                onClick={abrirEditorDisponibilidade}
-                className="mt-3 mb-6 text-xs text-iara-400/80 hover:text-iara-300 underline underline-offset-2 transition-colors"
-              >
-                Mudou sua rotina? Editar disponibilidade
-              </button>
+
+              {itemDoDia ? (
+                <CronogramaHojeCard
+                  item={itemDoDia}
+                  onConcluir={(id) => concluirItem(id) as Promise<void>}
+                  onRegerar={() => gerarCronograma(true)}
+                  podeRegerar
+                />
+              ) : (
+                <div className="rounded-3xl bg-gradient-to-br from-iara-900/30 via-accent-purple/10 to-iara-950/20 border border-iara-700/30 p-6 mb-3 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-iara-600/20 border border-iara-500/30 flex items-center justify-center text-2xl">
+                    🌙
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    {diaValido === today ? 'Hoje é dia de descanso' : 'Dia de descanso'}
+                  </h3>
+                  <p className="text-sm text-iara-200/80">
+                    {diaValido === today
+                      ? 'Aproveita. Toca em outro dia da semana pra ver o post.'
+                      : <>Você marcou esse dia como livre. <strong className="text-white">{new Date(diaValido + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}</strong></>}
+                  </p>
+                </div>
+              )}
             </>
           )
         }
 
-        // Cronograma existe mas hoje nao tem post (dia de descanso na agenda)
-        if (temCronogramaSemana && !itemHoje) {
-          const proximoItem = items
-            .filter(i => i.gerado_por_ia && i.data_planejada > today)
-            .sort((a, b) => a.data_planejada.localeCompare(b.data_planejada))[0]
-          return (
-            <div className="rounded-3xl bg-gradient-to-br from-iara-900/30 via-accent-purple/10 to-iara-950/20 border border-iara-700/30 p-6 mb-3 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-iara-600/20 border border-iara-500/30 flex items-center justify-center text-2xl">
-                🌙
-              </div>
-              <h3 className="text-lg font-bold text-white mb-1">Hoje é dia de descanso</h3>
-              <p className="text-sm text-iara-200/80">
-                {proximoItem
-                  ? <>Próximo post: <strong className="text-white">{new Date(proximoItem.data_planejada + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long' })}</strong>{proximoItem.horario_sugerido ? ` às ${proximoItem.horario_sugerido.slice(0, 5)}` : ''} — {proximoItem.titulo}</>
-                  : 'Aproveita pra descansar.'}
-              </p>
-              <button
-                onClick={abrirEditorDisponibilidade}
-                className="mt-3 text-xs text-iara-400/80 hover:text-iara-300 underline underline-offset-2 transition-colors"
-              >
-                Mudei de ideia, quero postar hoje
-              </button>
-            </div>
-          )
-        }
-
-        // Wizard de disponibilidade — bloqueia geracao ate user contar agenda real
+        // Wizard de disponibilidade
         if (precisaDisponibilidade) {
           return (
             <CronogramaDisponibilidadeWizard
