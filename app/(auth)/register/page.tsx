@@ -63,7 +63,7 @@ function RegisterForm() {
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -84,19 +84,25 @@ function RegisterForm() {
     }
 
     // Registra aceite da versao atual dos termos pra novos usuarios.
-    // (perfil ainda nao existe — sera criado no callback. O endpoint
-    // tolera ausencia de profile silenciosamente.)
     try {
       await fetch('/api/perfil/aceitar-termos', { method: 'POST' })
     } catch { /* nao-bloqueante */ }
 
-    // Tracking de conversão (signup)
     try {
       const { trackSignup, trackLead } = await import('@/lib/analytics-events')
       trackSignup('email')
       trackLead(tipoConta as 'criador' | 'marca')
     } catch { /* ignore */ }
 
+    // Com "Confirm email" OFF no Supabase, signUp ja retorna sessao ativa.
+    // Redireciona direto pro onboarding em vez de mostrar tela de espera.
+    if (data?.session) {
+      const dest = tipoConta === 'marca' ? '/marca/onboarding' : '/onboarding'
+      window.location.href = dest
+      return
+    }
+
+    // Fallback: sem sessao (Confirm email ON) -> tela de espera
     setSuccess(true)
     setLoading(false)
   }
@@ -113,8 +119,7 @@ function RegisterForm() {
           </div>
           <h2 className="text-xl font-bold text-[#f1f1f8] mb-2">Conta criada!</h2>
           <p className="text-sm text-[#5a5a7a] mb-3 leading-relaxed">
-            Verifique seu e-mail para confirmar o cadastro.<br />
-            Após confirmar, você já pode entrar.
+            Sua conta tá pronta. É só entrar com email e senha.
           </p>
           {intentPlano && (
             <p className="text-xs text-iara-300 bg-iara-900/20 border border-iara-700/30 rounded-xl px-3 py-2 mb-5 leading-relaxed">
