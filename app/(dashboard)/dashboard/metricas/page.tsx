@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { getPlatformIcon } from '@/components/platform-icons'
 import { SocialConnect } from '@/components/social-connect'
+import { InstagramPostsImportados } from '@/components/instagram-posts-importados'
 
 // ─── tipos ───────────────────────────────────────────────────────────────────
 
@@ -613,6 +614,9 @@ export default function MetricasPage() {
         onSync={handleSync}
         onDisconnect={handleDisconnect}
       />
+
+      {/* Posts importados do Instagram (so renderiza se conectado) */}
+      <InstagramPostsImportados />
 
       {/* Formulário (nova rede) */}
       {showForm && !editTarget && (

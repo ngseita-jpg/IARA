@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('client_id', appId)
   url.searchParams.set('redirect_uri', redirectUri)
   url.searchParams.set('response_type', 'code')
-  url.searchParams.set('scope', 'instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement')
+  url.searchParams.set('scope', 'instagram_basic,instagram_manage_insights,instagram_manage_comments,pages_show_list,pages_read_engagement,business_management')
   url.searchParams.set('state', user.id)
 
   return NextResponse.redirect(url.toString())
