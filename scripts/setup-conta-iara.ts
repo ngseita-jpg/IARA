@@ -1,5 +1,5 @@
 /**
- * Script de setup da conta "oficial" da Iara (ngseita@gmail.com).
+ * Script de setup da conta "oficial" da Iara (iarahubapp@gmail.com).
  *
  * - Verifica se a conta já existe no Supabase Auth
  * - Se não existir, cria com email_confirm=true (sem precisar verificar)
@@ -39,7 +39,7 @@ const supabase = createClient(URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
 
-const EMAIL_IARA = 'ngseita@gmail.com'
+const EMAIL_IARA = 'iarahubapp@gmail.com'
 const SENHA_IARA = '81145900Aa*'
 
 // ── Persona da Iara (voz oficial da marca dentro do próprio produto) ──
@@ -89,7 +89,7 @@ function gerarRefCode(): string {
 
 async function main() {
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('  Setup da conta oficial da Iara (ngseita@gmail.com)')
+  console.log('  Setup da conta oficial da Iara (iarahubapp@gmail.com)')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
 
   // 1. Verifica se a conta existe

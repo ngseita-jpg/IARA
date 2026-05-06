@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
   // Agência ainda não é self-service no Stripe — tem CTA "Falar com vendas"
   if (plano === 'agencia') {
     return NextResponse.json({
-      error: 'Plano Agência é vendido manualmente. Fale com a gente: ngseita@gmail.com',
-      contato: 'mailto:ngseita@gmail.com?subject=Plano%20Ag%C3%AAncia',
+      error: 'Plano Agência é vendido manualmente. Fale com a gente: iarahubapp@gmail.com',
+      contato: 'mailto:iarahubapp@gmail.com?subject=Plano%20Ag%C3%AAncia',
     }, { status: 400 })
   }
 

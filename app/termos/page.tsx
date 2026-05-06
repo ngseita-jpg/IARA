@@ -59,7 +59,7 @@ export default function TermosPage() {
               <li>Você deve fornecer informações verdadeiras e mantê-las atualizadas.</li>
               <li>Você é integralmente responsável pela guarda das credenciais e por toda atividade realizada na sua conta.</li>
               <li>Notifique imediatamente qualquer suspeita de uso não autorizado em {' '}
-                <a href="mailto:ngseita@gmail.com" className="text-iara-400 hover:underline">ngseita@gmail.com</a>.
+                <a href="mailto:iarahubapp@gmail.com" className="text-iara-400 hover:underline">iarahubapp@gmail.com</a>.
               </li>
               <li>A Iara pode adotar verificação por captcha, e-mail e telefone a qualquer momento para prevenir fraude.</li>
             </ul>
@@ -152,7 +152,7 @@ export default function TermosPage() {
             </ul>
             <p className="mt-3">
               Para exercer qualquer direito, envie e-mail para{' '}
-              <a href="mailto:ngseita@gmail.com" className="text-iara-400 hover:underline">ngseita@gmail.com</a>{' '}
+              <a href="mailto:iarahubapp@gmail.com" className="text-iara-400 hover:underline">iarahubapp@gmail.com</a>{' '}
               identificando-se. Respondemos em até 15 dias úteis.
             </p>
             <p className="mt-3 text-xs text-[#6b6b8a]">
@@ -226,8 +226,8 @@ export default function TermosPage() {
             <h2 className="text-lg font-semibold text-[#f1f1f8] mb-3">16. Contato e DPO</h2>
             <p>
               Suporte, dúvidas, exercício de direitos LGPD, denúncias de abuso:{' '}
-              <a href="mailto:ngseita@gmail.com" className="text-iara-400 hover:underline">
-                ngseita@gmail.com
+              <a href="mailto:iarahubapp@gmail.com" className="text-iara-400 hover:underline">
+                iarahubapp@gmail.com
               </a>
             </p>
           </section>
