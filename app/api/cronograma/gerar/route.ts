@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { jsonrepair } from 'jsonrepair'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import {
@@ -268,14 +269,23 @@ Gere o JSON do cronograma agora. Lembrete: scripts PRONTOS pra gravar/postar, em
 
   let parsed: { items: CronogramaItem[]; raciocinio: string }
   try {
+    // Tenta parse direto primeiro
     parsed = JSON.parse(jsonMatch[0])
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.error('[cronograma/gerar] JSON parse erro:', msg, 'Inicio:', jsonMatch[0].slice(0, 300))
-    return NextResponse.json({
-      error: 'IA retornou JSON quebrado. Tente regerar.',
-      debug: `Parse erro: ${msg}`,
-    }, { status: 502 })
+  } catch {
+    // Fallback: jsonrepair conserta vírgulas, aspas, escapes — IA frequentemente quebra
+    // JSON em scripts longos (aspas internas, newlines, etc). Salva geracao em vez de erro.
+    try {
+      const reparado = jsonrepair(jsonMatch[0])
+      parsed = JSON.parse(reparado)
+      console.log('[cronograma/gerar] JSON reparado via jsonrepair')
+    } catch (e2) {
+      const msg = e2 instanceof Error ? e2.message : String(e2)
+      console.error('[cronograma/gerar] jsonrepair falhou:', msg, 'Inicio:', jsonMatch[0].slice(0, 300))
+      return NextResponse.json({
+        error: 'IA retornou JSON quebrado. Tente regerar.',
+        debug: `Parse erro: ${msg}`,
+      }, { status: 502 })
+    }
   }
 
   if (!parsed.items || !Array.isArray(parsed.items) || parsed.items.length === 0) {
