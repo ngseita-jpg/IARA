@@ -9,6 +9,7 @@ import {
 import { getPlatformIcon } from '@/components/platform-icons'
 import { SocialConnect } from '@/components/social-connect'
 import { InstagramPostsImportados } from '@/components/instagram-posts-importados'
+import { InstagramSetupBanner } from '@/components/instagram-setup-banner'
 
 // ─── tipos ───────────────────────────────────────────────────────────────────
 
@@ -411,6 +412,7 @@ export default function MetricasPage() {
 
   const [toast, setToast] = useState<{ msg: string; tipo?: 'sucesso' | 'erro' } | null>(null)
   const [connections, setConnections] = useState<{ platform: string; platform_username: string | null; connected_at: string; token_expires_at: string | null }[]>([])
+  const [instagramSetupErro, setInstagramSetupErro] = useState<'sem_pagina_fb' | 'ig_nao_vinculada' | null>(null)
 
   function showToast(msg: string, tipo: 'sucesso' | 'erro' = 'sucesso') {
     setToast({ msg, tipo })
@@ -473,8 +475,12 @@ export default function MetricasPage() {
     const err = params.get('error')
     if (err === 'config_missing') {
       showToast('Conexão automática ainda não disponível pra essa rede. Use "Adicionar rede" pra inserir manualmente.', 'erro')
-    } else if (err === 'oauth_denied') {
+    } else if (err === 'oauth_denied' || err === 'oauth_cancelled') {
       showToast('Você cancelou a autorização. Tente novamente quando quiser.', 'erro')
+    } else if (err === 'sem_pagina_fb') {
+      setInstagramSetupErro('sem_pagina_fb')
+    } else if (err === 'ig_nao_vinculada') {
+      setInstagramSetupErro('ig_nao_vinculada')
     } else if (err) {
       showToast(`Não consegui conectar: ${err}. Use entrada manual abaixo.`, 'erro')
     }
@@ -607,6 +613,18 @@ export default function MetricasPage() {
           </div>
         </div>
       </div>
+
+      {/* Banner de erro especifico do setup do Instagram */}
+      {instagramSetupErro && (
+        <InstagramSetupBanner
+          tipo={instagramSetupErro}
+          onDismiss={() => setInstagramSetupErro(null)}
+          onReconectar={() => {
+            setInstagramSetupErro(null)
+            window.location.href = '/api/oauth/instagram'
+          }}
+        />
+      )}
 
       {/* Contas conectadas */}
       <SocialConnect

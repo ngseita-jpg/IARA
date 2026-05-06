@@ -34,25 +34,42 @@ export async function GET(req: NextRequest) {
     `https://graph.facebook.com/v18.0/me/accounts?access_token=${tokens.access_token}`
   )
   const pagesData = await pagesRes.json()
-  const page = pagesData.data?.[0]
+  const pages = pagesData.data ?? []
 
-  let igUsername = null
-  let igUserId = null
+  // CHECAGEM 1: User nao tem nenhuma Pagina FB
+  if (pages.length === 0) {
+    return NextResponse.redirect(new URL('/dashboard/metricas?error=sem_pagina_fb', req.url))
+  }
 
-  if (page) {
+  // Procura a PRIMEIRA Pagina que tem IG Business vinculada
+  // (user pode ter Paginas que nao tem IG — pulamos elas)
+  let igUsername: string | null = null
+  let igUserId: string | null = null
+  let pageUsada: { id: string; name: string } | null = null
+
+  for (const p of pages) {
     const igRes = await fetch(
-      `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
+      `https://graph.facebook.com/v18.0/${p.id}?fields=instagram_business_account&access_token=${p.access_token}`
     )
     const igData = await igRes.json()
-    igUserId = igData.instagram_business_account?.id ?? null
+    const candidato = igData.instagram_business_account?.id
 
-    if (igUserId) {
+    if (candidato) {
+      igUserId = candidato
+      pageUsada = { id: p.id, name: p.name }
+      // Busca o @ da conta IG
       const profileRes = await fetch(
-        `https://graph.facebook.com/v18.0/${igUserId}?fields=username&access_token=${page.access_token}`
+        `https://graph.facebook.com/v18.0/${candidato}?fields=username&access_token=${p.access_token}`
       )
       const profileData = await profileRes.json()
       igUsername = profileData.username ?? null
+      break
     }
+  }
+
+  // CHECAGEM 2: User tem Pagina(s) mas nenhuma tem IG Business vinculada
+  if (!igUserId) {
+    return NextResponse.redirect(new URL('/dashboard/metricas?error=ig_nao_vinculada', req.url))
   }
 
   await supabase.from('social_connections').upsert({
