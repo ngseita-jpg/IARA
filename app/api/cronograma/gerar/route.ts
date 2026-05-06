@@ -102,11 +102,20 @@ export async function POST(req: NextRequest) {
         .select('*')
         .eq('cronograma_id', existente.id)
         .order('data_planejada', { ascending: true })
-      return NextResponse.json({
-        cronograma_id: existente.id,
-        items: items ?? [],
-        cached: true,
-      })
+
+      // Defensivo: se cronograma_semanal existe mas nao tem itens (orfao por
+      // falha numa geracao anterior), apaga o registro pai e cai no fluxo de
+      // geracao. Senao usuario fica preso vendo lista vazia eternamente.
+      if (!items || items.length === 0) {
+        await admin.from('cronograma_semanal').delete().eq('id', existente.id)
+        // continua execucao do fluxo de geracao (nao retorna aqui)
+      } else {
+        return NextResponse.json({
+          cronograma_id: existente.id,
+          items,
+          cached: true,
+        })
+      }
     }
   }
 
