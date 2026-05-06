@@ -335,7 +335,10 @@ export default function OratorioPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.mensagem ?? data.error ?? 'Erro ao analisar')
+      if (!res.ok) {
+        const baseMsg = data.mensagem ?? data.error ?? 'Erro ao analisar'
+        throw new Error(data.detalhe ? `${baseMsg} [${data.detalhe}]` : baseMsg)
+      }
 
       const a = data.analysis
       setResultado({
