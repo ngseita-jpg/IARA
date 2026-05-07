@@ -29,15 +29,39 @@ interface Message {
 /* ─────────────────────────── helpers ──────────────────────────────── */
 
 function parseIdeas(raw: string): { text: string; ideas: Idea[] | null } {
-  const match = raw.match(/```ideas\n([\s\S]*?)\n```/)
-  if (!match) return { text: raw, ideas: null }
-  try {
-    const ideas = JSON.parse(match[1]) as Idea[]
-    const text = raw.replace(/```ideas\n[\s\S]*?\n```/, '').trim()
-    return { text, ideas }
-  } catch {
-    return { text: raw, ideas: null }
+  // Tenta multiplos formatos que a IA pode usar:
+  // 1. ```ideas [...]```
+  // 2. ```json [...]```
+  // 3. ``` [...] ```
+  // 4. raw [...] sem fence
+  const patterns = [
+    /```ideas\s*\n([\s\S]*?)\n```/,
+    /```json\s*\n([\s\S]*?)\n```/,
+    /```\s*\n(\[[\s\S]*?\])\s*\n```/,
+  ]
+  for (const re of patterns) {
+    const match = raw.match(re)
+    if (!match) continue
+    try {
+      const ideas = JSON.parse(match[1]) as Idea[]
+      if (Array.isArray(ideas) && ideas.length > 0 && ideas[0].titulo) {
+        const text = raw.replace(re, '').trim()
+        return { text, ideas }
+      }
+    } catch { /* tenta o proximo */ }
   }
+  // Fallback: array bruto sem fence
+  const arrayMatch = raw.match(/\[\s*\{[\s\S]*\}\s*\]/)
+  if (arrayMatch) {
+    try {
+      const ideas = JSON.parse(arrayMatch[0]) as Idea[]
+      if (Array.isArray(ideas) && ideas.length > 0 && ideas[0].titulo) {
+        const text = raw.replace(arrayMatch[0], '').trim()
+        return { text, ideas }
+      }
+    } catch { /* nada */ }
+  }
+  return { text: raw, ideas: null }
 }
 
 function urgencyStyle(n: number) {
@@ -374,10 +398,16 @@ export default function TemasPage() {
             if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
               raw += parsed.delta.text
               const { text, ideas } = parseIdeas(raw)
-              const hasStartedIdeas = raw.includes('```ideas')
+              // Detecta inicio de qualquer bloco JSON (ideas, json, ou ` raw)
+              // Tambem detecta abertura de array '[' como sinal de geracao
+              const ideasIdx = raw.indexOf('```ideas')
+              const jsonIdx = raw.indexOf('```json')
+              const fenceIdx = raw.indexOf('```')
+              const fenceStart = ideasIdx >= 0 ? ideasIdx : jsonIdx >= 0 ? jsonIdx : fenceIdx
+              const hasStartedIdeas = fenceStart >= 0
               // Esconde o JSON parcial — mostra só o texto antes do bloco
               const displayText = hasStartedIdeas && !ideas
-                ? raw.slice(0, raw.indexOf('```ideas')).trim()
+                ? raw.slice(0, fenceStart).trim()
                 : text
               setMessages(prev => {
                 const updated = [...prev]

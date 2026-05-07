@@ -43,7 +43,7 @@ Exemplos de perguntas poderosas:
 
 Antes do bloco JSON, escreva uma mensagem animada de 2-3 linhas sobre o que você entendeu do criador e por que as ideias vão funcionar.
 
-SEMPRE inclua um bloco JSON exatamente neste formato:
+**FORMATO OBRIGATÓRIO:** SEMPRE envolva as ideias num bloco \`\`\`ideas (NÃO use \`\`\`json, NÃO deixe sem fence). O parser do frontend procura literalmente por \`\`\`ideas\\n[...]\\n\`\`\`.
 
 \`\`\`ideas
 [
