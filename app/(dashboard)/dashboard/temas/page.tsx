@@ -260,9 +260,28 @@ function MessageBubble({ msg }: { msg: Message }) {
 
 /* ─────────────────────────── FIRST MESSAGE ────────────────────────── */
 
-const OPENING: Message = {
-  role: 'assistant',
-  content: 'Oi! Vou te ajudar a encontrar os temas certos para explodir de vez. 🔥\n\nAntes de gerar as ideias, preciso te entender. Qual foi o seu último post que mais engajou — o tema, não o formato? Por que você acha que ele funcionou?',
+// Pool de aberturas — sorteia uma a cada nova conversa pra Iara nunca soar
+// repetitiva. Cada uma puxa um angulo diferente: engajamento, dor, transformacao,
+// objecao, autoridade, etc. Quanto mais variado, mais chance de pegar o user
+// num modo mental fertil pra ideias.
+const OPENINGS: string[] = [
+  'Oi! Bora destravar uns temas que vão bombar. 🔥\n\nAntes de gerar, preciso te entender. Qual foi o seu último post que mais engajou — o tema, não o formato? Por que você acha que funcionou?',
+  'Eai, bora gerar tema bom? 🔥\n\nMe conta uma frase que você ouve direto da sua audiência — algo que se repete em DM, comentário ou conversa. Frase REAL, palavra deles.',
+  'Vamos achar uns temas que pegam mesmo. ⚡\n\nQual é a maior dor real do seu seguidor que ninguém tá falando direito? O que eles te perguntam toda semana?',
+  'Bora pra cima. 🔥\n\nSe você tivesse que ensinar UMA coisa hoje pra alguém começando no seu nicho, qual seria? E por que isso?',
+  'Eai! Vamos sair do óbvio. 🚀\n\nPensa nos últimos 7 dias do seu trabalho. O que aconteceu de mais inesperado, real ou desafiador? Conteúdo bom nasce de coisa real.',
+  'Tema bom é tema verdadeiro. 🎯\n\nQual é o maior mito do seu nicho que te irrita? Aquela informação errada que todo mundo repete e ninguém questiona?',
+  'Bora destravar aí. 💡\n\nMe diz uma transformação concreta que você causou em alguém recentemente — pode ser pequena. Qual foi o antes / depois?',
+  'Vamos puxar o que tá invisível. 🔍\n\nExiste algo que você faz no seu dia profissional que pra você é óbvio, mas pra maioria seria revelação? Conta sobre.',
+  'Eai! 🔥\n\nQual é a pergunta mais frequente que aparece nos seus DMs ou comentários? A que se repete tanto que você quase não responde mais?',
+  'Bora começar com o real. 💭\n\nMe conta um momento dos últimos meses em que você quase desistiu de algo mas não desistiu. O que segurou você?',
+  'Vamos pegar tema com fundo de verdade. 🎬\n\nSe você desse UM conselho de 30 segundos pro você de 1 ano atrás, qual seria? Por que esse?',
+  'Eai! 🚀\n\nQual é o maior tabu do seu nicho? Aquele assunto que ninguém quer falar mas que muda o jogo quando alguém fala?',
+]
+
+function getOpening(): Message {
+  const idx = Math.floor(Math.random() * OPENINGS.length)
+  return { role: 'assistant', content: OPENINGS[idx] }
 }
 
 /* ─────────────────────────── PAGE ─────────────────────────────────── */
@@ -274,7 +293,7 @@ export default function TemasPage() {
     : null
 
   const [messages, setMessages] = useState<Message[]>(
-    (draft?.messages && draft.messages.length > 0) ? draft.messages : [OPENING]
+    (draft?.messages && draft.messages.length > 0) ? draft.messages : [getOpening()]
   )
   const [input, setInput] = useState(draft?.input ?? '')
   const [loading, setLoading] = useState(false)
@@ -415,7 +434,7 @@ export default function TemasPage() {
   }
 
   function reset() {
-    setMessages([OPENING])
+    setMessages([getOpening()])
     setInput('')
     setLoading(false)
     clearDraft('temas-v1')   // descarta conversa anterior do auto-save
