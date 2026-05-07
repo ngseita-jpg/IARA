@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
   const perfilContexto = profile ? `
 PERFIL DO CRIADOR:
 - Nome/Marca: ${profile.nome_artistico ?? 'não informado'}
-- Nicho: ${profile.nicho ?? 'não informado'}
+- Nicho: ${joinArr(profile.nicho) || 'não informado'}
 - Tom de voz: ${joinArr(profile.tom_de_voz) || 'não informado'}
-- Objetivo: ${profile.objetivo ?? 'não informado'}
+- Objetivo: ${joinArr(profile.objetivo) || 'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Personalidade vocal: ${profile.voz_perfil}` : ''}
 ` : ''

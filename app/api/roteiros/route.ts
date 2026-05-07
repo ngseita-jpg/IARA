@@ -114,9 +114,9 @@ export async function POST(req: NextRequest) {
   const perfilContexto = profile
     ? `## Perfil do Criador (use como contexto de personalização)
 Nome/Como se apresenta: ${profile.nome_artistico || 'Não informado'}
-Nicho: ${profile.nicho || 'Não informado'}
-Plataformas principais: ${profile.plataformas?.join(', ') || 'Não informado'}
-Objetivo principal: ${(() => { try { const r = JSON.parse(profile.objetivo||''); return Array.isArray(r) ? r.join(', ') : profile.objetivo } catch { return profile.objetivo } })()||'Não informado'}
+Nicho: ${joinArr(profile.nicho) || 'Não informado'}
+Plataformas principais: ${joinArr(profile.plataformas) || 'Não informado'}
+Objetivo principal: ${joinArr(profile.objetivo) || 'Não informado'}
 Tom de voz e estilo: ${joinArr(profile.tom_de_voz) || 'Não informado'}
 Sobre o criador: ${profile.sobre || 'Não informado'}
 ${profile.voz_perfil ? `Perfil vocal (analisado por IA): ${profile.voz_perfil}` : ''}

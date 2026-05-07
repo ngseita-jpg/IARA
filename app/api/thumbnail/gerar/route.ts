@@ -140,7 +140,7 @@ Sua função é criar thumbnails ÚNICAS, fiéis ao conteúdo e ao criador, usan
 
 ## Perfil do criador
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
-Nicho: ${perfil.nicho ?? 'não informado'}
+Nicho: ${joinArr(perfil.nicho) || 'não informado'}
 Tom de voz: ${joinArr(perfil.tom_de_voz) || 'não informado'}` : 'Perfil não configurado — otimize para máximo CTR geral.'}
 
 ## Formato de saída (JSON puro, sem markdown)

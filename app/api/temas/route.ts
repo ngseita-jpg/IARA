@@ -31,9 +31,15 @@ Exemplos de perguntas poderosas:
 - "Qual conteúdo você nunca fez mas sente que poderia explodir se fizesse?"
 - "O que está acontecendo agora no seu nicho — alguma tendência, polêmica ou oportunidade?"
 
-## FASE 2 — GERAÇÃO DE IDEIAS
+## FASE 2 — GERAÇÃO DE IDEIAS (TRIGGERS)
 
-Após 3-4 trocas de mensagens (ou quando o criador pedir), gere as ideias.
+**Gere as ideias IMEDIATAMENTE (sem mais perguntas) quando QUALQUER um destes acontecer:**
+- O criador disser "gera", "gere", "gerar", "agora", "manda", "vai", "mostra ideias", "ideias agora", "faz logo", "pode gerar"
+- Já houve 3 trocas de mensagens (3 perguntas suas + 3 respostas dele) — chega de pergunta, gera
+- O criador disser que tem persona/perfil cadastrado — você JÁ tem o contexto, gera
+- O criador parecer impaciente, evasivo ou pedir pra acelerar
+
+**REGRA DE OURO:** se em dúvida entre fazer mais 1 pergunta vs gerar, **GERE**. É melhor ideias OK que conversa eterna.
 
 Antes do bloco JSON, escreva uma mensagem animada de 2-3 linhas sobre o que você entendeu do criador e por que as ideias vão funcionar.
 
@@ -78,18 +84,46 @@ export async function POST(req: NextRequest) {
     messages: { role: 'user' | 'assistant'; content: string }[]
   }
 
-  // Fetch profile for context
+  // Fetch profile completo — IA precisa pra personalizar de verdade.
+  // .maybeSingle pra nao falhar silenciosamente se row faltar. joinArr normaliza
+  // campos array (que vem como JSON-string `["Lifestyle"]` em alguns users).
   let profileNote = ''
+  let temPersona = false
   if (user) {
     const { data: profile } = await supabase
       .from('creator_profiles')
-      .select('nicho, tom_de_voz, nome_artistico, plataformas')
+      .select('nicho, tom_de_voz, nome_artistico, plataformas, objetivo, sobre, voz_perfil')
       .eq('user_id', user.id)
-      .single()
-    if (profile?.nicho) {
-      profileNote = `\n\nContexto do perfil: nicho="${profile.nicho}", tom="${joinArr(profile.tom_de_voz) || 'não definido'}", plataformas="${profile.plataformas ?? 'não definido'}". Use esse contexto para personalizar as perguntas e ideias.`
+      .maybeSingle()
+
+    const nichoStr = joinArr(profile?.nicho)
+    if (nichoStr) {
+      temPersona = true
+      const tomStr = joinArr(profile?.tom_de_voz) || 'não definido'
+      const plataformasStr = joinArr(profile?.plataformas) || 'não definido'
+      const objetivoStr = joinArr(profile?.objetivo) || 'não informado'
+      profileNote = `\n\n## CONTEXTO DO CRIADOR (use TUDO isso para personalizar)
+- Nome: ${profile?.nome_artistico ?? 'criador'}
+- Nicho: ${nichoStr}
+- Tom de voz: ${tomStr}
+- Plataformas principais: ${plataformasStr}
+- Objetivo: ${objetivoStr}
+${profile?.sobre ? `- Sobre: ${profile.sobre}` : ''}
+${profile?.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
+
+**JÁ TENHO contexto suficiente sobre o nicho e tom.** Não pergunte sobre nicho/tom/plataforma — você já SABE. Pule pra perguntas mais profundas (audiência, dores, ângulos, oportunidades) ou gere as ideias direto se o criador pedir.`
     }
   }
+
+  // Detecta trigger explicito de geracao na ultima msg do user — forca a IA a gerar.
+  const ultimaMsg = messages.filter(m => m.role === 'user').slice(-1)[0]?.content?.toLowerCase() ?? ''
+  const triggers = ['gera', 'gere', 'gerar', 'manda', 'mostra', 'mostre', 'as ideias', 'pode gerar', 'faz logo', 'vai logo', 'agora', 'tenho persona', 'persona cadastrad']
+  const querGerarAgora = triggers.some(t => ultimaMsg.includes(t))
+  const triggerNote = querGerarAgora
+    ? `\n\n## INSTRUÇÃO IMEDIATA\nO criador acabou de pedir/sinalizar que quer as ideias AGORA. **NÃO faça mais perguntas.** Gere as 6-8 ideias no formato \`\`\`ideas JSON imediatamente, com base no contexto que você já tem.`
+    : ''
+
+  const systemFinal = SYSTEM_PROMPT + profileNote + triggerNote
 
   const stream = await anthropic.messages.stream({
     model: 'claude-opus-4-6',
@@ -97,7 +131,7 @@ export async function POST(req: NextRequest) {
     system: [
       {
         type: 'text',
-        text: SYSTEM_PROMPT + profileNote,
+        text: systemFinal,
         cache_control: { type: 'ephemeral' },
       },
     ],
