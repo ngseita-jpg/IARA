@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import {
   FileText, TrendingUp, Sparkles, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
-  ChevronRight, Smartphone, Lightbulb, Briefcase, Scissors, Compass,
+  ChevronRight, Smartphone, Lightbulb, Briefcase, Scissors, Compass, Palette,
 } from 'lucide-react'
 import { UpgradeBanners } from '@/components/upgrade-banners'
 import { IaraInsightsCard } from '@/components/iara-insights-card'
@@ -50,6 +50,7 @@ const modules = [
   { icon: Compass,    label: 'Bússola',                desc: 'Direcionamento de carreira: marco de 3 meses, 4 semanas de missões concretas, integrado a todos os módulos. A Iara traça, você executa.', href: '/dashboard/bussola',    gradient: 'from-iara-600/20 to-accent-purple/10',   border: 'border-iara-700/30' },
   { icon: Calendar,   label: 'Conteúdos da Semana',    desc: '7 dias de conteúdo gerados pela Iara — gancho, script e horário ideais. Marque ao postar e acumule pontos.', href: '/dashboard/calendario', gradient: 'from-teal-900/20 to-iara-600/10',        border: 'border-teal-800/20' },
   { icon: User,       label: 'Persona IA',             desc: 'Configure seu nicho, tom de voz e plataformas. A IA usa seu perfil em todos os módulos.', href: '/dashboard/persona', gradient: 'from-accent-purple/15 to-iara-600/10', border: 'border-accent-purple/20' },
+  { icon: Palette,    label: 'Brand Kit',              desc: 'Sobe prints dos seus posts que bombaram, IA extrai paleta + fontes + mood. Toda geração visual nasce alinhada à sua identidade.', href: '/dashboard/brand-kit', gradient: 'from-pink-900/20 to-iara-600/10', border: 'border-pink-800/20' },
   { icon: Briefcase,  label: 'Oportunidades',          desc: 'Campanhas abertas por marcas — candidate-se e feche parcerias direto na plataforma.', href: '/dashboard/vagas', gradient: 'from-amber-900/20 to-iara-600/10', border: 'border-amber-800/20' },
 ]
 

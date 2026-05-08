@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { ImagemAnalise } from '../analisar-imagens/route'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { joinArr } from '@/lib/parseArr'
+import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const maxDuration = 60
 
@@ -53,7 +54,7 @@ const PLATAFORMA_CONTEXT: Record<string, string> = {
   pinterest: 'Pinterest — visual e inspiracional, títulos marcantes, conteúdo evergreen, foco em estética e utilidade prática, subtítulos descritivos',
 }
 
-function buildSystemPrompt(perfil: Record<string, unknown> | null, modo: string, plataforma?: string): string {
+function buildSystemPrompt(perfil: Record<string, unknown> | null, modo: string, plataforma?: string, brandKitCtx = ''): string {
   const isMarca = modo === 'marca'
   const plataformaCtx = plataforma && PLATAFORMA_CONTEXT[plataforma]
     ? `\n\n## Plataforma de destino\n${PLATAFORMA_CONTEXT[plataforma]}`
@@ -119,6 +120,7 @@ ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
 Nicho: ${joinArr(perfil.nicho) || 'não informado'}
 Tom de voz: ${joinArr(perfil.tom_de_voz) || 'não informado'}
 Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use linguagem direta, brasileira e próxima do leitor.'}
+${brandKitCtx}
 
 ## Tipografia e paleta — escolha conforme nicho/persona (NÃO use defaults genéricos)
 
@@ -361,6 +363,10 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
 
   console.log('[carrossel/gerar] num_imagens:', num_imagens, 'num_slides solicitado:', num_slides_solicitado, 'num_slides final:', num_slides)
 
+  // Brand Kit do user injeta paleta/fontes/mood no prompt — gera carrossel
+  // alinhado com identidade visual real, nao mais default generico.
+  const brandKitCtx = await getBrandKitContext(adminClient, user.id)
+
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -368,7 +374,7 @@ Retorne APENAS o JSON, sem nenhum texto antes ou depois.`
       system: [
         {
           type: 'text',
-          text: buildSystemPrompt(perfil as Record<string, unknown> | null, modo, plataforma),
+          text: buildSystemPrompt(perfil as Record<string, unknown> | null, modo, plataforma, brandKitCtx),
           cache_control: { type: 'ephemeral' },
         },
       ],

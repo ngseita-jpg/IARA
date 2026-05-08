@@ -139,6 +139,9 @@ NUNCA gere ideias genéricas que servem qualquer nicho — se for impossível se
   const systemFinal = SYSTEM_PROMPT + profileNote + planoNote + triggerNote
 
   const stream = await anthropic.messages.stream({
+    // Opus 4-6 mantido. Faisca e a feature mais sensivel a qualidade — user
+    // ja reclamou de ideias genericas, nao podemos arriscar regressao.
+    // Custo absorvido: ~$0.17/call mas e core do produto.
     model: 'claude-opus-4-6',
     max_tokens: 2400,
     system: [

@@ -76,9 +76,9 @@ export async function POST(req: NextRequest) {
   const perfilContexto = profile ? `
 PERFIL DO CRIADOR:
 - Nome/Marca: ${profile.nome_artistico ?? 'não informado'}
-- Nicho: ${profile.nicho ?? 'não informado'}
+- Nicho: ${joinArr(profile.nicho) || 'não informado'}
 - Tom de voz: ${joinArr(profile.tom_de_voz) || 'não informado'}
-- Objetivo: ${(() => { try { const r = JSON.parse(profile.objetivo||''); return Array.isArray(r) ? r.join(', ') : profile.objetivo } catch { return profile.objetivo } })()||'não informado'}
+- Objetivo: ${joinArr(profile.objetivo) || 'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Perfil vocal: ${profile.voz_perfil}` : ''}
 ` : ''
@@ -121,10 +121,12 @@ As 3 ações mais importantes que esse criador deve fazer nos próximos 30 dias 
 Escreva em português brasileiro, de forma natural e personalizada. Evite clichês como "criar conteúdo de valor", "postar de forma consistente" sem contexto específico.`
 
   try {
+    // Sonnet 4-6 (era Opus 4-6 com thinking adaptive): analise estrutural de
+    // numeros nao precisa Opus. Sonnet entrega indistinguivel a 1/5 do custo.
+    // Auditoria 2026-05-07.
     const message = await (anthropic.messages.create as (body: unknown) => Promise<Anthropic.Message>)({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      thinking: { type: 'adaptive' },
       messages: [{ role: 'user', content: prompt }],
     })
 

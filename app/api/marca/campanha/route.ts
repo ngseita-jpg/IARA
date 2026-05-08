@@ -208,6 +208,8 @@ Gere o diagnóstico completo conforme a estrutura definida.`
   }).then(() => null, () => null)
 
   const stream = anthropic.messages.stream({
+    // Opus 4-6 mantido. Plano Marca paga R$300+ — briefing de campanha
+    // estrategica e o entregavel premium, qualidade > custo.
     model: 'claude-opus-4-6',
     max_tokens: 3000,
     system: [
