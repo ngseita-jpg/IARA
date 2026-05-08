@@ -111,7 +111,15 @@ export async function POST(req: NextRequest) {
 ${profile?.sobre ? `- Sobre: ${profile.sobre}` : ''}
 ${profile?.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
 
-**JÁ TENHO contexto suficiente sobre o nicho e tom.** Não pergunte sobre nicho/tom/plataforma — você já SABE. Pule pra perguntas mais profundas (audiência, dores, ângulos, oportunidades) ou gere as ideias direto se o criador pedir.`
+**JÁ TENHO contexto suficiente sobre nicho e tom.** Não pergunte sobre nicho/tom/plataforma — você já SABE.
+
+**REGRA CRÍTICA pra nichos múltiplos:** Se o criador tem 3+ categorias no nicho (ex: "Lifestyle, Fitness, Tecnologia, Negócios"), você TEM 2 OPÇÕES — escolha a melhor pra cada caso:
+
+(a) Se a sessão mal começou (1-2 mensagens), PERGUNTE qual ângulo ele quer foco hoje. Exemplo: "Vi que você cobre vários temas (X, Y, Z). Pra essas ideias serem cirúrgicas, qual ângulo você quer destravar HOJE? Ou prefere ideias que cruzam vários?"
+
+(b) Se ele já pediu pra gerar, ESCOLHA o nicho MAIS específico do conjunto (ex: prefira "Finanças e Investimentos" sobre "Lifestyle") e foque ALI. Mencione no raciocínio: "Foquei em [nicho específico] porque é o mais específico do seu mix — se quiser ideias de outro ângulo, é só pedir."
+
+NUNCA gere ideias genéricas que servem qualquer nicho — se for impossível ser específico, pergunte ao criador. Genérico é falha grave.`
     }
   }
 
