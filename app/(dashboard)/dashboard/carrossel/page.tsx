@@ -51,6 +51,7 @@ import type { Slide2 } from '@/lib/carrossel-canvas-types'
 import { preloadImages, slide2ToPngUrl, type ImageCache } from '@/lib/carrossel-canvas-renderer'
 import { useDraftAutosave, loadDraft, useUnsavedWarning } from '@/hooks/useDraftAutosave'
 import { toast } from '@/lib/toast'
+import { CarrosselIterarChat } from '@/components/carrossel-iterar-chat'
 
 type CarrosselDraft = {
   step: Step
@@ -1367,6 +1368,14 @@ export default function CarrosselPage() {
                   </button>
                 )}
               </div>
+            )}
+
+            {/* Chat de refinamento (apenas pos-geracao) */}
+            {carrossel && !gerando && (
+              <CarrosselIterarChat
+                carrossel={carrossel}
+                onAtualizar={setCarrossel}
+              />
             )}
 
             {/* Grid de slides */}

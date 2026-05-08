@@ -328,7 +328,12 @@ function addToken(
   const weight = run.bold ? '700' : '500'
   const style = run.italic ? 'italic' : 'normal'
   const family = run.fontFamily ?? 'Inter'
-  ctx.font = `${style} ${weight} ${fontSize}px ${family}, system-ui, sans-serif`
+  // CRITICO: aspas no family. Sem isso, fontes multi-palavra (Bebas Neue,
+  // Playfair Display, etc — 19 das 41 do catalogo) ficam com CSS invalido,
+  // measureText cai em fallback Inter, xCursor avanca errado, glyphs
+  // sobrepoem visualmente (efeito 'fonte duplicada/borrada') E texto
+  // transborda a caixa invadindo layers vizinhas.
+  ctx.font = `${style} ${weight} ${fontSize}px "${family}", system-ui, sans-serif`
   const width = ctx.measureText(token).width
   line.runs.push({ ...run, text: token, measuredWidth: width })
   line.totalWidth += width
@@ -343,19 +348,36 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer, size: nu
 
   if (!layer.runs.length) return
 
+  // CRITICO: clip pra layer NAO invadir caixas vizinhas no PNG final.
+  // No editor (DOM) overflow:visible mostra texto saindo da caixa, mas no
+  // canvas tudo e pintado num plano so e overlap fica visivel. Clip resolve.
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(x, y, w, h)
+  ctx.clip()
+
   const defaultFontSize = layer.runs[0]?.fontSize ?? 40
   const lineHeight = layer.lineHeight ?? 1.25
 
-  // Auto-shrink: tenta no tamanho padrão, se não couber reduz até 60%
-  let currentDefault = defaultFontSize
+  // Auto-shrink: tenta no tamanho padrão, se não couber reduz até 55%.
+  // Aplica shrinkFactor MULTIPLICATIVO em todas as runs (nao so default)
+  // pra runs com fontSize explicito tambem encolherem.
+  let shrinkFactor = 1
   let lines: ParsedLine[] = []
-  for (let attempt = 0; attempt < 8; attempt++) {
-    lines = wrapRichText(ctx, layer.runs, w, currentDefault, lineHeight)
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const scaledRuns = layer.runs.map(r => ({
+      ...r,
+      fontSize: r.fontSize ? Math.round(r.fontSize * shrinkFactor) : undefined,
+    }))
+    const scaledDefault = Math.round(defaultFontSize * shrinkFactor)
+    lines = wrapRichText(ctx, scaledRuns, w, scaledDefault, lineHeight)
     const totalH = lines.reduce((sum, l) => sum + l.maxLineHeight, 0)
     if (totalH <= h) break
-    currentDefault = Math.round(currentDefault * 0.92)
-    if (currentDefault < defaultFontSize * 0.55) break
+    shrinkFactor *= 0.92
+    if (shrinkFactor < 0.55) break
   }
+  // currentDefault usado abaixo no loop de desenho como fallback pra runs sem fontSize
+  const currentDefault = Math.round(defaultFontSize * shrinkFactor)
 
   // Calcula y inicial baseado em vAlign
   const totalH = lines.reduce((sum, l) => sum + l.maxLineHeight, 0)
@@ -407,7 +429,8 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer, size: nu
     }
     yCursor += line.maxLineHeight
   }
-  ctx.restore()
+  ctx.restore()  // restore do save() do shadow/rotation
+  ctx.restore()  // restore do save() do clip
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -514,6 +537,21 @@ export async function slide2ToPngUrl(
   imageCache: ImageCache,
   opts: RenderOptions = {},
 ): Promise<string> {
+  // CRITICO: garante que fontes do slide ja estao carregadas no documento.
+  // Sem isso, primeira renderizacao do grid (antes de abrir o editor) usa
+  // fallback (Inter) pra TODAS as fontes — visual quebrado.
+  try {
+    const { ensureFontsLoaded } = await import('./carrossel-fontes')
+    const fontesEmUso = new Set<string>()
+    for (const layer of (slide.layers ?? [])) {
+      if (layer.type === 'text') {
+        for (const run of (layer.runs ?? [])) if (run.fontFamily) fontesEmUso.add(run.fontFamily)
+      }
+    }
+    if (slide.fonte_familia) fontesEmUso.add(slide.fonte_familia)
+    if (fontesEmUso.size > 0) await ensureFontsLoaded(Array.from(fontesEmUso))
+  } catch { /* nao bloqueia render se fontes falharem */ }
+
   const canvas = document.createElement('canvas')
   canvas.width = CANVAS_SIZE
   canvas.height = CANVAS_SIZE
