@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonrepair } from 'jsonrepair'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { joinArr } from '@/lib/parseArr'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 
@@ -54,23 +54,28 @@ export async function POST(req: NextRequest) {
     quem_e_audiencia?: string
   }
 
+  // Admin client bypassa RLS — algumas tabelas tem policies que falham em
+  // edge cases. Cronograma e outras rotas IA fazem assim tambem.
+  const admin = createAdminClient()
+
   // Carrega perfil pra contexto
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from('creator_profiles')
     .select('nicho, tom_de_voz, plataformas, objetivo, sobre, voz_perfil, nome_artistico')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!profile?.nicho) {
+  if (!profile?.nicho || (typeof profile.nicho === 'string' && profile.nicho.trim() === '')) {
     return NextResponse.json({
       error: 'persona_incompleta',
       mensagem: 'Configure seu nicho e tom no perfil pra a Iara montar sua Bússola.',
       redirect: '/dashboard/persona',
+      debug: `profile=${profile ? 'existe' : 'null'}, nicho=${JSON.stringify(profile?.nicho)}`,
     }, { status: 422 })
   }
 
   // Carrega métricas básicas (último update) pra IA saber onde user tá hoje
-  const { data: metricas } = await supabase
+  const { data: metricas } = await admin
     .from('metricas_redes')
     .select('plataforma, seguidores, alcance_mensal')
     .eq('user_id', user.id)
@@ -149,13 +154,13 @@ Gere o plano JSON agora. Lembre: marcos com NÚMERO ou resultado mensurável, mi
   const trimestre = `${agora.getFullYear()}-Q${trim}`
 
   // Arquiva plano antigo (se existir) e cria novo
-  await supabase
+  await admin
     .from('bussola_planos')
     .update({ status: 'arquivado' })
     .eq('user_id', user.id)
     .eq('status', 'ativo')
 
-  const { data: plano, error: insertErr } = await supabase
+  const { data: plano, error: insertErr } = await admin
     .from('bussola_planos')
     .insert({
       user_id: user.id,
