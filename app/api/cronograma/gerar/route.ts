@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsonrepair } from 'jsonrepair'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { checkRateLimitUser } from '@/lib/rateLimit'
+import { getCurrentPlan, formatPlanoParaPrompt } from '@/lib/getCurrentPlan'
 import {
   janelasHorarios, sugerirLocais, ARQUETIPO_DIA_SEMANA,
   inicioSemanaAtual, addDias, type DiaSemana,
@@ -181,6 +182,10 @@ export async function POST(req: NextRequest) {
     ? `${profile.disponibilidade_minutos} minutos por dia`
     : 'não informado'
 
+  // Plano da Bussola — direciona conteudo pro marco de 3 meses
+  const plano = await getCurrentPlan(supabase, user.id)
+  const planoNote = formatPlanoParaPrompt(plano)
+
   // Mapa abreviacao -> dia_semana numero (1=seg ... 0=dom)
   const DIA_NUM: Record<string, DiaSemana> = {
     seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6, dom: 0,
@@ -216,6 +221,7 @@ export async function POST(req: NextRequest) {
 - Objetivo: ${profile.objetivo ?? 'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
+${planoNote}
 
 ## Disponibilidade REAL do criador
 - Períodos do dia disponíveis: ${periodosDisponiveis || 'não informado'}

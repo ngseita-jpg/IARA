@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
 import { checkRateLimitUser } from '@/lib/rateLimit'
+import { getCurrentPlan, formatPlanoParaPrompt } from '@/lib/getCurrentPlan'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -131,7 +132,11 @@ NUNCA gere ideias genéricas que servem qualquer nicho — se for impossível se
     ? `\n\n## INSTRUÇÃO IMEDIATA\nO criador acabou de pedir/sinalizar que quer as ideias AGORA. **NÃO faça mais perguntas.** Gere as 6-8 ideias no formato \`\`\`ideas JSON imediatamente, com base no contexto que você já tem.`
     : ''
 
-  const systemFinal = SYSTEM_PROMPT + profileNote + triggerNote
+  // Plano da Bussola — alinha ideias geradas ao marco de 3 meses do criador
+  const plano = user ? await getCurrentPlan(supabase, user.id) : null
+  const planoNote = formatPlanoParaPrompt(plano)
+
+  const systemFinal = SYSTEM_PROMPT + profileNote + planoNote + triggerNote
 
   const stream = await anthropic.messages.stream({
     model: 'claude-opus-4-6',

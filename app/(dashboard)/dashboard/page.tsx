@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import {
   FileText, TrendingUp, Sparkles, ArrowRight,
   User, Calendar, Mic, Target, Layers, BookOpen, Image, Images, Zap,
-  ChevronRight, Smartphone, Lightbulb, Briefcase, Scissors,
+  ChevronRight, Smartphone, Lightbulb, Briefcase, Scissors, Compass,
 } from 'lucide-react'
 import { UpgradeBanners } from '@/components/upgrade-banners'
 import { IaraInsightsCard } from '@/components/iara-insights-card'
@@ -30,7 +30,7 @@ const quickAccess = [
   { label: 'Oratória',    href: '/dashboard/oratorio',   icon: Mic,         color: 'from-green-600/20 to-green-600/5',         border: 'border-green-700/30' },
   { label: 'Métricas',    href: '/dashboard/metricas',   icon: TrendingUp,  color: 'from-iara-600/20 to-accent-pink/5',        border: 'border-iara-700/30' },
   { label: 'Fotos',       href: '/dashboard/fotos',      icon: Images,      color: 'from-iara-600/15 to-teal-600/5',           border: 'border-iara-700/20' },
-  { label: 'Metas',       href: '/dashboard/metas',      icon: Target,      color: 'from-green-600/15 to-iara-600/5',          border: 'border-green-700/20' },
+  { label: 'Bússola',     href: '/dashboard/bussola',    icon: Compass,     color: 'from-iara-600/20 to-accent-purple/5',      border: 'border-iara-700/30' },
   { label: 'Calendário',  href: '/dashboard/calendario', icon: Calendar,    color: 'from-teal-600/15 to-iara-600/5',           border: 'border-teal-700/20' },
   { label: 'Persona IA',    href: '/dashboard/persona',  icon: User,        color: 'from-accent-purple/15 to-iara-600/5',      border: 'border-accent-purple/20' },
   { label: 'Oportunidades', href: '/dashboard/vagas',   icon: Briefcase,   color: 'from-amber-600/15 to-iara-600/5',          border: 'border-amber-700/20' },
@@ -47,7 +47,7 @@ const modules = [
   { icon: Mic,        label: 'Análise de Oratória',    desc: 'Grave sua voz, receba score em 5 dimensões e exercícios personalizados.',  href: '/dashboard/oratorio',   gradient: 'from-accent-purple/20 to-iara-600/10',   border: 'border-accent-purple/30' },
   { icon: TrendingUp, label: 'Métricas das Redes',     desc: 'Métricas consolidadas de todas as plataformas + análise com IA.',          href: '/dashboard/metricas',   gradient: 'from-iara-600/15 to-accent-pink/10',     border: 'border-iara-700/20' },
   { icon: Images,     label: 'Banco de Fotos',         desc: 'Salve suas fotos para usar nos geradores. Acesso rápido de qualquer módulo.', href: '/dashboard/fotos',   gradient: 'from-iara-600/15 to-teal-900/10',        border: 'border-iara-700/20' },
-  { icon: Target,     label: 'Metas de Postagem',      desc: 'Organize sua agenda, crie metas e ganhe pontos que sobem seu nível.',      href: '/dashboard/metas',      gradient: 'from-green-900/20 to-iara-600/10',       border: 'border-green-800/20' },
+  { icon: Compass,    label: 'Bússola',                desc: 'Direcionamento de carreira: marco de 3 meses, 4 semanas de missões concretas, integrado a todos os módulos. A Iara traça, você executa.', href: '/dashboard/bussola',    gradient: 'from-iara-600/20 to-accent-purple/10',   border: 'border-iara-700/30' },
   { icon: Calendar,   label: 'Conteúdos da Semana',    desc: '7 dias de conteúdo gerados pela Iara — gancho, script e horário ideais. Marque ao postar e acumule pontos.', href: '/dashboard/calendario', gradient: 'from-teal-900/20 to-iara-600/10',        border: 'border-teal-800/20' },
   { icon: User,       label: 'Persona IA',             desc: 'Configure seu nicho, tom de voz e plataformas. A IA usa seu perfil em todos os módulos.', href: '/dashboard/persona', gradient: 'from-accent-purple/15 to-iara-600/10', border: 'border-accent-purple/20' },
   { icon: Briefcase,  label: 'Oportunidades',          desc: 'Campanhas abertas por marcas — candidate-se e feche parcerias direto na plataforma.', href: '/dashboard/vagas', gradient: 'from-amber-900/20 to-iara-600/10', border: 'border-amber-800/20' },
