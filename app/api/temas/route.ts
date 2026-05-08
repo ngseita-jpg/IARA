@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { getCurrentPlan, formatPlanoParaPrompt } from '@/lib/getCurrentPlan'
+import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -136,7 +137,10 @@ NUNCA gere ideias genéricas que servem qualquer nicho — se for impossível se
   const plano = user ? await getCurrentPlan(supabase, user.id) : null
   const planoNote = formatPlanoParaPrompt(plano)
 
-  const systemFinal = SYSTEM_PROMPT + profileNote + planoNote + triggerNote
+  // Brand Kit — se user configurou, ideias respeitam mood/estilo/elementos recorrentes
+  const brandKitNote = user ? await getBrandKitContext(createAdminClient(), user.id) : ''
+
+  const systemFinal = SYSTEM_PROMPT + profileNote + planoNote + brandKitNote + triggerNote
 
   const stream = await anthropic.messages.stream({
     // Opus 4-6 mantido. Faisca e a feature mais sensivel a qualidade — user

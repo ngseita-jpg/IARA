@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
 import { checkRateLimitUser } from '@/lib/rateLimit'
+import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -111,6 +112,9 @@ export async function POST(req: NextRequest) {
   const check = await verificarLimite(supabase, user.id, 'roteiro', plano)
   if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
 
+  const adminClient = createAdminClient()
+  const brandKitCtx = await getBrandKitContext(adminClient, user.id)
+
   const perfilContexto = profile
     ? `## Perfil do Criador (use como contexto de personalização)
 Nome/Como se apresenta: ${profile.nome_artistico || 'Não informado'}
@@ -144,7 +148,7 @@ ${fonteCtx}
 **Estilo/tom adicional:** ${estilo || 'Use o perfil do criador como referência'}
 **Objetivo do conteúdo:** ${objetivo || 'Engajamento e entrega de valor'}
 
-${perfilContexto}${inspiracao ? `
+${perfilContexto}${brandKitCtx}${inspiracao ? `
 
 ## Vídeo de inspiração: "${inspiracao.titulo}"
 ${inspiracao.transcricao

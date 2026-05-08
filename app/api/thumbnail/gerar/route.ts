@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
 import { checkRateLimitUser } from '@/lib/rateLimit'
+import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -79,7 +80,7 @@ export type ThumbnailLayout = {
   raciocinio: string
 }
 
-function buildSystemPrompt(perfil: Record<string, unknown> | null): string {
+function buildSystemPrompt(perfil: Record<string, unknown> | null, brandKitCtx = ''): string {
   return `Você é a Iara, designer de thumbnails de altíssimo CTR para criadores de conteúdo brasileiros.
 
 Sua função é criar thumbnails ÚNICAS, fiéis ao conteúdo e ao criador, usando parâmetros de layout livre. Cada thumbnail que você cria deve ser diferente da anterior — nunca repita combinações de cor, fonte e posicionamento.
@@ -142,6 +143,7 @@ Sua função é criar thumbnails ÚNICAS, fiéis ao conteúdo e ao criador, usan
 ${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
 Nicho: ${joinArr(perfil.nicho) || 'não informado'}
 Tom de voz: ${joinArr(perfil.tom_de_voz) || 'não informado'}` : 'Perfil não configurado — otimize para máximo CTR geral.'}
+${brandKitCtx}
 
 ## Formato de saída (JSON puro, sem markdown)
 Preencha TODOS os campos obrigatórios. Campos opcionais: omita se não for usar.
@@ -237,6 +239,9 @@ Retorne APENAS o JSON.`
     }
   }
 
+  const adminClient = createAdminClient()
+  const brandKitCtx = await getBrandKitContext(adminClient, user.id)
+
   try {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -244,7 +249,7 @@ Retorne APENAS o JSON.`
       system: [
         {
           type: 'text',
-          text: buildSystemPrompt(perfil as Record<string, unknown> | null),
+          text: buildSystemPrompt(perfil as Record<string, unknown> | null, brandKitCtx),
           cache_control: { type: 'ephemeral' },
         },
       ],

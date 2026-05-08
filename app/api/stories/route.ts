@@ -1,8 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
 import { checkRateLimitUser } from '@/lib/rateLimit'
+import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
   const check = await verificarLimite(supabase, user.id, 'stories', plano)
   if (!check.permitido) return respostaLimiteAtingido(check.limite, check.usado, check.plano)
 
+  const adminClient = createAdminClient()
+  const brandKitCtx = await getBrandKitContext(adminClient, user.id)
+
   const perfilContexto = profile ? `
 PERFIL DO CRIADOR:
 - Nome/Marca: ${profile.nome_artistico ?? 'não informado'}
@@ -64,7 +68,8 @@ PERFIL DO CRIADOR:
 - Objetivo: ${joinArr(profile.objetivo) || 'não informado'}
 - Sobre: ${profile.sobre ?? 'não informado'}
 ${profile.voz_perfil ? `- Personalidade vocal: ${profile.voz_perfil}` : ''}
-` : ''
+${brandKitCtx}
+` : brandKitCtx
 
   const tipoDescricao = TIPOS_STORY[tipo] ?? tipo
 
@@ -84,7 +89,7 @@ REGRAS DOS SLIDES:
 - Slide 6 (cta): ação clara — responde, salva, compartilha, arrasta. Max 12 palavras.
 - Slide 7 (encerramento): fecha com personalidade. Pode ter humor, gratidão ou próximo passo. Max 10 palavras.
 
-Para as cores, use paletas que combinam com o nicho:
+Para as cores: se houver BRAND KIT acima, use a paleta dele (cor_fundo e cor_texto vem do kit). Sem kit, use paleta que combina com o nicho:
 - Fitness/Saúde: tons de verde escuro, laranja vibrante
 - Finanças: azul marinho, dourado
 - Lifestyle: roxo, rosa, bege quente
