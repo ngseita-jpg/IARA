@@ -340,8 +340,27 @@ export default function TemasPage() {
     }).catch(() => {})
   }, [])
 
+  // Auto-scroll APENAS se user ja esta perto do fundo. Senao, durante streaming
+  // o scroll fica preso embaixo e user nao consegue ler conteudo anterior.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const target = bottomRef.current
+    if (!target) return
+    // Acha o container scrollavel mais proximo (a viewport ou um div com overflow)
+    const scroller = (() => {
+      let el: HTMLElement | null = target.parentElement
+      while (el) {
+        const oy = window.getComputedStyle(el).overflowY
+        if (oy === 'auto' || oy === 'scroll') return el
+        el = el.parentElement
+      }
+      return document.scrollingElement as HTMLElement | null
+    })()
+    if (!scroller) return
+    const distanciaDoFundo = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
+    // Tolera ate 200px de distancia — user provavelmente quer continuar acompanhando
+    if (distanciaDoFundo < 200) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
   }, [messages])
 
   const send = useCallback(async () => {
