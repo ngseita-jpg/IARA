@@ -160,8 +160,19 @@ export default async function DashboardPage() {
   const badge = getBadgeInfo(pontos, nicho)
   const nome = profile?.nome_artistico?.split(' ')[0] ?? firstName
 
-  const hora = new Date().getHours()
-  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
+  // Vercel roda em UTC — sem timezone explícito, 21h BR vira 00h UTC e o
+  // cálculo da saudação fica deslocado. en-GB pq en-US com hour12:false às
+  // vezes devolve "24" em vez de "00" pra meia-noite (bug histórico do Node).
+  const horaBR = parseInt(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    hour12: false,
+  }).format(new Date()), 10)
+  const saudacao =
+    horaBR < 5  ? 'Boa noite' :
+    horaBR < 12 ? 'Bom dia'   :
+    horaBR < 18 ? 'Boa tarde' :
+                  'Boa noite'
 
   const perfilIncompleto = !profile?.nicho || !profile?.nome_artistico
   const planoAtual = ((planoRow?.plano ?? 'free') as import('@/lib/limites').Plano)
