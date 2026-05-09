@@ -318,13 +318,25 @@ export default async function DashboardPage() {
         <div className="absolute -top-4 right-2 sm:right-20 w-40 sm:w-48 h-40 sm:h-48 rounded-full bg-accent-pink/20 blur-3xl pointer-events-none cosmic-float" style={{ animationDelay: '-3s' }} />
 
         <div className="relative">
-          <div className="inline-flex items-center gap-2 cosmic-glass rounded-full px-3 py-1 mb-4 sm:mb-6">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 cosmic-glow-pulse" />
-            <p className="text-[10px] tracking-[0.22em] uppercase font-semibold text-zinc-300">
-              {usoTotalMes > 0
-                ? `você criou ${usoTotalMes} conteúdo${usoTotalMes > 1 ? 's' : ''} este mês`
-                : 'pronto pra começar'}
-            </p>
+          <div className="flex items-center gap-2 mb-4 sm:mb-6 flex-wrap">
+            <div className="inline-flex items-center gap-2 cosmic-glass rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 cosmic-glow-pulse" />
+              <p className="text-[10px] tracking-[0.22em] uppercase font-semibold text-zinc-300">
+                {usoTotalMes > 0
+                  ? `${usoTotalMes} conteúdo${usoTotalMes > 1 ? 's' : ''} este mês`
+                  : 'pronto pra começar'}
+              </p>
+            </div>
+            <Link
+              href="/dashboard/perfil"
+              className={`cosmic-glass cosmic-card rounded-full pl-1.5 pr-3 py-1 inline-flex items-center gap-2 group ${badge.cor.border}`}
+            >
+              <span className={`w-5 h-5 rounded-full ${badge.cor.bg} flex items-center justify-center text-[11px] leading-none`}>
+                {badge.cor.emoji}
+              </span>
+              <span className={`text-[10px] tracking-[0.18em] uppercase font-bold ${badge.cor.text}`}>{badge.badge}</span>
+              <span className="text-[10px] text-[#6b6b8a] tabular hidden sm:inline">· {badge.pontos.toLocaleString('pt-BR')} pts</span>
+            </Link>
           </div>
 
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold leading-[0.95] mb-1 sm:mb-2 text-[#f1f1f8] tracking-tight">
@@ -334,27 +346,13 @@ export default async function DashboardPage() {
             {nome}.
           </h1>
 
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-            <p className="text-sm sm:text-base lg:text-lg text-[#9b9bb5] max-w-xl leading-relaxed">
-              {usoTotalMes >= 10
-                ? <>Você está em ritmo <span className="text-white font-semibold">acelerado</span> esse mês. <span className="font-editorial text-amber-300">Bora manter.</span></>
-                : usoTotalMes > 0
-                  ? <>O ritmo tá <span className="font-editorial text-amber-300">tomando forma</span>. Que tal mais um hoje?</>
-                  : <>O que vamos criar <span className="font-editorial text-amber-300">hoje</span>?</>}
-            </p>
-            <Link
-              href="/dashboard/perfil"
-              className="ml-auto cosmic-glass cosmic-card rounded-2xl px-3 py-2 flex items-center gap-3 group flex-shrink-0"
-            >
-              <div className={`w-9 h-9 rounded-xl ${badge.cor.bg} border ${badge.cor.border} flex items-center justify-center text-xl flex-shrink-0`}>
-                {badge.cor.emoji}
-              </div>
-              <div className="hidden sm:block">
-                <p className={`text-xs font-bold ${badge.cor.text}`}>{badge.badge}</p>
-                <p className="text-[10px] text-[#6b6b8a]">{badge.pontos} pts</p>
-              </div>
-            </Link>
-          </div>
+          <p className="text-sm sm:text-base lg:text-lg text-[#9b9bb5] max-w-xl leading-relaxed">
+            {usoTotalMes >= 10
+              ? <>Você está em ritmo <span className="text-white font-semibold">acelerado</span> esse mês. <span className="font-editorial text-amber-300">Bora manter.</span></>
+              : usoTotalMes > 0
+                ? <>O ritmo tá <span className="font-editorial text-amber-300">tomando forma</span>. Que tal mais um hoje?</>
+                : <>O que vamos criar <span className="font-editorial text-amber-300">hoje</span>?</>}
+          </p>
         </div>
       </section>
 
