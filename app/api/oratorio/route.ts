@@ -116,6 +116,7 @@ Avalie nas 5 dimensões e retorne SOMENTE JSON válido (sem markdown, sem texto 
     }
   } catch (e) {
     const detalhe = e instanceof Error ? e.message : 'erro'
+    console.error('[oratorio] análise Claude falhou:', detalhe, e instanceof Error ? e.stack : '')
     return new Response(JSON.stringify({ error: 'Erro ao analisar transcrição', detalhe }), { status: 500 })
   }
 
@@ -141,7 +142,11 @@ Avalie nas 5 dimensões e retorne SOMENTE JSON válido (sem markdown, sem texto 
     .single()
 
   if (analysisError) {
-    return new Response(JSON.stringify({ error: analysisError.message }), { status: 500 })
+    console.error('[oratorio] erro ao salvar voice_analyses:', analysisError)
+    return new Response(JSON.stringify({
+      error: 'Erro ao salvar análise no banco',
+      detalhe: analysisError.message,
+    }), { status: 500 })
   }
 
   // Buscar perfil atual para atualizar pontos e nível

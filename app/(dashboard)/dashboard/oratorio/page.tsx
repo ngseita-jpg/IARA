@@ -284,8 +284,22 @@ export default function OratorioPage() {
         fd.append('audio', blob)
         fd.append('duracao_segundos', String(dur))
         const tRes = await fetch('/api/oratorio/transcrever', { method: 'POST', body: fd })
+
+        // Trata Vercel timeout / HTML de erro antes de tentar .json()
+        const ct = tRes.headers.get('content-type') ?? ''
+        if (!ct.includes('application/json')) {
+          if (tRes.status === 504 || tRes.status === 408) {
+            throw new Error('A transcrição demorou demais. Tenta uma gravação mais curta.')
+          }
+          if (tRes.status >= 500) {
+            throw new Error(`Servidor com problema (HTTP ${tRes.status}). Tenta de novo em 1min.`)
+          }
+          throw new Error(`Erro inesperado (HTTP ${tRes.status}).`)
+        }
+
         const tData = await tRes.json()
         if (!tRes.ok) {
+          console.error('[oratorio/transcrever] erro da API:', tData)
           throw new Error(tData.error ?? 'Falha ao transcrever áudio')
         }
         const text = (tData.transcript ?? '').trim()
@@ -298,6 +312,7 @@ export default function OratorioPage() {
         // Cai pra análise IA padrão
         await callAnaliseAPI(text, dur, text.split(/\s+/).filter(Boolean).length)
       } catch (err) {
+        console.error('[oratorio] transcrição/análise falhou:', err)
         setError(err instanceof Error ? err.message : 'Erro inesperado')
         setEstado('idle')
       }
@@ -325,21 +340,50 @@ export default function OratorioPage() {
   async function callAnaliseAPI(text: string, dur: number, wc: number) {
     setEstado('analyzing')
     try {
-      const res = await fetch('/api/oratorio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript: text,
-          duracao_segundos: dur,
-          word_count: wc,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        const baseMsg = data.mensagem ?? data.error ?? 'Erro ao analisar'
-        throw new Error(data.detalhe ? `${baseMsg} [${data.detalhe}]` : baseMsg)
+      // Timeout client-side de 75s — Vercel mata em 60s, com folga pra
+      // capturar e dar mensagem clara em vez de pendurar pra sempre.
+      const ctrl = new AbortController()
+      const timeoutId = setTimeout(() => ctrl.abort(), 75_000)
+
+      let res: Response
+      try {
+        res = await fetch('/api/oratorio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transcript: text,
+            duracao_segundos: dur,
+            word_count: wc,
+          }),
+          signal: ctrl.signal,
+        })
+      } finally {
+        clearTimeout(timeoutId)
       }
 
+      // Se Vercel deu timeout ou crash, response NÃO é JSON. Sem isso,
+      // res.json() joga "Unexpected token < in JSON at position 0" críptico.
+      const contentType = res.headers.get('content-type') ?? ''
+      const isJson = contentType.includes('application/json')
+
+      if (!res.ok) {
+        if (!isJson) {
+          // 504 Gateway Timeout / 502 / página HTML de erro
+          if (res.status === 504 || res.status === 408) {
+            throw new Error('A análise demorou demais (>60s). Tenta com uma gravação mais curta — ou tenta de novo em 1min.')
+          }
+          if (res.status >= 500) {
+            throw new Error(`Servidor com problema (HTTP ${res.status}). Tenta de novo em 1min.`)
+          }
+          throw new Error(`Erro inesperado do servidor (HTTP ${res.status}).`)
+        }
+        const data = await res.json().catch(() => ({}))
+        const baseMsg = data.mensagem ?? data.error ?? `Erro ao analisar (HTTP ${res.status})`
+        console.error('[oratorio] erro da API:', data)
+        throw new Error(data.detalhe ? `${baseMsg} — ${data.detalhe}` : baseMsg)
+      }
+
+      const data = await res.json()
       const a = data.analysis
       setResultado({
         scores: a.score_confianca !== undefined ? {
@@ -360,7 +404,13 @@ export default function OratorioPage() {
       })
       setEstado('resultado')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro inesperado')
+      console.error('[oratorio] análise falhou:', err)
+      const msg = err instanceof Error
+        ? (err.name === 'AbortError'
+            ? 'A análise demorou demais (>75s). Tenta com uma gravação mais curta.'
+            : err.message)
+        : 'Erro inesperado ao analisar'
+      setError(msg)
       setEstado('idle')
     }
   }
