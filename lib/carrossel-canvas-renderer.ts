@@ -357,19 +357,25 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer, size: nu
   ctx.clip()
 
   const defaultFontSize = layer.runs[0]?.fontSize ?? 40
-  const lineHeight = layer.lineHeight ?? 1.25
+  // lineHeight 1.35 (era 1.25) — fontes display tipo Anton têm descenders
+  // largos que ficavam cortados pelo clip com line height apertado.
+  const lineHeight = layer.lineHeight ?? 1.35
 
-  // Auto-shrink: tenta no tamanho padrão, se não couber reduz até 55%.
-  // Aplica shrinkFactor MULTIPLICATIVO em todas as runs (nao so default)
-  // pra runs com fontSize explicito tambem encolherem.
+  // Auto-shrink: tenta no tamanho padrão, se não couber reduz. Mínimo absoluto
+  // de 22px pra não virar texto ilegível em "discorrer do tema". Se nem com
+  // mínimo cabe, aceita estourar (user vê que precisa reduzir conteúdo).
+  const MIN_FONT_SIZE = 22
   let shrinkFactor = 1
   let lines: ParsedLine[] = []
   for (let attempt = 0; attempt < 10; attempt++) {
+    const scaledDefault = Math.round(defaultFontSize * shrinkFactor)
+    // Para antes de cair abaixo do mínimo legível
+    if (attempt > 0 && scaledDefault < MIN_FONT_SIZE) break
+
     const scaledRuns = layer.runs.map(r => ({
       ...r,
       fontSize: r.fontSize ? Math.round(r.fontSize * shrinkFactor) : undefined,
     }))
-    const scaledDefault = Math.round(defaultFontSize * shrinkFactor)
     lines = wrapRichText(ctx, scaledRuns, w, scaledDefault, lineHeight)
     const totalH = lines.reduce((sum, l) => sum + l.maxLineHeight, 0)
     if (totalH <= h) break

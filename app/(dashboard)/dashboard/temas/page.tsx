@@ -340,12 +340,30 @@ export default function TemasPage() {
     }).catch(() => {})
   }, [])
 
-  // Auto-scroll APENAS se user ja esta perto do fundo. Senao, durante streaming
-  // o scroll fica preso embaixo e user nao consegue ler conteudo anterior.
+  // Auto-scroll inteligente — antes chamava scrollIntoView com behavior:'smooth'
+  // a cada token do stream (500+ vezes em 30s), travando o scroll manual do
+  // user. Agora: respeita interação recente do user (wheel/touch < 1.5s) e usa
+  // behavior:'auto' (instantâneo, não bloqueia interação).
+  const lastUserScrollRef = useRef(0)
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mark = () => { lastUserScrollRef.current = Date.now() }
+    window.addEventListener('wheel', mark, { passive: true })
+    window.addEventListener('touchmove', mark, { passive: true })
+    window.addEventListener('keydown', mark, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', mark)
+      window.removeEventListener('touchmove', mark)
+      window.removeEventListener('keydown', mark)
+    }
+  }, [])
+
+  useEffect(() => {
+    // Se user mexeu no scroll nos últimos 1.5s, NUNCA força scroll
+    if (Date.now() - lastUserScrollRef.current < 1500) return
+
     const target = bottomRef.current
     if (!target) return
-    // Acha o container scrollavel mais proximo (a viewport ou um div com overflow)
     const scroller = (() => {
       let el: HTMLElement | null = target.parentElement
       while (el) {
@@ -357,9 +375,9 @@ export default function TemasPage() {
     })()
     if (!scroller) return
     const distanciaDoFundo = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
-    // Tolera ate 200px de distancia — user provavelmente quer continuar acompanhando
     if (distanciaDoFundo < 200) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      // behavior 'auto' = instantâneo. 'smooth' anima e bloqueia interação.
+      target.scrollIntoView({ behavior: 'auto', block: 'end' })
     }
   }, [messages])
 

@@ -50,6 +50,7 @@ import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'
 import type { Slide2 } from '@/lib/carrossel-canvas-types'
 import { preloadImages, slide2ToPngUrl, type ImageCache } from '@/lib/carrossel-canvas-renderer'
 import { useDraftAutosave, loadDraft, useUnsavedWarning } from '@/hooks/useDraftAutosave'
+import { useImagesAutosave, loadImagesDraft, clearImagesDraft } from '@/hooks/useImagesAutosave'
 import { toast } from '@/lib/toast'
 import { CarrosselIterarChat } from '@/components/carrossel-iterar-chat'
 
@@ -161,14 +162,17 @@ export default function CarrosselPage() {
   const [fonteCarrossel, setFonteCarrossel] = useState<string>(draft?.fonteCarrossel ?? 'inter')
   const [incluirEncerramento, setIncluirEncerramento] = useState(draft?.incluirEncerramento ?? true)
 
-  // Auto-save (sem imagens base64 / PNGs renderizados — pesa muito)
+  // Auto-save metadata (texto, config) em localStorage
   useDraftAutosave('carrossel-v1', {
     step, modoConteudo, url, textoManual, leitura, numSlides, instrucoes, modo,
     plataforma, carrossel, showWatermark, fonteCarrossel, incluirEncerramento,
   })
+  // Auto-save fotos em IndexedDB (base64 estoura localStorage). Inclui análise
+  // da IA pra não precisar refazer caso o user reload depois de upload.
+  useImagesAutosave('carrossel-v1', { imagens, imagensPreview, analiseImagens })
   useUnsavedWarning(gerando || analisando)
 
-  // Notifica recuperacao de draft + se ha carrossel mas sem PNGs, auto-renderiza
+  // Notifica recuperacao de draft + restaura fotos do IndexedDB + auto-renderiza
   useEffect(() => {
     if (draft && (draft.carrossel || draft.url || draft.textoManual)) {
       const tem = draft.carrossel ? 'carrossel' : 'rascunho'
@@ -180,6 +184,19 @@ export default function CarrosselPage() {
     if (draft?.carrossel && draft.carrossel.slides?.length > 0) {
       void renderizarTodos(draft.carrossel)
     }
+    // Restaura fotos do IDB (uma vez no mount). Antes o user perdia tudo ao
+    // dar F5 entre upload e geração; agora só perde se passou 24h.
+    void loadImagesDraft<{ imagens: string[]; imagensPreview: string[]; analiseImagens: ImagemAnalise[] }>('carrossel-v1')
+      .then(saved => {
+        if (!saved) return
+        const temFotos = (saved.imagens?.length ?? 0) > 0
+        if (!temFotos) return
+        setImagens(saved.imagens)
+        setImagensPreview(saved.imagensPreview ?? saved.imagens)
+        if (saved.analiseImagens?.length) setAnaliseImagens(saved.analiseImagens)
+        toast.info(`Recuperei ${saved.imagens.length} foto${saved.imagens.length > 1 ? 's' : ''} do último trabalho`)
+      })
+      .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1691,6 +1708,8 @@ export default function CarrosselPage() {
                       setLeitura(null)
                       setImagens([])
                       setImagensPreview([])
+                      setAnaliseImagens([])
+                      void clearImagesDraft('carrossel-v1')
                     }}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0f0f20] border border-[#1a1a2e] text-[#9b9bb5] hover:text-[#f1f1f8] text-sm transition-all"
                   >
