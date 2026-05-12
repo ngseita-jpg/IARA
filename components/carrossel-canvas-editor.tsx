@@ -655,15 +655,29 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   async function exportarTodosPng() {
     if (!imageCache) return
     setExportando(true)
+    setExportProgresso({ atual: 0, total: slides.length })
     try {
       await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
       hidden.width = CANVAS_SIZE
       hidden.height = CANVAS_SIZE
 
-      for (const s of slides) {
-        await renderSlide2(hidden, s, imageCache, { watermark })
-        const blob = await canvasToBlob(hidden)
+      for (let i = 0; i < slides.length; i++) {
+        const s = slides[i]
+        setExportProgresso({ atual: i + 1, total: slides.length })
+
+        // Timeout de 15s por slide pra não pendurar pra sempre se canvas ou
+        // imagem trava (causa comum de "save trava" reportado pelo user).
+        const blob = await Promise.race([
+          (async () => {
+            await renderSlide2(hidden, s, imageCache, { watermark })
+            return canvasToBlob(hidden)
+          })(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Tempo esgotado no slide ${i + 1}`)), 15_000),
+          ),
+        ])
+
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
@@ -676,8 +690,14 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       haptic('medium')
       setExportToast(`✓ ${slides.length} ${slides.length === 1 ? 'slide salvo' : 'slides salvos'} no seu dispositivo`)
       setTimeout(() => setExportToast(null), 4000)
+    } catch (err) {
+      console.error('[carrossel] export falhou:', err)
+      const msg = err instanceof Error ? err.message : 'erro desconhecido'
+      setExportToast(`✗ Save travou: ${msg}. Tenta o botão "Compartilhar" como alternativa.`)
+      setTimeout(() => setExportToast(null), 6500)
     } finally {
       setExportando(false)
+      setExportProgresso(null)
     }
   }
 
