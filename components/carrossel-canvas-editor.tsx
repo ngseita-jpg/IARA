@@ -14,6 +14,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FotoFundoDragger } from '@/components/foto-fundo-dragger'
 import { TextEditMobileSheet } from '@/components/text-edit-mobile-sheet'
+import { ContextualToolbar as FloatingToolbar, type ContextualAction } from '@/components/contextual-toolbar'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
@@ -155,6 +156,13 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     }
   }, [isMobile])
 
+  // Bounds do layer selecionado em coords da viewport — pra posicionar a
+  // toolbar contextual mobile. Recalcula quando: layer muda, canvas resize,
+  // scroll do window. Null quando nada selecionado.
+  const [selectedLayerBounds, setSelectedLayerBounds] = useState<{
+    top: number; left: number; width: number; height: number
+  } | null>(null)
+
   // Canvas display size — RESPONSIVO: medido do container via ResizeObserver.
   // Fallback inicial: 520px desktop, ajusta no primeiro layout.
   const stageContainerRef = useRef<HTMLDivElement>(null)
@@ -187,6 +195,25 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
 
   const slide = slides[slideIdx]
   const selectedLayer = slide?.layers.find(l => l.id === selectedLayerId) ?? null
+
+  // Recalcula bounds da layer selecionada em coords da viewport (px absolutos),
+  // pra posicionar a toolbar contextual flutuante mobile. Re-roda quando layer
+  // muda (incluindo durante drag — selectedLayer.x/y mudam) ou canvas resize.
+  useEffect(() => {
+    if (!selectedLayer || !stageContainerRef.current || !isMobile) {
+      setSelectedLayerBounds(null)
+      return
+    }
+    const rect = stageContainerRef.current.getBoundingClientRect()
+    const offsetX = (rect.width - canvasDisplaySize) / 2
+    const offsetY = (rect.height - canvasDisplaySize) / 2
+    setSelectedLayerBounds({
+      top:    rect.top + offsetY + (selectedLayer.y / 100) * canvasDisplaySize,
+      left:   rect.left + offsetX + (selectedLayer.x / 100) * canvasDisplaySize,
+      width:  (selectedLayer.w / 100) * canvasDisplaySize,
+      height: (selectedLayer.h / 100) * canvasDisplaySize,
+    })
+  }, [selectedLayer, canvasDisplaySize, isMobile])
 
   // ─── Pre-load imagens ─────────────────────────────────────────────
   useEffect(() => {
@@ -1302,6 +1329,49 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
         }}
         onClose={() => setMobileEditingLayerId(null)}
       />
+
+      {/* Toolbar contextual flutuante (mobile only) — aparece acima da layer
+          selecionada com atalhos rápidos. "Mais" abre o Inspector completo. */}
+      {isMobile && selectedLayer && selectedLayerBounds && !mobileEditingLayerId && !editingTextId && (
+        <FloatingToolbar
+          layer={selectedLayer}
+          bounds={selectedLayerBounds}
+          onAction={(action: ContextualAction) => {
+            if (!selectedLayer) return
+            switch (action) {
+              case 'bold':
+                updateLayer(selectedLayer.id, l => l.type === 'text'
+                  ? { ...l, runs: l.runs.map(r => ({ ...r, bold: !r.bold })) }
+                  : l)
+                break
+              case 'italic':
+                updateLayer(selectedLayer.id, l => l.type === 'text'
+                  ? { ...l, runs: l.runs.map(r => ({ ...r, italic: !r.italic })) }
+                  : l)
+                break
+              case 'sizeDown':
+                updateLayer(selectedLayer.id, l => l.type === 'text'
+                  ? { ...l, runs: l.runs.map(r => ({ ...r, fontSize: Math.max(8, (r.fontSize ?? 40) - 4) })) }
+                  : l)
+                break
+              case 'sizeUp':
+                updateLayer(selectedLayer.id, l => l.type === 'text'
+                  ? { ...l, runs: l.runs.map(r => ({ ...r, fontSize: Math.min(300, (r.fontSize ?? 40) + 4) })) }
+                  : l)
+                break
+              case 'duplicate':
+                duplicateLayer(selectedLayer.id)
+                break
+              case 'delete':
+                deleteLayer(selectedLayer.id)
+                break
+              case 'more':
+                setShowFullEditor(true)
+                break
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
