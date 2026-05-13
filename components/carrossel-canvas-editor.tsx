@@ -13,6 +13,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FotoFundoDragger } from '@/components/foto-fundo-dragger'
+import { TextEditMobileSheet } from '@/components/text-edit-mobile-sheet'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
@@ -62,7 +63,9 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   const [slides, setSlides] = useState<Slide2[]>(slidesInit)
   const [slideIdx, setSlideIdx] = useState(0)
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
-  const [editingTextId, setEditingTextId] = useState<string | null>(null)   // texto em modo edição in-place
+  const [editingTextId, setEditingTextId] = useState<string | null>(null)   // texto em modo edição in-place (desktop)
+  const [mobileEditingLayerId, setMobileEditingLayerId] = useState<string | null>(null)   // texto em bottom-sheet mobile
+  const [isMobile, setIsMobile] = useState(false)
   const [imageCache, setImageCache] = useState<ImageCache>(new Map())
   const [imagensCache, setImagensCache] = useState<string[]>([])            // dataURLs pra exibição HTML
   const [exportando, setExportando] = useState(false)
@@ -124,6 +127,33 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     const dur = intensity === 'light' ? 8 : intensity === 'medium' ? 14 : 24
     try { navigator.vibrate(dur) } catch { /* ignored */ }
   }, [])
+
+  // Mobile detection — usado pra decidir se text-edit abre em bottom-sheet
+  // ao invés do contentEditable inline (que ficava tiny no canvas).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Quando user double-tap em texto: desktop usa contentEditable inline,
+  // mobile abre o bottom-sheet (mais espaço, teclado virtual não cobre).
+  // Aceita null pra fechar/limpar edição em qualquer modo.
+  const startEditText = useCallback((id: string | null) => {
+    if (id === null) {
+      setEditingTextId(null)
+      setMobileEditingLayerId(null)
+      return
+    }
+    if (isMobile) {
+      setMobileEditingLayerId(id)
+      setSelectedLayerId(id)
+    } else {
+      setEditingTextId(id)
+    }
+  }, [isMobile])
 
   // Canvas display size — RESPONSIVO: medido do container via ResizeObserver.
   // Fallback inicial: 520px desktop, ajusta no primeiro layout.
@@ -346,7 +376,8 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     setSlides(next)
     pushHistory(next)
     setSelectedLayerId(tl.id)
-    setTimeout(() => setEditingTextId(tl.id), 50)
+    // Usa wrapper pra ir pro bottom-sheet em mobile / inline em desktop
+    setTimeout(() => startEditText(tl.id), 50)
   }
 
   function addPhotoLayer(imgIdx: number) {
@@ -1006,7 +1037,7 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
               selectedLayerId={selectedLayerId}
               editingTextId={editingTextId}
               onSelectLayer={setSelectedLayerId}
-              onStartEditText={setEditingTextId}
+              onStartEditText={startEditText}
               onLayerPointerDown={onLayerPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -1247,6 +1278,30 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Bottom-sheet de edição de texto (só mobile) — substitui contentEditable
+          inline que ficava tiny no canvas e era coberto pelo teclado virtual */}
+      <TextEditMobileSheet
+        open={mobileEditingLayerId !== null}
+        initialText={(() => {
+          if (!mobileEditingLayerId || !slide) return ''
+          const l = slide.layers.find(x => x.id === mobileEditingLayerId)
+          if (!l || l.type !== 'text') return ''
+          return l.runs.map(r => r.text).join('')
+        })()}
+        onSave={(novoTexto) => {
+          if (!mobileEditingLayerId) return
+          updateLayer(mobileEditingLayerId, (l) => {
+            if (l.type !== 'text') return l
+            // Substitui runs por uma única com texto novo, herdando formatação
+            // da primeira run (fontSize, color, bold etc). Se quiser formatar
+            // por palavra, user usa a toolbar "Mais" depois.
+            const baseRun = l.runs[0] ?? { text: '', fontSize: 40 }
+            return { ...l, runs: [{ ...baseRun, text: novoTexto }] }
+          })
+        }}
+        onClose={() => setMobileEditingLayerId(null)}
+      />
     </div>
   )
 }
