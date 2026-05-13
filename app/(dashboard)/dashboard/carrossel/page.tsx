@@ -45,6 +45,7 @@ const CarrosselCanvasEditor = dynamic(() => import('@/components/carrossel-canva
   loading: () => <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 text-sm text-white">Carregando editor…</div>,
 })
 import { SaveTemplateButton } from '@/components/save-template-button'
+import { EditarImagemIAModal } from '@/components/editar-imagem-ia-modal'
 import { IaFeedback } from '@/components/ia-feedback'
 import { carrosselParaSlide2 } from '@/lib/carrossel-canvas-adapter'
 import type { Slide2 } from '@/lib/carrossel-canvas-types'
@@ -132,6 +133,17 @@ export default function CarrosselPage() {
   // Step 2: imagens (volatil — base64 grandes, nao restauramos)
   const [imagens, setImagens] = useState<string[]>([])
   const [imagensPreview, setImagensPreview] = useState<string[]>([])
+
+  // Edição de imagem com IA (gpt-image-1)
+  const [editandoImagemIdx, setEditandoImagemIdx] = useState<number | null>(null)
+  const aplicarEdicaoIA = useCallback((idx: number, newDataUrl: string) => {
+    setImagens(prev => prev.map((v, i) => i === idx ? newDataUrl : v))
+    setImagensPreview(prev => prev.map((v, i) => i === idx ? newDataUrl : v))
+    setAnaliseImagens([])  // invalida análise antiga, força reanalise
+    setEditandoImagemIdx(null)
+    toast.success('Foto editada com IA aplicada!')
+  }, [])
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [analiseImagens, setAnaliseImagens] = useState<ImagemAnalise[]>([])
   const [analisando, setAnalisando] = useState(false)
@@ -951,9 +963,18 @@ export default function CarrosselPage() {
                       alt={`Imagem ${i + 1}`}
                       className="w-full h-full object-cover rounded-lg border border-[#1a1a2e]"
                     />
-                    <div className="absolute inset-0 bg-black/50 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => setEditandoImagemIdx(i)}
+                        title="Editar com IA"
+                        className="p-2 rounded-full text-white shadow-lg shadow-iara-900/40 hover:scale-[1.05] transition-all"
+                        style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7,#ec4899)' }}
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => removerImagem(i)}
+                        title="Remover"
                         className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 transition-colors"
                       >
                         <X className="w-3 h-3 text-white" />
@@ -1756,6 +1777,15 @@ export default function CarrosselPage() {
           }}
         />
       )}
+
+      <EditarImagemIAModal
+        open={editandoImagemIdx !== null}
+        imageDataUrl={editandoImagemIdx !== null ? (imagensPreview[editandoImagemIdx] ?? null) : null}
+        onClose={() => setEditandoImagemIdx(null)}
+        onApply={(newDataUrl) => {
+          if (editandoImagemIdx !== null) aplicarEdicaoIA(editandoImagemIdx, newDataUrl)
+        }}
+      />
     </div>
   )
 }

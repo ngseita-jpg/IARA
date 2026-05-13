@@ -1489,7 +1489,7 @@ const LayerView = React.memo(function LayerView({
 })
 
 // Handles de resize nos 4 cantos.
-// Visual: bolinha 16px. Hit area: 32px (touch-friendly), expandida via padding invisível.
+// Visual: bolinha 16px. Hit area: 44px (WCAG AAA touch), expandida via padding invisível.
 // touch-action none + select-none pra evitar que o navegador interprete como scroll/seleção de texto.
 function ResizeHandles({ onPointerDown }: { onPointerDown: (e: React.PointerEvent, mode: 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br') => void }) {
   const handle = (mode: 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br', pos: { top?: number; left?: number; right?: number; bottom?: number; cursor: string }) => (
@@ -1505,15 +1505,17 @@ function ResizeHandles({ onPointerDown }: { onPointerDown: (e: React.PointerEven
       className="touch-none select-none"
       style={{
         position: 'absolute',
-        // Hit area de 32px (touch-friendly), padding invisível
-        width: 32, height: 32,
+        // Hit area 44x44 (era 32) pra atender WCAG AAA touch — mobile difícil
+        // de agarrar com 32px especialmente em dedos grandes/handles próximos.
+        width: 44, height: 44,
         cursor: pos.cursor,
         zIndex: 20,
-        // Posicionamento ajustado pelo offset do hit-area
-        ...(pos.top !== undefined  ? { top:  (pos.top  ?? 0) - 16 + 6 } : {}),
-        ...(pos.bottom !== undefined ? { bottom: (pos.bottom ?? 0) - 16 + 6 } : {}),
-        ...(pos.left !== undefined ? { left: (pos.left ?? 0) - 16 + 6 } : {}),
-        ...(pos.right !== undefined ? { right: (pos.right ?? 0) - 16 + 6 } : {}),
+        // Offset ajustado pra manter o visual da bolinha na mesma posição
+        // do canto, só o hit area cresceu simetricamente ao redor.
+        ...(pos.top !== undefined  ? { top:  (pos.top  ?? 0) - 16 } : {}),
+        ...(pos.bottom !== undefined ? { bottom: (pos.bottom ?? 0) - 16 } : {}),
+        ...(pos.left !== undefined ? { left: (pos.left ?? 0) - 16 } : {}),
+        ...(pos.right !== undefined ? { right: (pos.right ?? 0) - 16 } : {}),
         // Centraliza visual no centro do hit area
         display: 'flex',
         alignItems: 'center',
