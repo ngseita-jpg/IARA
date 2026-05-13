@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { FotoFundoDragger } from '@/components/foto-fundo-dragger'
 import { TextEditMobileSheet } from '@/components/text-edit-mobile-sheet'
 import { ContextualToolbar as FloatingToolbar, type ContextualAction } from '@/components/contextual-toolbar'
+import { LongPressMenu, type LongPressAction } from '@/components/long-press-menu'
 import {
   X, Type, Palette, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight,
   Bold, Italic, Underline, Undo2, Redo2, Download, Trash2, Copy,
@@ -162,6 +163,19 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   const [selectedLayerBounds, setSelectedLayerBounds] = useState<{
     top: number; left: number; width: number; height: number
   } | null>(null)
+
+  // Long-press menu (mobile): segura 550ms numa layer sem mover → abre menu
+  // de contexto com ações de z-index + dup/del.
+  const [longPressMenu, setLongPressMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null)
+  function clearLongPress() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    longPressStartRef.current = null
+  }
 
   // Canvas display size — RESPONSIVO: medido do container via ResizeObserver.
   // Fallback inicial: 520px desktop, ajusta no primeiro layout.
@@ -504,9 +518,28 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       origW: layer.w, origH: layer.h,
       mode,
     })
+
+    // Long-press detection (só mode 'move' e mobile): segurar 550ms sem
+    // mover muito = abre menu de contexto. onPointerMove cancela se passar
+    // de 6px (virou drag), onPointerUp também cancela.
+    if (mode === 'move' && isMobile) {
+      longPressStartRef.current = { x: e.clientX, y: e.clientY }
+      const startX = e.clientX
+      const startY = e.clientY
+      longPressTimerRef.current = setTimeout(() => {
+        haptic('medium')
+        setLongPressMenu({ layerId, x: startX, y: startY })
+      }, 550)
+    }
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    // Long-press: se moveu > 6px desde o pointerdown, cancela timer (virou drag)
+    if (longPressStartRef.current) {
+      const ldx = Math.abs(e.clientX - longPressStartRef.current.x)
+      const ldy = Math.abs(e.clientY - longPressStartRef.current.y)
+      if (ldx > 6 || ldy > 6) clearLongPress()
+    }
     if (!dragState) return
     const dx = ((e.clientX - dragState.startX) / canvasDisplaySize) * 100
     const dy = ((e.clientY - dragState.startY) / canvasDisplaySize) * 100
@@ -589,6 +622,8 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
   }
 
   function onPointerUp() {
+    // Cancela long-press pendente (user soltou antes dos 550ms)
+    clearLongPress()
     // Commit history UMA VEZ no fim do drag (em vez de 60 vezes/seg).
     if (isDraggingRef.current) {
       isDraggingRef.current = false
@@ -1370,6 +1405,24 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
                 break
             }
           }}
+        />
+      )}
+
+      {/* Long-press context menu (mobile) — segurar 550ms numa layer */}
+      {longPressMenu && (
+        <LongPressMenu
+          position={{ x: longPressMenu.x, y: longPressMenu.y }}
+          onAction={(action: LongPressAction) => {
+            const id = longPressMenu.layerId
+            setLongPressMenu(null)
+            switch (action) {
+              case 'forward':   moveLayerZ(id, 'up');   break
+              case 'backward':  moveLayerZ(id, 'down'); break
+              case 'duplicate': duplicateLayer(id);     break
+              case 'delete':    deleteLayer(id);        break
+            }
+          }}
+          onClose={() => setLongPressMenu(null)}
         />
       )}
     </div>
