@@ -1,18 +1,25 @@
 /**
- * Renderiza um Slide2 num <canvas> 1080×1080 no client.
- * Zero dependência server-side — tudo HTMLCanvas 2D nativo.
+ * Renderiza um Slide2 num <canvas> 1440×1800 (proporção 4:5 — padrão atual
+ * do Instagram feed) no client. Zero dependência server-side — tudo
+ * HTMLCanvas 2D nativo.
  *
  * Usado tanto no preview (redimensionado CSS) quanto no export PNG.
+ *
+ * Layers usam coords em PERCENT (x/y/w/h), então não precisam mudar com
+ * a proporção — só o canvas alvo cresce ou muda forma.
  */
 
 import type {
   Slide2, Layer, TextLayer, PhotoLayer, ShapeLayer, Run, Background, Overlay,
 } from './carrossel-canvas-types'
 
-// 1440x1440 = qualidade Instagram premium (mais alta que o feed default 1080).
-// Pra fotos profissionais, perda visual e' imperceptivel; ganho de nitidez
-// em texto e detalhes finos e' enorme. Custo: PNG ~2x maior em bytes.
-export const CANVAS_SIZE = 1440
+// 1440×1800 = proporção 4:5 (padrão atual Insta feed). Qualidade premium
+// — feed default seria 1080×1350 mas usamos 1.33× pra mais nitidez em
+// texto e detalhes. Insta aceita até 8K.
+export const CANVAS_WIDTH  = 1440
+export const CANVAS_HEIGHT = 1800
+/** @deprecated use CANVAS_WIDTH (= 1440). Mantido pra retrocompat. */
+export const CANVAS_SIZE   = CANVAS_WIDTH
 
 export type RenderOptions = {
   watermark?: boolean
@@ -92,60 +99,63 @@ function drawImageCover(
 function drawBackground(
   ctx: CanvasRenderingContext2D,
   bg: Background,
-  size: number,
+  width: number,
+  height: number,
   imageCache: ImageCache,
 ) {
   if (bg.type === 'color') {
     ctx.fillStyle = bg.color
-    ctx.fillRect(0, 0, size, size)
+    ctx.fillRect(0, 0, width, height)
     return
   }
   if (bg.type === 'gradient') {
     const angleRad = ((bg.angle ?? 135) * Math.PI) / 180
-    const x0 = size / 2 - Math.cos(angleRad) * size / 2
-    const y0 = size / 2 - Math.sin(angleRad) * size / 2
-    const x1 = size / 2 + Math.cos(angleRad) * size / 2
-    const y1 = size / 2 + Math.sin(angleRad) * size / 2
+    // Gradient agora respeita dimensões separadas — antes assumia quadrado
+    const x0 = width / 2  - Math.cos(angleRad) * width / 2
+    const y0 = height / 2 - Math.sin(angleRad) * height / 2
+    const x1 = width / 2  + Math.cos(angleRad) * width / 2
+    const y1 = height / 2 + Math.sin(angleRad) * height / 2
     const grad = ctx.createLinearGradient(x0, y0, x1, y1)
     grad.addColorStop(0, bg.from)
     grad.addColorStop(1, bg.to)
     ctx.fillStyle = grad
-    ctx.fillRect(0, 0, size, size)
+    ctx.fillRect(0, 0, width, height)
     return
   }
   // photo
   const img = imageCache.get(bg.imageIdx)
   if (img) {
-    drawImageCover(ctx, img, 0, 0, size, size, bg.objectPosition, bg.zoom ?? 1)
+    drawImageCover(ctx, img, 0, 0, width, height, bg.objectPosition, bg.zoom ?? 1)
   } else {
     // Fallback: gradiente suave
-    const grad = ctx.createLinearGradient(0, 0, size, size)
+    const grad = ctx.createLinearGradient(0, 0, width, height)
     grad.addColorStop(0, '#1a1a2e')
     grad.addColorStop(1, '#0a0a14')
     ctx.fillStyle = grad
-    ctx.fillRect(0, 0, size, size)
+    ctx.fillRect(0, 0, width, height)
   }
 }
 
-function drawOverlay(ctx: CanvasRenderingContext2D, overlay: Overlay | undefined, size: number) {
+function drawOverlay(ctx: CanvasRenderingContext2D, overlay: Overlay | undefined, width: number, height: number) {
   if (!overlay) return
   ctx.save()
   ctx.globalAlpha = overlay.opacity
   ctx.fillStyle = overlay.color
-  ctx.fillRect(0, 0, size, size)
+  ctx.fillRect(0, 0, width, height)
   ctx.restore()
 }
 
 function drawPhotoLayer(
   ctx: CanvasRenderingContext2D,
   layer: PhotoLayer,
-  size: number,
+  width: number,
+  height: number,
   imageCache: ImageCache,
 ) {
-  const x = (layer.x / 100) * size
-  const y = (layer.y / 100) * size
-  const w = (layer.w / 100) * size
-  const h = (layer.h / 100) * size
+  const x = (layer.x / 100) * width
+  const y = (layer.y / 100) * height
+  const w = (layer.w / 100) * width
+  const h = (layer.h / 100) * height
 
   ctx.save()
   if (layer.rotation) {
@@ -199,11 +209,11 @@ function drawImageContain(
   ctx.drawImage(img, dx + offsetX, dy + offsetY, renderW, renderH)
 }
 
-function drawShapeLayer(ctx: CanvasRenderingContext2D, layer: ShapeLayer, size: number) {
-  const x = (layer.x / 100) * size
-  const y = (layer.y / 100) * size
-  const w = (layer.w / 100) * size
-  const h = (layer.h / 100) * size
+function drawShapeLayer(ctx: CanvasRenderingContext2D, layer: ShapeLayer, width: number, height: number) {
+  const x = (layer.x / 100) * width
+  const y = (layer.y / 100) * height
+  const w = (layer.w / 100) * width
+  const h = (layer.h / 100) * height
 
   ctx.save()
   if (layer.rotation) {
@@ -340,11 +350,11 @@ function addToken(
   if (fontSize > line.maxFontSize) line.maxFontSize = fontSize
 }
 
-function drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer, size: number) {
-  const x = (layer.x / 100) * size
-  const y = (layer.y / 100) * size
-  const w = (layer.w / 100) * size
-  const h = (layer.h / 100) * size
+function drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer, width: number, height: number) {
+  const x = (layer.x / 100) * width
+  const y = (layer.y / 100) * height
+  const w = (layer.w / 100) * width
+  const h = (layer.h / 100) * height
 
   if (!layer.runs.length) return
 
@@ -453,15 +463,16 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-function drawWatermark(ctx: CanvasRenderingContext2D, size: number) {
+function drawWatermark(ctx: CanvasRenderingContext2D, width: number, height: number) {
   const padX = 14, padY = 7
   ctx.save()
   ctx.font = '700 16px Inter, system-ui, sans-serif'
   const textWidth = ctx.measureText('Iara Hub').width
   const boxW = textWidth + padX * 2 + 24
   const boxH = 32
-  const bx = size - boxW - 24
-  const by = size - boxH - 24
+  // Posiciona no canto inferior-direito respeitando dimensões reais
+  const bx = width - boxW - 24
+  const by = height - boxH - 24
   // Fundo
   ctx.fillStyle = 'rgba(0,0,0,0.5)'
   roundRect(ctx, bx, by, boxW, boxH, boxH / 2)
@@ -488,8 +499,9 @@ function drawWatermark(ctx: CanvasRenderingContext2D, size: number) {
 }
 
 /**
- * Renderiza um slide completo no canvas fornecido.
- * O canvas deve ter largura e altura iguais (será tratado como 1080×1080).
+ * Renderiza um slide completo no canvas fornecido (1440×1800, proporção 4:5).
+ * Layers usam coords em PERCENT — x/w escalam com CANVAS_WIDTH, y/h com
+ * CANVAS_HEIGHT.
  */
 export async function renderSlide2(
   canvas: HTMLCanvasElement,
@@ -499,9 +511,8 @@ export async function renderSlide2(
 ) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
-  const size = CANVAS_SIZE
-  canvas.width = size
-  canvas.height = size
+  canvas.width  = CANVAS_WIDTH
+  canvas.height = CANVAS_HEIGHT
 
   // CRITICO: ativa Lanczos resampling. Sem isso o canvas usa nearest-neighbor
   // ao desenhar fotos em escala diferente — qualidade fica horrivel.
@@ -510,18 +521,18 @@ export async function renderSlide2(
   ctx.imageSmoothingQuality = 'high'
 
   // Fundo
-  drawBackground(ctx, slide.background, size, imageCache)
+  drawBackground(ctx, slide.background, CANVAS_WIDTH, CANVAS_HEIGHT, imageCache)
   // Overlay
-  drawOverlay(ctx, slide.overlay, size)
+  drawOverlay(ctx, slide.overlay, CANVAS_WIDTH, CANVAS_HEIGHT)
 
   // Layers em ordem (z-index = index do array)
   for (const layer of slide.layers) {
-    if (layer.type === 'photo') drawPhotoLayer(ctx, layer as PhotoLayer, size, imageCache)
-    else if (layer.type === 'shape') drawShapeLayer(ctx, layer as ShapeLayer, size)
-    else if (layer.type === 'text') drawTextLayer(ctx, layer as TextLayer, size)
+    if (layer.type === 'photo') drawPhotoLayer(ctx, layer as PhotoLayer, CANVAS_WIDTH, CANVAS_HEIGHT, imageCache)
+    else if (layer.type === 'shape') drawShapeLayer(ctx, layer as ShapeLayer, CANVAS_WIDTH, CANVAS_HEIGHT)
+    else if (layer.type === 'text') drawTextLayer(ctx, layer as TextLayer, CANVAS_WIDTH, CANVAS_HEIGHT)
   }
 
-  if (opts.watermark) drawWatermark(ctx, size)
+  if (opts.watermark) drawWatermark(ctx, CANVAS_WIDTH, CANVAS_HEIGHT)
 }
 
 /** Converte canvas → Blob PNG */
@@ -559,8 +570,8 @@ export async function slide2ToPngUrl(
   } catch { /* nao bloqueia render se fontes falharem */ }
 
   const canvas = document.createElement('canvas')
-  canvas.width = CANVAS_SIZE
-  canvas.height = CANVAS_SIZE
+  canvas.width  = CANVAS_WIDTH
+  canvas.height = CANVAS_HEIGHT
   await renderSlide2(canvas, slide, imageCache, opts)
   const blob = await canvasToBlob(canvas)
   return URL.createObjectURL(blob)

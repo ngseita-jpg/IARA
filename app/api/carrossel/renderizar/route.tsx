@@ -1457,10 +1457,10 @@ export async function POST(req: NextRequest) {
     const bgOverride = slide.cor_fundo_override
     const rootBg = bgOverride && /^#([0-9a-fA-F]{3,8})$/.test(bgOverride) ? bgOverride : BG
 
-    // Atualizado 2026-05-05: 1080 -> 1440 pra alinhar com CANVAS_SIZE
-    // do canvas editor + qualidade premium em texto e foto.
+    // Atualizado: 1440x1440 (1:1) → 1440x1800 (4:5) pra alinhar com novo
+    // padrão Insta feed. CANVAS_WIDTH × CANVAS_HEIGHT do canvas editor.
     const root = (c: React.ReactElement) => (
-      <div style={{ width: 1440, height: 1440, position: 'relative', backgroundColor: rootBg, display: 'flex', fontFamily: fontFamilyName, overflow: 'hidden' }}>
+      <div style={{ width: 1440, height: 1800, position: 'relative', backgroundColor: rootBg, display: 'flex', fontFamily: fontFamilyName, overflow: 'hidden' }}>
         {c}
         {show_wm && <Watermark />}
       </div>
@@ -1468,9 +1468,9 @@ export async function POST(req: NextRequest) {
 
     let buf: ArrayBuffer
     try {
-      buf = await new ImageResponse(root(content), { width: 1440, height: 1440, fonts }).arrayBuffer()
+      buf = await new ImageResponse(root(content), { width: 1440, height: 1800, fonts }).arrayBuffer()
     } catch {
-      buf = await new ImageResponse(root(renderFallback(slide, total)), { width: 1440, height: 1440, fonts }).arrayBuffer()
+      buf = await new ImageResponse(root(renderFallback(slide, total)), { width: 1440, height: 1800, fonts }).arrayBuffer()
     }
 
     return new Response(buf, { headers: { 'Content-Type': 'image/png' } })

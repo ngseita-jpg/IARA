@@ -28,7 +28,7 @@ import {
   newId, runsToText,
 } from '@/lib/carrossel-canvas-types'
 import {
-  preloadImages, renderSlide2, canvasToBlob, type ImageCache, CANVAS_SIZE,
+  preloadImages, renderSlide2, canvasToBlob, type ImageCache, CANVAS_WIDTH, CANVAS_HEIGHT,
 } from '@/lib/carrossel-canvas-renderer'
 import {
   FONTES as CATALOGO_FONTES, CATEGORIAS, buildGoogleFontsUrl, ensureFontsLoaded,
@@ -191,9 +191,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       // Subtraímos padding interno e bottom-bar de navegação (~80px no mobile)
       const padding = 32
       const reservedBottom = 80
-      const available = Math.min(rect.width - padding, rect.height - reservedBottom)
-      // Mín 280 (extra-small phones), max 720 (não fica monstruoso em desktops largos)
-      const next = Math.max(280, Math.min(720, available))
+      // Aspect 4:5 (1440x1800) → altura = largura × 1.25. Calcula a maior
+      // largura que cabe (limitada pelo width disponível OU pela altura disp /
+      // 1.25, o que for menor).
+      const ASPECT_H_OVER_W = CANVAS_HEIGHT / CANVAS_WIDTH
+      const availableW = rect.width - padding
+      const availableH = rect.height - reservedBottom
+      const maxWFromH = availableH / ASPECT_H_OVER_W
+      const next = Math.max(280, Math.min(720, Math.min(availableW, maxWFromH)))
+      // canvasDisplaySize agora representa WIDTH do display (altura derivada)
       setCanvasDisplaySize(Math.floor(next))
     }
     measure()
@@ -219,13 +225,15 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       return
     }
     const rect = stageContainerRef.current.getBoundingClientRect()
-    const offsetX = (rect.width - canvasDisplaySize) / 2
-    const offsetY = (rect.height - canvasDisplaySize) / 2
+    // canvas é 4:5 — altura derivada da largura
+    const canvasDisplayHeight = canvasDisplaySize * (CANVAS_HEIGHT / CANVAS_WIDTH)
+    const offsetX = (rect.width  - canvasDisplaySize) / 2
+    const offsetY = (rect.height - canvasDisplayHeight) / 2
     setSelectedLayerBounds({
-      top:    rect.top + offsetY + (selectedLayer.y / 100) * canvasDisplaySize,
+      top:    rect.top  + offsetY + (selectedLayer.y / 100) * canvasDisplayHeight,
       left:   rect.left + offsetX + (selectedLayer.x / 100) * canvasDisplaySize,
       width:  (selectedLayer.w / 100) * canvasDisplaySize,
-      height: (selectedLayer.h / 100) * canvasDisplaySize,
+      height: (selectedLayer.h / 100) * canvasDisplayHeight,
     })
   }, [selectedLayer, canvasDisplaySize, isMobile])
 
@@ -541,8 +549,10 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
       if (ldx > 6 || ldy > 6) clearLongPress()
     }
     if (!dragState) return
-    const dx = ((e.clientX - dragState.startX) / canvasDisplaySize) * 100
-    const dy = ((e.clientY - dragState.startY) / canvasDisplaySize) * 100
+    // dx % usa displayWidth, dy % usa displayHeight (canvas 4:5)
+    const canvasDisplayHeight = canvasDisplaySize * (CANVAS_HEIGHT / CANVAS_WIDTH)
+    const dx = ((e.clientX - dragState.startX) / canvasDisplaySize)   * 100
+    const dy = ((e.clientY - dragState.startY) / canvasDisplayHeight) * 100
 
     // Snap guides — durante MOVE. Threshold 1.8%, snap pra alinhar.
     // Targets:
@@ -752,8 +762,8 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
     try {
       await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
-      hidden.width = CANVAS_SIZE
-      hidden.height = CANVAS_SIZE
+      hidden.width  = CANVAS_WIDTH
+      hidden.height = CANVAS_HEIGHT
 
       for (let i = 0; i < slides.length; i++) {
         const s = slides[i]
@@ -829,8 +839,8 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
 
       await ensureFontsLoaded(collectFontsInUse())
       const hidden = document.createElement('canvas')
-      hidden.width = CANVAS_SIZE
-      hidden.height = CANVAS_SIZE
+      hidden.width  = CANVAS_WIDTH
+      hidden.height = CANVAS_HEIGHT
       const files: File[] = []
       for (let i = 0; i < slides.length; i++) {
         const s = slides[i]
@@ -1108,44 +1118,51 @@ export function CarrosselCanvasEditor({ slides: slidesInit, imagensBase64, onFec
               displaySize={canvasDisplaySize}
             />
 
-            {/* Snap guides — linhas magenta sutis durante drag */}
+            {/* Snap guides — linhas magenta sutis durante drag.
+                Canvas é 4:5 — altura = largura × 1.25. */}
             <AnimatePresence>
-              {snapGuides.v.map(v => (
-                <motion.div
-                  key={`v-${v}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.7 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.08 }}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `calc(50% - ${canvasDisplaySize / 2}px + ${(v / 100) * canvasDisplaySize}px)`,
-                    top: `calc(50% - ${canvasDisplaySize / 2}px)`,
-                    width: 1,
-                    height: canvasDisplaySize,
-                    background: 'linear-gradient(180deg, transparent 0%, #ec4899 30%, #ec4899 70%, transparent 100%)',
-                    boxShadow: '0 0 8px rgba(236,72,153,0.6)',
-                  }}
-                />
-              ))}
-              {snapGuides.h.map(h => (
-                <motion.div
-                  key={`h-${h}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.7 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.08 }}
-                  className="absolute pointer-events-none"
-                  style={{
-                    top: `calc(50% - ${canvasDisplaySize / 2}px + ${(h / 100) * canvasDisplaySize}px)`,
-                    left: `calc(50% - ${canvasDisplaySize / 2}px)`,
-                    height: 1,
-                    width: canvasDisplaySize,
-                    background: 'linear-gradient(90deg, transparent 0%, #ec4899 30%, #ec4899 70%, transparent 100%)',
-                    boxShadow: '0 0 8px rgba(236,72,153,0.6)',
-                  }}
-                />
-              ))}
+              {snapGuides.v.map(v => {
+                const dispH = canvasDisplaySize * (CANVAS_HEIGHT / CANVAS_WIDTH)
+                return (
+                  <motion.div
+                    key={`v-${v}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.7 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.08 }}
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `calc(50% - ${canvasDisplaySize / 2}px + ${(v / 100) * canvasDisplaySize}px)`,
+                      top: `calc(50% - ${dispH / 2}px)`,
+                      width: 1,
+                      height: dispH,
+                      background: 'linear-gradient(180deg, transparent 0%, #ec4899 30%, #ec4899 70%, transparent 100%)',
+                      boxShadow: '0 0 8px rgba(236,72,153,0.6)',
+                    }}
+                  />
+                )
+              })}
+              {snapGuides.h.map(h => {
+                const dispH = canvasDisplaySize * (CANVAS_HEIGHT / CANVAS_WIDTH)
+                return (
+                  <motion.div
+                    key={`h-${h}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.7 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.08 }}
+                    className="absolute pointer-events-none"
+                    style={{
+                      top: `calc(50% - ${dispH / 2}px + ${(h / 100) * dispH}px)`,
+                      left: `calc(50% - ${canvasDisplaySize / 2}px)`,
+                      height: 1,
+                      width: canvasDisplaySize,
+                      background: 'linear-gradient(90deg, transparent 0%, #ec4899 30%, #ec4899 70%, transparent 100%)',
+                      boxShadow: '0 0 8px rgba(236,72,153,0.6)',
+                    }}
+                  />
+                )
+              })}
             </AnimatePresence>
 
             {/* Pinch tooltip — pill flutuante mostrando tamanho durante pinch */}
@@ -1453,8 +1470,13 @@ function CanvasStage({
   onSelectLayer, onStartEditText, onLayerPointerDown, onPointerMove, onPointerUp,
   onUpdateLayer, onDeleteLayer, displaySize,
 }: CanvasStageProps) {
-  // Escala px: 100% = displaySize px
-  const pxFromPct = (pct: number) => (pct / 100) * displaySize
+  // Canvas 4:5 — displaySize agora representa WIDTH; altura derivada.
+  const displayWidth  = displaySize
+  const displayHeight = displaySize * (CANVAS_HEIGHT / CANVAS_WIDTH)
+  // Escala px: 100% = dimensão correspondente. xFromPct usa width, yFromPct
+  // usa height (antes era um único pxFromPct quando era quadrado).
+  const xFromPct = (pct: number) => (pct / 100) * displayWidth
+  const yFromPct = (pct: number) => (pct / 100) * displayHeight
 
   // Background CSS
   const bgStyle = useMemo(() => {
@@ -1477,7 +1499,7 @@ function CanvasStage({
     <div
       className="relative shadow-2xl rounded-xl overflow-hidden touch-none select-none"
       style={{
-        width: displaySize, height: displaySize,
+        width: displayWidth, height: displayHeight,
         ...bgStyle,
         fontFamily: cssFamilyFor(slide.fonte_familia ?? 'Inter'),
       }}
@@ -1501,7 +1523,8 @@ function CanvasStage({
           selected={selectedLayerId === layer.id}
           editing={editingTextId === layer.id}
           imagensCache={imagensCache}
-          pxFromPct={pxFromPct}
+          xFromPct={xFromPct}
+          yFromPct={yFromPct}
           displaySize={displaySize}
           onPointerDown={onLayerPointerDown}
           onDoubleClick={() => {
@@ -1536,7 +1559,8 @@ type LayerViewProps = {
   selected: boolean
   editing: boolean
   imagensCache: string[]
-  pxFromPct: (n: number) => number
+  xFromPct: (n: number) => number
+  yFromPct: (n: number) => number
   displaySize: number
   onPointerDown: (e: React.PointerEvent, id: string, mode?: 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br') => void
   onDoubleClick: () => void
@@ -1549,14 +1573,14 @@ type LayerViewProps = {
 // frame de movimento. O comparador raso de memo faz cada layer so re-renderizar
 // se o seu proprio objeto mudou.
 const LayerView = React.memo(function LayerView({
-  layer, selected, editing, imagensCache, pxFromPct, displaySize, onPointerDown, onDoubleClick, onUpdateText, onStopEdit,
+  layer, selected, editing, imagensCache, xFromPct, yFromPct, displaySize, onPointerDown, onDoubleClick, onUpdateText, onStopEdit,
 }: LayerViewProps) {
   const common = {
     position: 'absolute' as const,
-    left: pxFromPct(layer.x),
-    top: pxFromPct(layer.y),
-    width: pxFromPct(layer.w),
-    height: pxFromPct(layer.h),
+    left: xFromPct(layer.x),
+    top: yFromPct(layer.y),
+    width: xFromPct(layer.w),
+    height: yFromPct(layer.h),
     transform: layer.rotation ? `rotate(${layer.rotation}deg)` : undefined,
     // Selection ring suave estilo Canva — box-shadow em vez de outline
     boxShadow: selected
@@ -1642,7 +1666,7 @@ const LayerView = React.memo(function LayerView({
       }
     } else if (shapeLayer.shape === 'line') {
       shapeStyle.backgroundColor = shapeLayer.stroke ?? '#fff'
-      shapeStyle.height = (shapeLayer.strokeWidth ?? 4) * (displaySize / CANVAS_SIZE)
+      shapeStyle.height = (shapeLayer.strokeWidth ?? 4) * (displaySize / CANVAS_WIDTH)
     }
     return (
       <div style={shapeStyle}>
@@ -1724,7 +1748,7 @@ function ResizeHandles({ onPointerDown }: { onPointerDown: (e: React.PointerEven
 // ─── RichTextView ─────────────────────────────────────────────────────
 // Renderiza runs como spans (sem edição)
 function RichTextView({ runs, displaySize }: { runs: Run[]; displaySize: number }) {
-  const scale = displaySize / CANVAS_SIZE
+  const scale = displaySize / CANVAS_WIDTH
   return (
     <div>
       {runs.map((run, i) => (
@@ -1755,7 +1779,7 @@ function EditableText({ runs, align, displaySize, onChange, onBlur }: {
   onChange: (runs: Run[]) => void; onBlur: (runsFinais: Run[]) => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const scale = displaySize / CANVAS_SIZE
+  const scale = displaySize / CANVAS_WIDTH
 
   // Apenas na primeira montagem: injeta runs como spans
   useEffect(() => {
@@ -1950,7 +1974,7 @@ function Thumbnail({ slide, active, imageCache, onClick, number }: {
     <motion.button
       onClick={onClick}
       whileTap={{ scale: 0.92 }}
-      className={`relative aspect-square w-full rounded-lg overflow-hidden border-2 transition-all ${
+      className={`relative aspect-[4/5] w-full rounded-lg overflow-hidden border-2 transition-all ${
         active
           ? 'border-iara-500 shadow-[0_0_0_2px_rgba(99,102,241,0.3),0_4px_16px_rgba(99,102,241,0.4)]'
           : 'border-[#1a1a2e] hover:border-[#2a2a4a]'
@@ -1961,7 +1985,7 @@ function Thumbnail({ slide, active, imageCache, onClick, number }: {
       {!renderizou && (
         <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] via-[#13131f] to-[#1a1a2e] animate-pulse" />
       )}
-      <canvas ref={ref} width={1080} height={1080} style={{ width: '100%', height: '100%', opacity: renderizou ? 1 : 0, transition: 'opacity 200ms' }} />
+      <canvas ref={ref} width={1440} height={1800} style={{ width: '100%', height: '100%', opacity: renderizou ? 1 : 0, transition: 'opacity 200ms' }} />
       <span className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white tabular-nums backdrop-blur-sm">
         {number}
       </span>
@@ -1987,9 +2011,9 @@ function PreviewModal({ slides, imageCache, watermark, onFechar }: {
         <X className="w-5 h-5" />
       </button>
       <div className="flex flex-col items-center gap-4" onClick={e => e.stopPropagation()}>
-        {/* width/height matchando CANVAS_SIZE (1440) — antes estava 1080
-            mas renderer escreve em 1440 e canvas DOM downscalava com perda. */}
-        <canvas ref={ref} width={1440} height={1440} className="max-w-[90vw] max-h-[75vh] rounded-xl shadow-2xl" style={{ aspectRatio: '1/1' }} />
+        {/* width/height matchando CANVAS_WIDTH x CANVAS_HEIGHT (1440×1800,
+            proporção 4:5 padrão Insta feed). Atualizado de 1:1 → 4:5. */}
+        <canvas ref={ref} width={1440} height={1800} className="max-w-[90vw] max-h-[75vh] rounded-xl shadow-2xl" style={{ aspectRatio: '4/5' }} />
         <div className="flex items-center gap-3">
           <button onClick={() => setIdx(Math.max(0, idx - 1))} disabled={idx === 0}
             className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white disabled:opacity-30">
