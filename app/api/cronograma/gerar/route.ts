@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonrepair } from 'jsonrepair'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { safeName } from '@/lib/persona-prompt'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { getCurrentPlan, formatPlanoParaPrompt } from '@/lib/getCurrentPlan'
 import {
@@ -213,13 +214,14 @@ export async function POST(req: NextRequest) {
     .filter((d): d is NonNullable<typeof d> => d !== null)
     .sort((a, b) => a.data.localeCompare(b.data))
 
+  const _nomeReal = safeName(profile)
   const userPrompt = `## Perfil do criador
-- Nome: ${profile.nome_artistico ?? 'criador'}
+${_nomeReal ? `- Nome: ${_nomeReal}` : '*(nome não disponível — NÃO use vocativos genéricos como "criador!", "amigo!". Fale direto na 2ª pessoa.)*'}
 - Nicho: ${profile.nicho}
 - Tom de voz: ${tomDeVoz}
 - Plataformas: ${plataformas}
-- Objetivo: ${profile.objetivo ?? 'não informado'}
-- Sobre: ${profile.sobre ?? 'não informado'}
+${profile.objetivo ? `- Objetivo: ${profile.objetivo}` : ''}
+${profile.sobre ? `- Sobre: ${profile.sobre}` : ''}
 ${profile.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
 ${planoNote}
 

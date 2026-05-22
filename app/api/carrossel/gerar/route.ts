@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { ImagemAnalise } from '../analisar-imagens/route'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { joinArr } from '@/lib/parseArr'
+import { personaFields } from '@/lib/persona-prompt'
 import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const maxDuration = 60
@@ -116,10 +117,17 @@ ${isMarca ? `
 - "imagem_index": OBRIGATÓRIO nos arquétipos visuais. Use o índice da foto que melhor se encaixa com o conteúdo do slide, conforme a análise visual
 
 ## Perfil ${isMarca ? 'da marca' : 'do criador'}
-${perfil ? `Nome: ${perfil.nome_artistico ?? 'não informado'}
-Nicho: ${joinArr(perfil.nicho) || 'não informado'}
-Tom de voz: ${joinArr(perfil.tom_de_voz) || 'não informado'}
-Sobre: ${perfil.sobre ?? 'não informado'}` : 'Perfil não configurado — use linguagem direta, brasileira e próxima do leitor.'}
+${(() => {
+  if (!perfil) return 'Perfil não configurado — use linguagem direta, brasileira e próxima do leitor. NÃO use nome próprio (não invente).'
+  const f = personaFields(perfil as unknown as Record<string, unknown>)
+  const ls: string[] = []
+  if (f.nome)  ls.push(`Nome: ${f.nome}`)
+  if (f.nicho) ls.push(`Nicho: ${f.nicho}`)
+  if (f.tom)   ls.push(`Tom de voz: ${f.tom}`)
+  if (f.sobre) ls.push(`Sobre: ${f.sobre}`)
+  const aviso = !f.nome ? '\n\n**Nome não disponível — não invente vocativos genéricos ("criador!", "amigo!"). Fale direto na 2ª pessoa.**' : ''
+  return ls.length ? ls.join('\n') + aviso : 'Perfil não configurado — use linguagem direta, brasileira.'
+})()}
 ${brandKitCtx}
 
 ## Tipografia e paleta — escolha conforme nicho/persona (NÃO use defaults genéricos)

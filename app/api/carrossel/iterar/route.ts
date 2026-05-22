@@ -4,6 +4,7 @@ import { jsonrepair } from 'jsonrepair'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { joinArr } from '@/lib/parseArr'
+import { personaFields } from '@/lib/persona-prompt'
 import { getBrandKitContext } from '@/lib/getBrandKit'
 import type { CarrosselData } from '../gerar/route'
 
@@ -62,11 +63,18 @@ REGRAS CRÍTICAS:
 
 OUTPUT: JSON estrito (sem markdown). Mesmo schema do CarrosselData. Inclua slides[], paleta, fonte_sugerida/titulo/corpo, raciocinio (curta — explica em 1-2 frases o que mudou).
 
-${profile ? `## Perfil do criador (use pra manter voz)
-- Nome: ${profile.nome_artistico ?? 'criador'}
-- Nicho: ${joinArr(profile.nicho) || 'não informado'}
-- Tom de voz: ${joinArr(profile.tom_de_voz) || 'não informado'}
-- Sobre: ${profile.sobre ?? 'não informado'}` : ''}
+${(() => {
+  if (!profile) return ''
+  const f = personaFields(profile)
+  const ls: string[] = []
+  if (f.nome)  ls.push(`- Nome: ${f.nome}`)
+  if (f.nicho) ls.push(`- Nicho: ${f.nicho}`)
+  if (f.tom)   ls.push(`- Tom de voz: ${f.tom}`)
+  if (f.sobre) ls.push(`- Sobre: ${f.sobre}`)
+  if (!ls.length) return ''
+  const aviso = !f.nome ? '\n\n*(nome não disponível — NÃO use vocativos genéricos. Fale direto na 2ª pessoa.)*' : ''
+  return `## Perfil do criador (use pra manter voz)\n${ls.join('\n')}${aviso}`
+})()}
 ${brandKitCtx}`
 
   const userPrompt = `## Carrossel atual

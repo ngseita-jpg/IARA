@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { joinArr } from '@/lib/parseArr'
+import { personaFields } from '@/lib/persona-prompt'
 import { getBrandKitContext } from '@/lib/getBrandKit'
 
 export const runtime = 'nodejs'
@@ -158,13 +159,19 @@ export async function POST(req: NextRequest) {
     .limit(1)
     .maybeSingle()
 
-  const personaCtx = profile ? `## Perfil do criador
-- Nome: ${profile.nome_artistico ?? 'criador'}
-- Nicho: ${joinArr(profile.nicho) || 'não informado'}
-- Tom de voz: ${joinArr(profile.tom_de_voz) || 'não informado'}
-- Plataformas: ${joinArr(profile.plataformas) || 'não informado'}
-- Objetivo: ${joinArr(profile.objetivo) || 'não informado'}
-${profile.sobre ? `- Sobre: ${profile.sobre}` : ''}` : 'Perfil não configurado.'
+  const personaCtx = (() => {
+    if (!profile) return 'Perfil não configurado — não use nome próprio.'
+    const f = personaFields(profile)
+    const ls: string[] = []
+    if (f.nome)        ls.push(`- Nome: ${f.nome}`)
+    if (f.nicho)       ls.push(`- Nicho: ${f.nicho}`)
+    if (f.tom)         ls.push(`- Tom de voz: ${f.tom}`)
+    if (f.plataformas) ls.push(`- Plataformas: ${f.plataformas}`)
+    if (f.objetivo)    ls.push(`- Objetivo: ${f.objetivo}`)
+    if (f.sobre)       ls.push(`- Sobre: ${f.sobre}`)
+    const aviso = !f.nome ? '\n\n**Nome não disponível — NÃO use vocativos genéricos ("criador!"). Fale direto na 2ª pessoa.**' : ''
+    return ls.length ? `## Perfil do criador\n${ls.join('\n')}${aviso}` : 'Perfil não configurado.'
+  })()
 
   const cronoCtx = cronoHoje ? `\n\n## Cronograma de hoje (${cronoHoje.tipo_conteudo} no ${cronoHoje.plataforma})
 - Título programado: ${cronoHoje.titulo}

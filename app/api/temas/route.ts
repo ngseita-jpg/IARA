@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
+import { personaFields } from '@/lib/persona-prompt'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { getCurrentPlan, formatPlanoParaPrompt } from '@/lib/getCurrentPlan'
 import { getBrandKitContext } from '@/lib/getBrandKit'
@@ -98,20 +99,24 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    const nichoStr = joinArr(profile?.nicho)
-    if (nichoStr) {
+    const fields = personaFields(profile)
+    if (fields.nicho) {
       temPersona = true
-      const tomStr = joinArr(profile?.tom_de_voz) || 'não definido'
-      const plataformasStr = joinArr(profile?.plataformas) || 'não definido'
-      const objetivoStr = joinArr(profile?.objetivo) || 'não informado'
+      const linhas: string[] = []
+      if (fields.nome)        linhas.push(`- Nome: ${fields.nome}`)
+      linhas.push(`- Nicho: ${fields.nicho}`)
+      if (fields.tom)         linhas.push(`- Tom de voz: ${fields.tom}`)
+      if (fields.plataformas) linhas.push(`- Plataformas principais: ${fields.plataformas}`)
+      if (fields.objetivo)    linhas.push(`- Objetivo: ${fields.objetivo}`)
+      if (fields.sobre)       linhas.push(`- Sobre: ${fields.sobre}`)
+      if (fields.voz)         linhas.push(`- Análise vocal IA: ${fields.voz}`)
+
+      const semNomeNota = !fields.nome
+        ? '\n\n**IMPORTANTE — nome não disponível:** NÃO use vocativos genéricos ("criador!", "amigo!"). Fale direto na 2ª pessoa sem nome próprio.'
+        : ''
+
       profileNote = `\n\n## CONTEXTO DO CRIADOR (use TUDO isso para personalizar)
-- Nome: ${profile?.nome_artistico ?? 'criador'}
-- Nicho: ${nichoStr}
-- Tom de voz: ${tomStr}
-- Plataformas principais: ${plataformasStr}
-- Objetivo: ${objetivoStr}
-${profile?.sobre ? `- Sobre: ${profile.sobre}` : ''}
-${profile?.voz_perfil ? `- Análise vocal IA: ${profile.voz_perfil}` : ''}
+${linhas.join('\n')}${semNomeNota}
 
 **JÁ TENHO contexto suficiente sobre nicho e tom.** Não pergunte sobre nicho/tom/plataforma — você já SABE.
 

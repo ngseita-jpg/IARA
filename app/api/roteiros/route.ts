@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
+import { personaFields } from '@/lib/persona-prompt'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { getBrandKitContext } from '@/lib/getBrandKit'
 
@@ -115,19 +116,29 @@ export async function POST(req: NextRequest) {
   const adminClient = createAdminClient()
   const brandKitCtx = await getBrandKitContext(adminClient, user.id)
 
-  const perfilContexto = profile
-    ? `## Perfil do Criador (use como contexto de personalização)
-Nome/Como se apresenta: ${profile.nome_artistico || 'Não informado'}
-Nicho: ${joinArr(profile.nicho) || 'Não informado'}
-Plataformas principais: ${joinArr(profile.plataformas) || 'Não informado'}
-Objetivo principal: ${joinArr(profile.objetivo) || 'Não informado'}
-Tom de voz e estilo: ${joinArr(profile.tom_de_voz) || 'Não informado'}
-Sobre o criador: ${profile.sobre || 'Não informado'}
-${profile.voz_perfil ? `Perfil vocal (analisado por IA): ${profile.voz_perfil}` : ''}
+  const perfilContexto = (() => {
+    if (!profile) {
+      return `## Perfil do Criador\nPerfil não configurado — gere um roteiro autêntico e engajador em português brasileiro, sem usar nome próprio (não invente).`
+    }
+    const f = personaFields(profile)
+    const linhas: string[] = []
+    if (f.nome)        linhas.push(`Nome/Como se apresenta: ${f.nome}`)
+    if (f.nicho)       linhas.push(`Nicho: ${f.nicho}`)
+    if (f.plataformas) linhas.push(`Plataformas principais: ${f.plataformas}`)
+    if (f.objetivo)    linhas.push(`Objetivo principal: ${f.objetivo}`)
+    if (f.tom)         linhas.push(`Tom de voz e estilo: ${f.tom}`)
+    if (f.sobre)       linhas.push(`Sobre o criador: ${f.sobre}`)
+    if (f.voz)         linhas.push(`Perfil vocal (analisado por IA): ${f.voz}`)
+
+    const semNome = !f.nome
+      ? '\n\n**Nome não disponível — não invente, não use vocativos genéricos como "criador!" ou "amigo!". Fale direto na 2ª pessoa.**'
+      : ''
+
+    return `## Perfil do Criador (use como contexto de personalização)
+${linhas.join('\n')}${semNome}
 
 Este roteiro deve soar exatamente como esse criador fala — adapte o ritmo, vocabulário e energia ao perfil acima.`
-    : `## Perfil do Criador
-Perfil não configurado — gere um roteiro autêntico e engajador em português brasileiro.`
+  })()
 
   const modoTexto = modo === 'hooks'
     ? 'Gere 4 hooks alternativos com abordagens distintas para o tema abaixo.'

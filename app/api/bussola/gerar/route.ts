@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsonrepair } from 'jsonrepair'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { joinArr } from '@/lib/parseArr'
+import { safeName } from '@/lib/persona-prompt'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
@@ -86,8 +87,9 @@ export async function POST(req: NextRequest) {
     ? metricas!.map(m => `${m.plataforma}: ${m.seguidores?.toLocaleString('pt-BR') ?? '0'} seguidores`).join(', ')
     : 'sem métricas cadastradas ainda'
 
+  const _nomeReal = safeName(profile)
   const userPrompt = `## Perfil do criador
-- Nome: ${profile.nome_artistico ?? 'criador'}
+${_nomeReal ? `- Nome: ${_nomeReal}` : '*(nome não disponível — NÃO use vocativos genéricos como "criador!". Fale direto na 2ª pessoa.)*'}
 - Nicho: ${joinArr(profile.nicho)}
 - Tom de voz: ${joinArr(profile.tom_de_voz) || 'não definido'}
 - Plataformas: ${joinArr(profile.plataformas) || 'não definido'}

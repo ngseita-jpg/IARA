@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
 import { joinArr } from '@/lib/parseArr'
+import { personaFields } from '@/lib/persona-prompt'
 import { checkRateLimitUser } from '@/lib/rateLimit'
 import { getBrandKitContext } from '@/lib/getBrandKit'
 
@@ -60,16 +61,19 @@ export async function POST(req: NextRequest) {
   const adminClient = createAdminClient()
   const brandKitCtx = await getBrandKitContext(adminClient, user.id)
 
-  const perfilContexto = profile ? `
-PERFIL DO CRIADOR:
-- Nome/Marca: ${profile.nome_artistico ?? 'não informado'}
-- Nicho: ${joinArr(profile.nicho) || 'não informado'}
-- Tom de voz: ${joinArr(profile.tom_de_voz) || 'não informado'}
-- Objetivo: ${joinArr(profile.objetivo) || 'não informado'}
-- Sobre: ${profile.sobre ?? 'não informado'}
-${profile.voz_perfil ? `- Personalidade vocal: ${profile.voz_perfil}` : ''}
-${brandKitCtx}
-` : brandKitCtx
+  const perfilContexto = (() => {
+    if (!profile) return brandKitCtx
+    const f = personaFields(profile)
+    const ls: string[] = []
+    if (f.nome)        ls.push(`- Nome/Marca: ${f.nome}`)
+    if (f.nicho)       ls.push(`- Nicho: ${f.nicho}`)
+    if (f.tom)         ls.push(`- Tom de voz: ${f.tom}`)
+    if (f.objetivo)    ls.push(`- Objetivo: ${f.objetivo}`)
+    if (f.sobre)       ls.push(`- Sobre: ${f.sobre}`)
+    if (f.voz)         ls.push(`- Personalidade vocal: ${f.voz}`)
+    const aviso = !f.nome ? '\n**Nome não disponível — não invente vocativos genéricos. Fale direto na 2ª pessoa.**' : ''
+    return ls.length ? `\nPERFIL DO CRIADOR:\n${ls.join('\n')}${aviso}\n${brandKitCtx}\n` : brandKitCtx
+  })()
 
   const tipoDescricao = TIPOS_STORY[tipo] ?? tipo
 
