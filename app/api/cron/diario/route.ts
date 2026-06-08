@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
   const base = new URL(req.url).origin
   const headers = { Authorization: `Bearer ${CRON_SECRET}` }
 
-  const subjobs = ['/api/cron/trial-emails', '/api/cron/uso-alertas']
+  // keep-supabase-alive é PRIORIDADE — sem ele Supabase pausa em 7d e tudo cai.
+  // Roda primeiro pra garantir que mesmo se outros subjobs falharem, projeto fica ativo.
+  const subjobs = ['/api/cron/keep-supabase-alive', '/api/cron/trial-emails', '/api/cron/uso-alertas']
   const resultados = await Promise.allSettled(
     subjobs.map(async path => {
       const r = await fetch(`${base}${path}`, { headers })
