@@ -40,12 +40,44 @@ function LoginForm() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError('E-mail ou senha incorretos. Tente novamente.')
+      // ANTES: TUDO virava "senha incorreta" — escondia erros reais (rate
+      // limit, JWT expired, email não confirmado, Supabase down). User
+      // acreditava que estava digitando senha errada quando o problema era
+      // outro. Agora distingue por mensagem do Supabase.
+      console.error('[login] supabase auth error:', error)
+      const msg = (error.message ?? '').toLowerCase()
+      let mensagem = 'E-mail ou senha incorretos. Tente novamente.'
+      if (msg.includes('invalid login credentials') || msg.includes('invalid_credentials')) {
+        mensagem = 'E-mail ou senha incorretos. Tente novamente.'
+      } else if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
+        mensagem = 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada (e spam) pelo link de ativação.'
+      } else if (msg.includes('too many requests') || msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+        mensagem = 'Muitas tentativas em pouco tempo. Espere ~1 minuto e tente de novo.'
+      } else if (msg.includes('user not found') || msg.includes('user_not_found')) {
+        mensagem = 'Não encontramos uma conta com esse e-mail. Tem conta? Clique em "Criar gratuitamente".'
+      } else if (msg.includes('jwt') || msg.includes('token')) {
+        mensagem = 'Sessão expirada do servidor. Dá F5 na página e tenta de novo.'
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        mensagem = 'Falha de conexão. Verifica sua internet e tenta de novo.'
+      } else if (error.message) {
+        // Mostra erro REAL pro user ajudar a debugar. Antes vinha 'senha
+        // incorreta' até em rate limit, ficava impossível diagnosticar.
+        mensagem = `Não consegui te logar: ${error.message}`
+      }
+      setError(mensagem)
       // Audit anônimo (rate limited por IP) — útil pra detectar bruteforce
       void fetch('/api/audit/evento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evento: 'login_falha', meta: { email_tentado: email.slice(0, 80) } }),
+        body: JSON.stringify({
+          evento: 'login_falha',
+          meta: {
+            email_tentado: email.slice(0, 80),
+            // Inclui código do erro pra a gente investigar via /admin/audit-log
+            erro_codigo: (error as { code?: string }).code ?? null,
+            erro_msg: error.message?.slice(0, 200) ?? null,
+          },
+        }),
       }).catch(() => null)
       setLoading(false)
       return
